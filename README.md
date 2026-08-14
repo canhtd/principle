@@ -19,7 +19,7 @@ cd .claude/skills && zip -r ../../dist/ask-ray.zip ask-ray
 `references/corpus.jsonl` đi kèm sẵn (bản cá nhân). Nếu mất hoặc muốn dựng lại:
 
 ```bash
-python3 lib/build-corpus.py ~/books/VIE_-_Principles_-_Dalio__Ray-update_V1.epub
+python3 .claude/skills/ask-ray/build-corpus.py ~/books/VIE_-_Principles_-_Dalio__Ray-update_V1.epub
 ```
 
 Script nhận cả `.epub` thật (zip) lẫn file markdown đặt tên `.epub` — bản đang

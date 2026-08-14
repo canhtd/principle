@@ -11,7 +11,6 @@ tình huống cụ thể → chốt hướng đi → **ghi lại để lần sau
 memory/                     trí nhớ giữa các session — hồ sơ + ca đã hỏi
 goals/GOALS.md              mục tiêu đang theo
 rules/                      quy tắc dùng chung mà SKILL.md trỏ tới
-lib/build-corpus.py         dựng lại corpus từ file sách
 apps/decision-journal/      app React ghi quyết định theo vòng lặp 5.1→5.11
 docs/concept.md             concept gốc + lộ trình
 ```
@@ -57,7 +56,7 @@ grep '"num":"5.6"' "$C"
 grep -i "giá trị kỳ vọng" "$C"
 ```
 
-Dựng lại khi cần: `python3 lib/build-corpus.py /duong/dan/Principles.epub`
+Dựng lại khi cần: `python3 .claude/skills/ask-ray/build-corpus.py /duong/dan/Principles.epub`
 
 ## Luật cứng khi làm việc trong repo này
 
