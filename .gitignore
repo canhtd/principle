@@ -1,0 +1,17 @@
+# Nội dung sách — bản dịch có bản quyền, không đẩy lên remote
+*.epub
+*.mobi
+.claude/skills/ask-ray/references/corpus.jsonl
+.claude/skills/ask-ray/references/index.md
+
+# Dữ liệu cá nhân — ca đã hỏi + mục tiêu, không đẩy lên remote công khai
+memory/
+goals/
+
+# Bản dựng để chia sẻ
+dist/
+*.zip
+
+__pycache__/
+.DS_Store
+node_modules/
