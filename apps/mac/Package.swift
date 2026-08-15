@@ -20,7 +20,8 @@ let package = Package(
         .target(name: "PrincipleCore"),
         .testTarget(
             name: "PrincipleTests",
-            dependencies: ["PrincipleCore"]
+            dependencies: ["PrincipleCore"],
+            resources: [.copy("Fixtures")]
         ),
     ]
 )
