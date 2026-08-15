@@ -2,20 +2,16 @@ import Foundation
 
 /// Where the repo the app reads and writes lives.
 ///
-/// U7 owns this setting; until then everything goes through this one accessor,
-/// so replacing it is a one-file change. The path is never hardcoded: it comes
-/// from the shared defaults suite, and only when that is empty does a fallback
-/// apply.
+/// The path itself is `AppSettings`' business — this stays as the one accessor
+/// every store goes through, and owns only what Settings cannot answer: what to
+/// do when nothing is configured.
 public enum RepoLocation {
-    public static let defaultsSuite = PrincipleInfo.bundleIdentifier
-    public static let repoPathKey = "repoPath"
+    public static let defaultsSuite = AppSettings.defaultsSuite
+    public static let repoPathKey = AppSettings.Key.repoPath
 
-    public static func current(defaults: UserDefaults? = UserDefaults(suiteName: defaultsSuite)) -> URL {
-        if let configured = defaults?.string(forKey: repoPathKey),
-            case let trimmed = configured.trimmingCharacters(in: .whitespacesAndNewlines),
-            !trimmed.isEmpty
-        {
-            return URL(fileURLWithPath: (trimmed as NSString).expandingTildeInPath, isDirectory: true)
+    public static func current(defaults: UserDefaults? = AppSettings.sharedDefaults()) -> URL {
+        if let configured = AppSettings.repoPath(in: defaults) {
+            return AppSettings.expandedURL(configured)
         }
         #if DEBUG
             if let development = developmentRepoURL { return development }

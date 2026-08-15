@@ -12,6 +12,12 @@ struct PrincipleApp: App {
         }
         .defaultSize(width: 1040, height: 700)
         .windowToolbarStyle(.unified)
+
+        // ⌘, in the app menu. Everything it edits is written through immediately,
+        // so closing the window is the same as saving.
+        Settings {
+            SettingsView()
+        }
     }
 }
 
