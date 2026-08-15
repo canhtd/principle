@@ -4,7 +4,9 @@ import SwiftUI
 /// Names the consultation before it starts (R1). "Tạo" stays off until the
 /// topic has something in it — the rule lives in `NewSessionDraft`.
 struct NewSessionSheet: View {
-    @State private var draft = NewSessionDraft()
+    /// Opens on the model chosen in Settings, so a change there applies to the
+    /// next session without touching the ones already on disk (AE4).
+    @State private var draft = AppSettings().newSessionDraft()
     let create: (NewSessionDraft) -> Void
     @Environment(\.dismiss) private var dismiss
 

@@ -3,7 +3,13 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var section: AppSection = .chat
-    @State private var model = SessionViewModel.live()
+    /// Built from Settings (KTD4/KTD5): the repo the stores read and the exact
+    /// binary to spawn. Read once at launch, which is why Settings says a change
+    /// takes effect after reopening the app.
+    @State private var model = SessionViewModel.live(
+        repoURL: AppSettings().repoURL,
+        binaryOverride: AppSettings().engineOverridePath
+    )
     @State private var isCreatingSession = false
     /// Pinned open: the session list is how a consultation is found again (R1),
     /// and AppKit otherwise restores whatever collapsed state it saw last.
