@@ -7,8 +7,10 @@ import Testing
 struct MessageBlocksTests {
     // MARK: - Paragraphs
 
-    @Test("Dòng trống tách đoạn; xuống dòng mềm giữ nguyên trong một đoạn")
-    func splitsParagraphsOnBlankLines() {
+    /// The model that forgets its blank lines used to render as one wall of
+    /// text; a single newline between two prose lines now breaks the paragraph.
+    @Test("Xuống dòng đơn cũng tách đoạn, không dồn thành một khối")
+    func splitsParagraphsOnEveryNewline() {
         let blocks = MessageBlocks.parse(
             """
             Chẩn đoán: anh đang lẫn giữa mong muốn và thực tế.
@@ -18,12 +20,20 @@ struct MessageBlocksTests {
             """
         )
 
-        #expect(blocks.count == 2)
+        #expect(blocks.count == 3)
         #expect(blocks.allSatisfy { $0.kind == .paragraph })
-        #expect(blocks[0].text.contains("\n"))
-        #expect(blocks[0].text.hasSuffix("lặp lại nhiều lần."))
-        #expect(blocks[1].text == "Hướng đi: viết ra kết quả anh muốn trước.")
-        #expect(blocks.map(\.id) == [0, 1])
+        #expect(blocks.allSatisfy { !$0.text.contains("\n") })
+        #expect(blocks[1].text == "Chuyện này lặp lại nhiều lần.")
+        #expect(blocks[2].text == "Hướng đi: viết ra kết quả anh muốn trước.")
+        #expect(blocks.map(\.id) == [0, 1, 2])
+    }
+
+    /// The blank line still has to be visible on the block: it is what tells one
+    /// list from two, and paragraphs written apart from paragraphs merely wrapped.
+    @Test("Đoạn ngay sau dòng trống vẫn được đánh dấu afterBlankLine")
+    func recordsTheBlankLineBetweenParagraphs() {
+        let blocks = MessageBlocks.parse("Một.\nHai.\n\nBa.")
+        #expect(blocks.map(\.afterBlankLine) == [false, false, true])
     }
 
     @Test("Nhiều dòng trống liên tiếp không sinh đoạn rỗng")
@@ -58,9 +68,9 @@ struct MessageBlocksTests {
     @Test("Số thập phân và gạch ngang trơ trọi vẫn là văn xuôi")
     func doesNotMistakeProseForAList() {
         let blocks = MessageBlocks.parse("1.5 triệu đồng\n-\n2.Không có khoảng trắng")
-        #expect(blocks.count == 1)
-        #expect(blocks[0].kind == .paragraph)
-        #expect(blocks[0].text.contains("1.5 triệu đồng"))
+        #expect(blocks.count == 3)
+        #expect(blocks.allSatisfy { $0.kind == .paragraph })
+        #expect(blocks.map(\.text) == ["1.5 triệu đồng", "-", "2.Không có khoảng trắng"])
     }
 
     @Test("Dòng trống giữa hai list được ghi lại, list liền mạch thì không")

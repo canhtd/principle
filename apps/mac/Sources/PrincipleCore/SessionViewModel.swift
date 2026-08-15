@@ -38,6 +38,9 @@ public final class SessionViewModel {
     /// The local principle corpus (KTD3). Loaded once: a repo without the file
     /// simply renders no cards.
     public let corpus: CorpusStore
+    /// The book's own paragraphs, picked out of that same corpus and sent with
+    /// every turn as the cadence to answer in.
+    let voice: VoiceExemplars
     private let availabilityProvider: any EngineAvailabilityProviding
     /// Kept so "Resend" retries the same question without asking it twice.
     var lastPrompt: String?
@@ -54,7 +57,9 @@ public final class SessionViewModel {
         self.store = store
         self.availabilityProvider = availabilityProvider
         // Defaults to the corpus that sits in the same repo as the sessions.
-        self.corpus = corpus ?? CorpusStore(repoURL: store.repoURL)
+        let loaded = corpus ?? CorpusStore(repoURL: store.repoURL)
+        self.corpus = loaded
+        voice = VoiceExemplars(corpus: loaded)
         refreshSessions()
     }
 

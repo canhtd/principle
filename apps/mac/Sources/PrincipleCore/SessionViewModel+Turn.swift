@@ -101,7 +101,7 @@ extension SessionViewModel {
                 model: session.model,
                 resumeID: resumeID,
                 cwd: store.repoURL,
-                extraArgs: ConsultPrompt.systemPromptArguments
+                extraArgs: ConsultPrompt.systemPromptArguments(voice: voice)
             )
             for try await event in stream {
                 apply(event, to: &outcome)

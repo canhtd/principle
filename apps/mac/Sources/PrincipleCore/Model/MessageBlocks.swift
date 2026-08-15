@@ -43,9 +43,16 @@ public enum MessageBlocks {
     /// Bullet markers accepted from the engine, all drawn as one bullet.
     private static let bulletPrefixes = ["- ", "* ", "+ "]
 
+    /// One line of prose is one paragraph.
+    ///
+    /// Markdown would join two prose lines separated by a single newline into
+    /// one paragraph, and an answer that forgets its blank lines then renders as
+    /// a single wall of text — which is what a real answer did. The engine never
+    /// hard-wraps its prose, so the newline it writes always means a break; the
+    /// blank line is still recorded on the block, because two list lines in a row
+    /// are one list and the view spaces them accordingly.
     public static func parse(_ text: String) -> [MessageBlock] {
         var blocks: [MessageBlock] = []
-        var paragraph: [String] = []
         var sawBlankLine = false
 
         func append(_ kind: MessageBlock.Kind, _ text: String) {
@@ -55,29 +62,18 @@ public enum MessageBlocks {
             sawBlankLine = false
         }
 
-        func flushParagraph() {
-            guard !paragraph.isEmpty else { return }
-            append(.paragraph, paragraph.joined(separator: "\n"))
-            paragraph.removeAll()
-        }
-
         for rawLine in text.components(separatedBy: .newlines) {
             let line = rawLine.trimmingCharacters(in: .whitespaces)
             if line.isEmpty {
-                // A blank line is the only paragraph break Markdown has.
-                flushParagraph()
                 sawBlankLine = true
             } else if let heading = heading(in: line) {
-                flushParagraph()
                 append(.heading, heading)
             } else if let item = listItem(in: line) {
-                flushParagraph()
                 append(.listItem(marker: item.marker), item.text)
             } else {
-                paragraph.append(line)
+                append(.paragraph, line)
             }
         }
-        flushParagraph()
         return blocks
     }
 
@@ -118,9 +114,9 @@ public enum MessageBlocks {
 
     /// A block's inline Markdown, resolved to an `AttributedString`.
     ///
-    /// `inlineOnlyPreservingWhitespace` keeps the soft line breaks inside a
-    /// paragraph and leaves block syntax alone — the split above already did
-    /// that job. Anything the parser refuses is shown as plain text rather than
+    /// `inlineOnlyPreservingWhitespace` leaves block syntax alone — the split
+    /// above already did that job — and keeps whatever whitespace a block does
+    /// carry. Anything the parser refuses is shown as plain text rather than
     /// dropped: half an answer is worse than an unstyled one.
     ///
     /// `parse` is a seam for tests; callers use the default.

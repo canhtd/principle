@@ -291,7 +291,66 @@ struct ConsultPromptTests {
 
     @Test("Trailer đi kèm mọi lượt qua --append-system-prompt")
     func systemPromptTravelsAsAnArgument() {
-        #expect(ConsultPrompt.systemPromptArguments == ["--append-system-prompt", ConsultPrompt.systemPrompt])
+        #expect(
+            ConsultPrompt.systemPromptArguments() == ["--append-system-prompt", ConsultPrompt.systemPrompt]
+        )
+    }
+
+    /// Describing the cadence was not enough on its own; these are the rules the
+    /// real answer broke — slogans, a clever opener, and every principle number
+    /// pushed down into the trailer.
+    @Test("System prompt cấm khẩu hiệu, đòi đoạn văn và số hiệu ngay trong câu")
+    func systemPromptSetsTheCadence() {
+        let prompt = ConsultPrompt.systemPrompt
+
+        #expect(prompt.contains("mỗi đoạn 3–5 câu trọn vẹn"))
+        #expect(prompt.contains("LUÔN có một dòng trống"))
+        #expect(prompt.contains("\"Phải đo.\""))
+        #expect(prompt.contains("Nhiều nhất một dấu gạch ngang dài trong một đoạn"))
+        #expect(prompt.contains("Giải thích cơ chế trước, ra lệnh sau"))
+        #expect(prompt.contains("Tôi đã học được rằng…"))
+        #expect(prompt.contains("Ít nhất một số hiệu nguyên tắc phải nằm ngay trong câu dùng nó"))
+        #expect(prompt.contains("không mở bài bằng câu lật ngược"))
+        #expect(prompt.contains("Giọng người"))
+        // The block spliced in at runtime is announced, so an engine that gets
+        // one knows the paragraphs below are the model to copy.
+        #expect(prompt.contains(VoiceExemplars.headerTitle))
+    }
+
+    /// The exemplars are quoted book text, and the book is not in the repo — so
+    /// they can only be spliced in at runtime, and only ahead of the order block.
+    @Test("Đoạn mẫu giọng được chèn vào system prompt, ngay trước khối thứ tự")
+    func voiceExemplarsAreSplicedBeforeTheOrderBlock() throws {
+        let voice = VoiceExemplars(passages: [
+            .init(num: "1.6", part: "Nguyên tắc sống", text: "[FIXTURE] Tôi thấy rằng chuyện này lặp lại.")
+        ])
+
+        let delivered = ConsultPrompt.deliveredSystemPrompt(voice: voice)
+
+        #expect(delivered.contains("[FIXTURE] Tôi thấy rằng chuyện này lặp lại."))
+        #expect(delivered.contains("(nguyên tắc 1.6, phần Nguyên tắc sống)"))
+        let quote = try #require(delivered.range(of: "[FIXTURE] Tôi thấy rằng", options: .literal))
+        let order = try #require(delivered.range(of: ConsultPrompt.orderBlockAnchor))
+        #expect(quote.lowerBound < order.lowerBound)
+        // Recency belongs to the order block: nothing may sit after it.
+        #expect(delivered.hasSuffix("là lỗi, kể cả khi\ncâu trả lời đã đủ ý."))
+        // Everything the literal already said still travels.
+        #expect(delivered.contains("Từ của sách, dùng nguyên dạng:"))
+        #expect(delivered.contains("PRINCIPLES_JSON:"))
+    }
+
+    @Test("Không có corpus thì system prompt đi nguyên như cũ")
+    func noCorpusLeavesThePromptUntouched() {
+        #expect(ConsultPrompt.deliveredSystemPrompt(voice: .empty) == ConsultPrompt.systemPrompt)
+        #expect(ConsultPrompt.systemPromptArguments(voice: .empty).last == ConsultPrompt.systemPrompt)
+    }
+
+    /// The anchor is a plain sentence out of the literal; if it ever gets
+    /// reworded the splice would silently stop happening.
+    @Test("Mốc chèn xuất hiện đúng một lần trong system prompt")
+    func theSpliceAnchorIsUnique() {
+        let parts = ConsultPrompt.systemPrompt.components(separatedBy: ConsultPrompt.orderBlockAnchor)
+        #expect(parts.count == 2)
     }
 
     /// The parser is the only consumer of the instruction above; if the two ever

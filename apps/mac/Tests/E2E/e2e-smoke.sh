@@ -20,6 +20,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 FIXTURE="$SCRIPT_DIR/fixture-repo"
 CONSULT_SWIFT="$REPO_ROOT/apps/mac/Sources/PrincipleCore/Engine/ConsultPrompt.swift"
 CONTEXT_SWIFT="$REPO_ROOT/apps/mac/Sources/PrincipleCore/Engine/RepoContext.swift"
+VOICE_SWIFT="$REPO_ROOT/apps/mac/Sources/PrincipleCore/Engine/VoiceExemplars.swift"
 ALLOWED_TOOLS="Read Grep Glob Write Edit Bash(grep:*)"
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
@@ -51,6 +52,50 @@ system_prompt() { swift_literal "$CONSULT_SWIFT" 'public static let systemPrompt
 # prompt (RepoContext), which is what turn 1 below reproduces. Same reason the
 # system prompt is read out of Swift: a second hand-typed copy would drift.
 context_header() { swift_literal "$CONTEXT_SWIFT" 'public static let header = """'; }
+
+# --- voice exemplars ----------------------------------------------------------
+# The app quotes a few of the book's own paragraphs into the system prompt so the
+# engine can hear the cadence instead of only being told about it. The corpus is
+# gitignored (the translation is copyrighted), so the passages exist only at
+# runtime — which is exactly why they are worth exercising here, against the
+# invented [FIXTURE] corpus. Ids, header and splice point all come out of Swift;
+# a second hand-typed copy would drift from what the app sends.
+voice_header() { swift_literal "$VOICE_SWIFT" 'public static let header = """'; }
+
+voice_ids() {
+    grep -E 'public static let ids' "$VOICE_SWIFT" | grep -oE '(life|work):[A-Za-z0-9.~]+'
+}
+
+# Where the block goes: immediately before the mandatory-order block, never after
+# it — recency is the only reason that block sits last.
+order_anchor() {
+    sed -n 's/.*static let orderBlockAnchor = "\(.*\)".*/\1/p' "$CONSULT_SWIFT" | head -1
+}
+
+# num, part and the opening words of one exemplar, cut the way VoiceExemplars
+# does it. A body under the floor, a heading-only record and an unknown id all
+# yield nothing, exactly as the Swift skips them.
+voice_passage() {
+    jq -r --arg id "$1" --argjson limit 120 --argjson floor 40 '
+        select(.id == $id) |
+        (((.body // "") | gsub("\\s+"; " ") | sub("^ +"; "") | sub(" +$"; "")) | split(" ")) as $w |
+        select(($w | length) >= $floor) |
+        [ .num, .part,
+          (if ($w | length) > $limit then (($w[0:$limit] | join(" ")) + "…") else ($w | join(" ")) end)
+        ] | @tsv
+    ' "$CORPUS"
+}
+
+voice_block() {
+    local id row num part text first=1
+    for id in $(voice_ids); do
+        row="$(voice_passage "$id")"
+        [ -n "$row" ] || continue
+        IFS=$'\t' read -r num part text <<<"$row"
+        if [ "$first" = 1 ]; then voice_header; first=0; fi
+        printf '\n"%s"\n(nguyên tắc %s, phần %s)\n' "$text" "$num" "$part"
+    done
+}
 
 # One pre-read file, fenced the way RepoContext.section does it.
 context_section() {
@@ -135,6 +180,29 @@ note "engine:  $CLAUDE_BIN"
 note "fixture: $WORK"
 CORPUS="$WORK/.claude/skills/ask-ray/references/corpus.jsonl"
 [ -f "$CORPUS" ] || fail "fixture corpus missing at $CORPUS"
+
+# The system prompt the app actually sends: the literal, with the exemplars
+# spliced in ahead of the order block.
+VOICE_BLOCK="$(voice_block)"
+[ -n "$VOICE_BLOCK" ] || fail "no voice exemplar resolved against $CORPUS — check the ids in $VOICE_SWIFT"
+ORDER_ANCHOR="$(order_anchor)"
+[ -n "$ORDER_ANCHOR" ] || fail "could not read orderBlockAnchor out of $CONSULT_SWIFT"
+case "$SYSTEM_PROMPT" in
+    *"$ORDER_ANCHOR"*) ;;
+    *) fail "the extracted system prompt has no splice anchor ($ORDER_ANCHOR)" ;;
+esac
+# Through a file, not `awk -v`: the block is multi-line and the awk macOS ships
+# refuses a newline inside a -v assignment.
+printf '%s\n' "$VOICE_BLOCK" >"$LOGS/voice.txt"
+SYSTEM_PROMPT="$(awk -v anchor="$ORDER_ANCHOR" -v blockfile="$LOGS/voice.txt" '
+    !spliced && index($0, anchor) == 1 {
+        while ((getline line < blockfile) > 0) print line
+        print ""
+        spliced = 1
+    }
+    { print }
+' <<<"$SYSTEM_PROMPT")"
+note "voice exemplars: $(voice_ids | tr '\n' ' ')($(printf '%s' "$VOICE_BLOCK" | wc -w | tr -d ' ') words)"
 BEFORE="$(real_memory_snapshot)"
 note "real repo memory+goals: $(printf '%s\n' "$BEFORE" | wc -l | tr -d ' ') files hashed"
 
@@ -179,6 +247,15 @@ assert_result_ok "$LOGS/turn1.jsonl" "turn 1"
 
 # --- voice: Ray in the first person, talking to "bạn" --------------------------
 step "Voice"
+# The exemplars are the app's answer to a real answer that came back in slogans
+# with no principle number in it. They only exist if the splice happened.
+case "$SYSTEM_PROMPT" in
+    *"$(voice_header | head -1)"*) note "system prompt carries the voice exemplars" ;;
+    *) fail "the voice exemplar block never reached the system prompt" ;;
+esac
+if [ "$(printf '%s' "$SYSTEM_PROMPT" | grep -c "$ORDER_ANCHOR")" != 1 ]; then
+    fail "the splice duplicated or lost the order block"
+fi
 if printf '%s' "$TEXT" | grep -qi 'anh danny'; then
     fail "the answer greets the user as 'Anh Danny'; inside the app the voice rule is 'bạn'"
 fi

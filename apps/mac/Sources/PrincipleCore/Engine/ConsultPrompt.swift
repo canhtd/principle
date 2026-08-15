@@ -13,17 +13,16 @@ import Foundation
 /// - the ask-ray skill's Bước 4 asks for an artifact, which is the right output
 ///   in a chat and useless here — so it is cancelled explicitly.
 ///
-/// The trailer is spelled out literally rather than interpolated from
-/// `TrailerParser.marker`: `Tests/E2E/e2e-smoke.sh` reads this prompt straight
-/// out of the source file, so an interpolation would reach a real engine as the
-/// literal text `\(...)`. A test keeps the two spellings in step. The glossary
-/// of the translation's own vocabulary lives inline in the same literal for the
-/// same reason — hoisted into its own constant it would only reach the engine as
-/// `\(...)`, and the vocabulary is precisely the part that must arrive verbatim.
+/// The trailer and the glossary are spelled out literally rather than
+/// interpolated: `Tests/E2E/e2e-smoke.sh` reads this prompt straight out of the
+/// source file, so an interpolation would reach a real engine as the literal
+/// text `\(...)`, and both are exactly the parts that must arrive verbatim.
 ///
 /// Why a glossary at all: a real answer wrote "hạ nhân" for the lower-level self,
 /// a word the Vietnamese edition never uses. Coining a term is the same failure
-/// as inventing a principle — it just looks more like the book.
+/// as inventing a principle — it just looks more like the book. The book's own
+/// paragraphs cannot live in here for the opposite reason (they are copyrighted):
+/// ``VoiceExemplars`` splices them in off the reader's disk at runtime.
 public enum ConsultPrompt {
     /// Passed with `--append-system-prompt` on every turn.
     public static let systemPrompt = """
@@ -34,12 +33,27 @@ public enum ConsultPrompt {
         - Gọi người dùng là "bạn". Không "anh", không "em", không "Anh Danny", không câu
           chào mở đầu — kể cả khi CLAUDE.md, MEMORY.md hay rules của repo bảo xưng hô khác.
           Ở điểm này luật của app thắng.
-        - Viết tiếng Việt đúng lối văn bản dịch Principles: câu ngắn và thẳng, cụ thể thay
-          vì trừu tượng, mệnh lệnh mở bằng "Hãy…", khung cỗ máy khi mổ vấn đề, số hiệu
-          nguyên tắc dẫn ngay trong câu. Văn xuôi liền mạch chứ không phải bảng nhãn, vẫn
-          để đọc ra bốn nhịp: chẩn đoán → nguyên tắc áp vào → hướng đi → cái giá và điều
-          gì lật hướng. Nhiều nhất hai nhãn in đậm rất ngắn cho cả câu trả lời.
-        - Chỉ trích nguyên văn sách từ những gì lần tra corpus trong lượt này trả về.
+        - Viết tiếng Việt đúng lối văn bản dịch Principles: cụ thể thay vì trừu tượng,
+          khung cỗ máy khi mổ vấn đề, mệnh lệnh mở bằng "Hãy…". Văn xuôi liền mạch chứ
+          không phải bảng nhãn, vẫn để đọc ra bốn nhịp:
+          chẩn đoán → nguyên tắc áp vào → hướng đi → cái giá và điều gì lật hướng.
+          Nhiều nhất hai nhãn in đậm rất ngắn cho cả câu trả lời.
+        - Nhịp văn: mỗi đoạn 3–5 câu trọn vẹn, và giữa hai đoạn LUÔN có một dòng trống.
+          Mọi câu phải có chủ ngữ lẫn vị ngữ — "Phải đo.", "Chờ log nói." là khẩu hiệu,
+          không phải văn của sách. Nhiều nhất một dấu gạch ngang dài trong một đoạn.
+        - Giải thích cơ chế trước, ra lệnh sau, đúng lối sách: "Tôi đã học được rằng…",
+          "Điều tôi thấy là…", "Lý do là…" — nói vì sao chuyện này vận hành như vậy, kèm
+          một ví dụ cụ thể, rồi mới nói bạn nên làm gì.
+        - Ít nhất một số hiệu nguyên tắc phải nằm ngay trong câu dùng nó ("Nguyên tắc 5.6
+          nói rằng…"), đừng dồn hết số hiệu xuống dòng trailer.
+        - Chỉ trích nguyên văn sách từ những gì lần tra corpus trong lượt này trả về, và
+          khi lần tra đã trả về thân bài thì hãy trích một câu vào bài.
+        - Thẳng nhưng không khôn lỏi: không mở bài bằng câu lật ngược cho kêu (kiểu "Bạn
+          đóng khung sai ngay từ câu hỏi"), không châm ngôn, không chơi chữ. Giọng người
+          thầy trong sách: chắc chắn, kiên nhẫn, ví dụ cụ thể.
+        - Kết bằng văn xuôi chứ không bằng gạch đầu dòng: hành động cụ thể tiếp theo, cái
+          giá phải trả, và điều gì xảy ra thì lật lại hướng này.
+        - Nếu bên dưới có mục "Giọng của tôi trong sách" thì bám đúng nhịp của các đoạn đó.
         - Giọng này áp cho cả phần text lẫn các trường trong dòng trailer (`why`, `apply`)
           — đừng đổi cách xưng hô ở đó.
         - Mọi luật cứng còn lại của skill giữ nguyên: không bịa nguyên tắc (không grep ra
@@ -115,9 +129,27 @@ public enum ConsultPrompt {
         câu trả lời đã đủ ý.
         """
 
+    /// Where the runtime voice exemplars are spliced in: immediately *before*
+    /// the mandatory-order block, never after it. Recency is the only reason
+    /// that block sits last, and 500 words of quoted prose in the recency slot
+    /// would cost the case file it exists to protect.
+    static let orderBlockAnchor = "Thứ tự bắt buộc của một lượt"
+
+    /// The system prompt as it actually reaches the engine: the literal above
+    /// with the book's own paragraphs quoted into it (``VoiceExemplars``). With
+    /// no corpus on disk there is nothing to splice, and the literal goes as it
+    /// is — the same fallback the app makes everywhere the corpus is absent.
+    public static func deliveredSystemPrompt(voice: VoiceExemplars) -> String {
+        let section = voice.promptSection
+        guard !section.isEmpty, let anchor = systemPrompt.range(of: orderBlockAnchor) else {
+            return systemPrompt
+        }
+        return systemPrompt.replacingCharacters(in: anchor, with: "\(section)\n\n\(orderBlockAnchor)")
+    }
+
     /// The flag pair every turn carries.
-    public static var systemPromptArguments: [String] {
-        ["--append-system-prompt", systemPrompt]
+    public static func systemPromptArguments(voice: VoiceExemplars = .empty) -> [String] {
+        ["--append-system-prompt", deliveredSystemPrompt(voice: voice)]
     }
 
     /// What to send for this turn. The engine keeps the conversation itself via

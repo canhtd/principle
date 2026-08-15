@@ -8,12 +8,14 @@ private func makeViewModel(
     repo: TempRepo,
     engine: MockTurnEngine,
     availability: EngineAvailability = .ready(version: "2.1.233"),
-    existing: ChatSession? = nil
+    existing: ChatSession? = nil,
+    corpus: CorpusStore? = nil
 ) throws -> SessionViewModel {
     let model = SessionViewModel(
         engine: engine,
         store: repo.sessions,
-        availabilityProvider: StubAvailabilityProvider(value: availability)
+        availabilityProvider: StubAvailabilityProvider(value: availability),
+        corpus: corpus
     )
     if let existing {
         try repo.sessions.save(existing)
@@ -81,7 +83,38 @@ struct SessionViewModelTests {
         // The turn goes out as a consult, with the trailer instruction attached.
         let call = try #require(engine.calls.first)
         #expect(call.prompt.contains("/ask-ray"))
-        #expect(call.extraArgs == ConsultPrompt.systemPromptArguments)
+        #expect(call.extraArgs == ConsultPrompt.systemPromptArguments())
+    }
+
+    /// The book's own paragraphs cannot be committed, so they can only reach the
+    /// engine off the reader's disk — which means the wiring from corpus to
+    /// `--append-system-prompt` is the part worth pinning down.
+    @Test("Đoạn mẫu giọng lấy từ corpus của repo đi kèm mọi lượt")
+    func theTurnCarriesTheVoiceExemplars() async throws {
+        let repo = try TempRepo(prefix: "vm-voice")
+        let engine = MockTurnEngine()
+        let body = "[FIXTURE] " + (1...60).map { "từ\($0)" }.joined(separator: " ")
+        let corpus = CorpusStore(records: [
+            PrincipleRecord(
+                id: "life:1.6", part: "Nguyên tắc sống", chapter: "Chương thử", num: "1.6",
+                title: "[FIXTURE] Tiêu đề", body: body, hasBody: true
+            )
+        ])
+        let model = try makeViewModel(repo: repo, engine: engine, corpus: corpus)
+
+        let turn = Task { await model.send("Em nên chọn nơi nào?") }
+        #expect(await waitUntil { !engine.calls.isEmpty })
+        engine.emit(result("eng-voice", text: "Bắt đầu từ chẩn đoán."))
+        engine.finish()
+        await turn.value
+
+        let call = try #require(engine.calls.first)
+        let systemPrompt = try #require(call.extraArgs.last)
+        #expect(call.extraArgs.first == "--append-system-prompt")
+        #expect(systemPrompt.contains(VoiceExemplars.headerTitle))
+        #expect(systemPrompt.contains("[FIXTURE] từ1 từ2"))
+        // The order block keeps the recency slot it was put there for.
+        #expect(systemPrompt.hasSuffix("là lỗi, kể cả khi\ncâu trả lời đã đủ ý."))
     }
 
     /// What `--include-partial-messages` buys, seen from the screen's side: the
