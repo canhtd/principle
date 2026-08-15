@@ -10,6 +10,7 @@ final class MockTurnEngine: TurnRunning, @unchecked Sendable {
         let prompt: String
         let model: String
         let resumeID: String?
+        let extraArgs: [String]
     }
 
     enum Response {
@@ -41,7 +42,8 @@ final class MockTurnEngine: TurnRunning, @unchecked Sendable {
         extraArgs: [String]
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         let response: Response = lock.withLock {
-            recordedCalls.append(Call(prompt: prompt, model: model, resumeID: resumeID))
+            recordedCalls.append(
+                Call(prompt: prompt, model: model, resumeID: resumeID, extraArgs: extraArgs))
             return pendingResponses.isEmpty ? .live : pendingResponses.removeFirst()
         }
         return AsyncThrowingStream { continuation in

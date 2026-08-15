@@ -67,19 +67,8 @@ extension SessionViewModel {
         phase = .preparing
         streamingText = ""
 
-        let resumeID: String?
-        let outgoing: String
-        switch session.nextTurnStart {
-        case .fresh:
-            resumeID = nil
-            outgoing = prompt
-        case .resume(let claudeSessionID):
-            resumeID = claudeSessionID
-            outgoing = prompt
-        case .freshWithSeed:
-            resumeID = nil
-            outgoing = TranscriptSeed.prompt(for: session, question: prompt)
-        }
+        let resumeID = session.nextTurnStart.resumeID
+        let outgoing = ConsultPrompt.text(for: session, question: prompt)
 
         var outcome = TurnOutcome()
         do {
@@ -88,7 +77,7 @@ extension SessionViewModel {
                 model: session.model,
                 resumeID: resumeID,
                 cwd: store.repoURL,
-                extraArgs: []
+                extraArgs: ConsultPrompt.systemPromptArguments
             )
             for try await event in stream {
                 apply(event, to: &outcome)

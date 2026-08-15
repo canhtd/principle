@@ -60,6 +60,12 @@ public enum TurnStart: Equatable, Sendable {
     /// Engine context is gone but the app still owns the transcript: run as a
     /// fresh engine session seeded with the transcript plus the case file.
     case freshWithSeed
+
+    /// The id to hand `claude --resume`, when there is one.
+    public var resumeID: String? {
+        guard case .resume(let claudeSessionID) = self else { return nil }
+        return claudeSessionID
+    }
 }
 
 /// One consultation, persisted as `memory/sessions/<uuid>.json` (KTD2).

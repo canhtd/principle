@@ -94,6 +94,10 @@ struct SessionViewModelTests {
         // The engine's own id is persisted so the next turn can --resume (KTD2).
         #expect(model.currentSession?.claudeSessionID == "eng-1")
         #expect(model.streamingText.isEmpty)
+        // The turn goes out as a consult, with the trailer instruction attached.
+        let call = try #require(engine.calls.first)
+        #expect(call.prompt.contains("/ask-ray"))
+        #expect(call.extraArgs == ConsultPrompt.systemPromptArguments)
     }
 
     // MARK: - 2. Subagent (R6)
@@ -140,7 +144,11 @@ struct SessionViewModelTests {
         #expect(model.errorMessage == nil)
         #expect(!model.canResend)
         #expect(engine.calls.count == 2)
-        #expect(engine.calls.map(\.prompt) == ["Tôi kẹt chuyện tiền bạc.", "Tôi kẹt chuyện tiền bạc."])
+        // The failed turn still reported an engine session id, so the retry
+        // resumes it and re-asks the question without opening a second consult.
+        #expect(engine.calls[0].prompt.hasSuffix("Tôi kẹt chuyện tiền bạc."))
+        #expect(engine.calls[1].resumeID == "eng-1")
+        #expect(engine.calls[1].prompt == "Tôi kẹt chuyện tiền bạc.")
         // The question is asked once even though the turn ran twice.
         #expect(model.messages.map(\.role) == [.user, .assistant])
         #expect(model.messages.last?.text == "Xong rồi.")

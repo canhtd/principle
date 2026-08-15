@@ -14,6 +14,28 @@ Skill Desktop cần zip riêng từng cái, **thư mục gốc trong zip phải 
 cd .claude/skills && zip -r ../../dist/ask-ray.zip ask-ray
 ```
 
+## App macOS
+
+App chat riêng, vẫn dùng Claude Code làm engine: hỏi ca, thấy thẻ nguyên tắc, ca
+được ghi vào `memory/cases/` y như khi gọi `/ask-ray` trong terminal.
+
+```bash
+cd apps/mac && swift run        # chạy thẳng lúc đang sửa code
+apps/mac/scripts/make-app.sh    # dựng Principle.app vào ~/Applications
+```
+
+Trong **Cài đặt** của app: model trả lời, thư mục repo (nơi ghi phiên và ca), và
+đường dẫn `claude` — để trống thì app tự tìm.
+
+Kiểm tra vòng lặp có chạy thật không:
+
+```bash
+apps/mac/Tests/E2E/e2e-smoke.sh
+```
+
+Chạy một ca thật trên repo giả lập tách biệt, tốn đúng 2 lượt haiku, không đụng
+vào `memory/` thật.
+
 ## Corpus
 
 `references/corpus.jsonl` đi kèm sẵn (bản cá nhân). Nếu mất hoặc muốn dựng lại:
