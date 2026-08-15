@@ -113,9 +113,14 @@ NUMONLY = re.compile(r'^(?=[^A-Za-z]*$)(?=.*[.,])[\d.,\s]{1,10}$|^[a-z]\.\s*$')
 HEAD = re.compile(r'^(?:\d{1,2}[.,]\s?\d{1,2}[.,]?|[a-z]\.)\s')
 
 
-def find(blocks, needle, start=0, end=None):
+def find(blocks, needle, start=0, end=None, strict=True):
     """Vị trí bảng nguyên tắc thật. Mục lục / nav cũng khớp tên bảng, nên chấm
-    điểm ứng viên bằng số mục dạng nguyên tắc ngay sau nó rồi lấy cái cao nhất."""
+    điểm ứng viên bằng số mục dạng nguyên tắc ngay sau nó rồi lấy cái cao nhất.
+
+    `strict` = chỉ nhận ứng viên có điểm > 0, dùng khi thứ đang tìm LÀ bảng
+    nguyên tắc. Tìm trang phân cách phần thì đặt strict=False: sau tiêu đề phần
+    là văn xuôi, không có mục con nào để chấm điểm.
+    """
     n = norm(needle)
     hi = end if end is not None else len(blocks)
     best, score = None, 0
@@ -123,6 +128,11 @@ def find(blocks, needle, start=0, end=None):
         if n not in norm(blocks[i]['text']) or len(blocks[i]['text']) > 120:
             continue
         s = sum(1 for b in blocks[i + 1:i + 60] if SUB.match(b['text']))
+        # Điểm 0 = khớp tên bảng nhưng sau nó không có mục nguyên tắc nào: đó là
+        # mục lục hoặc nav, không phải bảng. Trả None để bên gọi dừng, thay vì
+        # đọc nhầm mục lục thành bảng rồi dựng ra corpus rỗng.
+        if strict and s == 0:
+            continue
         if s >= score:
             best, score = i, s
     return best
@@ -284,8 +294,8 @@ def main():
     work_tbl, work_tbl_end = parse_table(blocks, wt, len(blocks))
 
     # Thân Phần II nằm TRƯỚC bảng tóm tắt Phần II; thân Phần III nằm SAU bảng Phần III.
-    p2 = (find(blocks, 'NGUYÊN LÝ CUỘC SỐNG', 0, lt)
-          or find(blocks, 'PHẦN II', 0, lt) or 0)
+    p2 = (find(blocks, 'NGUYÊN LÝ CUỘC SỐNG', 0, lt, strict=False)
+          or find(blocks, 'PHẦN II', 0, lt, strict=False) or 0)
     life = attach_bodies(life_tbl, blocks, p2, lt)
     work = attach_bodies(work_tbl, blocks, work_tbl_end, len(blocks))
 
@@ -319,28 +329,45 @@ def main():
                 'has_body': bool(body),
             })
 
+    # Không đọc được gì mà vẫn mở file ghi là xoá trắng corpus đang dùng được.
+    if not records:
+        sys.exit('Không đọc được nguyên tắc nào từ file này. corpus.jsonl và index.md '
+                 'giữ nguyên — mở file kiểm tra thủ công.')
+
     here = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'references')
     os.makedirs(here, exist_ok=True)
     out = os.path.join(here, 'corpus.jsonl')
-    with open(out, 'w', encoding='utf-8') as f:
-        for r in records:
-            f.write(json.dumps(r, ensure_ascii=False) + '\n')
+    idx = os.path.join(here, 'index.md')
 
-    # index.md — menu tiêu đề để lướt chọn, sinh từ chính corpus
-    with open(os.path.join(here, 'index.md'), 'w', encoding='utf-8') as f:
-        f.write('# Index nguyên tắc — menu để CHỌN\n\n'
-                '> Chọn xong thì lấy nguyên văn từ `corpus.jsonl`. Đừng trích từ đây.\n')
-        part = ch = None
-        for r in records:
-            if r['part'] != part:
-                part = r['part']; ch = None
-                f.write(f'\n## {part}\n')
-            if r['chapter'] != ch:
-                ch = r['chapter']
-                if ch:
-                    f.write(f'\n**{ch}**\n\n')
-            mark = '' if r['has_body'] else ' ·no-body'
-            f.write(f'- `{r["num"]}`{mark} {r["title"]}\n')
+    # Ghi ra .tmp rồi os.replace: một lần chạy hỏng giữa chừng không được để lại
+    # corpus cụt. os.replace là atomic trong cùng thư mục.
+    try:
+        with open(out + '.tmp', 'w', encoding='utf-8') as f:
+            for r in records:
+                f.write(json.dumps(r, ensure_ascii=False) + '\n')
+
+        # index.md — menu tiêu đề để lướt chọn, sinh từ chính corpus
+        with open(idx + '.tmp', 'w', encoding='utf-8') as f:
+            f.write('# Index nguyên tắc — menu để CHỌN\n\n'
+                    '> Chọn xong thì lấy nguyên văn từ `corpus.jsonl`. Đừng trích từ đây.\n')
+            part = ch = None
+            for r in records:
+                if r['part'] != part:
+                    part = r['part']; ch = None
+                    f.write(f'\n## {part}\n')
+                if r['chapter'] != ch:
+                    ch = r['chapter']
+                    if ch:
+                        f.write(f'\n**{ch}**\n\n')
+                mark = '' if r['has_body'] else ' ·no-body'
+                f.write(f'- `{r["num"]}`{mark} {r["title"]}\n')
+
+        os.replace(out + '.tmp', out)
+        os.replace(idx + '.tmp', idx)
+    finally:
+        for leftover in (out + '.tmp', idx + '.tmp'):
+            if os.path.exists(leftover):
+                os.remove(leftover)
 
     wb = sum(1 for r in records if r['has_body'])
     print(f'{out}: {len(records)} nguyên tắc · {wb} có thân ({wb*100//len(records)}%) '

@@ -5,8 +5,8 @@ extension SessionViewModel {
     /// against the local corpus, each carrying its verbatim quote and the
     /// engine's bridge into this case (KTD3).
     ///
-    /// Kept next to `principles(for:)` rather than replacing it — the plain
-    /// record list is still what the Favorites section and the tests want.
+    /// An id the corpus does not know produces no card — the app never invents
+    /// a citation the engine did not make (AE2).
     public func cards(for message: ChatMessage) -> [PrincipleCardModel] {
         PrincipleCardModel.cards(for: message.principles, corpus: corpus)
     }

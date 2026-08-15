@@ -97,6 +97,20 @@ struct TrailerParserTests {
         #expect(TrailerParser.visibleText(streaming: "Câu trả lời.\nPRINCIPLES_JSON:") == "Câu trả lời.")
     }
 
+    /// The chunk boundary that leaked the raw marker: the answer arrives with
+    /// the trailer's own newline already in it, so the last segment is empty
+    /// and the marker is one line further up.
+    @Test("Trailer đứng trước dấu xuống dòng cuối vẫn bị giấu")
+    func hidesATrailerFollowedByANewline() {
+        #expect(TrailerParser.visibleText(streaming: "Câu trả lời.\nPRINCIPLES_JSON:\n") == "Câu trả lời.")
+        #expect(
+            TrailerParser.visibleText(streaming: "Câu trả lời.\nPRINCIPLES_JSON: {\"ids\":[\n\n")
+                == "Câu trả lời.")
+        #expect(
+            TrailerParser.visibleText(streaming: "Câu trả lời.\nPRINCIPLES_JSON: {\"ids\":[  \n")
+                == "Câu trả lời.")
+    }
+
     @Test("Text bình thường khi stream không bị đụng tới")
     func leavesStreamingProseAlone() {
         let partial = "Chẩn đoán: anh đang\nPhân vân giữa hai hướng"

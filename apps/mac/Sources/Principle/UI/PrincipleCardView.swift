@@ -61,7 +61,7 @@ struct PrincipleCardView: View {
     /// The one place the spec lets itself be loud: the principle's number is
     /// real information — where this sits in the system — so it gets the bar.
     private var label: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Spacing.cardRow) {
             Rectangle()
                 .fill(Palette.red)
                 .frame(width: 3)
@@ -83,7 +83,7 @@ struct PrincipleCardView: View {
             .foregroundStyle(Palette.cardTitle)
             .textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.top, 12)
+            .padding(.top, Spacing.cardRow)
     }
 
     // MARK: - Controls
@@ -91,21 +91,21 @@ struct PrincipleCardView: View {
     /// Disclosure on the left, the affordances that outlive the card on the
     /// right — a favourite must stay one click away while the card is shut.
     private var controls: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: Spacing.cardBlock) {
             if card.isExpandable { disclosure }
-            Spacer(minLength: 8)
+            Spacer(minLength: Spacing.cardSnug)
             favoriteButton
             chapterButton
         }
-        .padding(.top, 12)
+        .padding(.top, Spacing.cardRow)
     }
 
     private var disclosure: some View {
         Button(action: toggleExpanded) {
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.cardTight) {
                 Text(disclosureTitle)
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(Typography.chevron)
             }
             .foregroundStyle(Palette.cardMuted)
         }
@@ -155,14 +155,14 @@ struct PrincipleCardView: View {
                 // Long prose asked for its ideal size is one endless line; this
                 // is what makes it wrap into the width it was given instead.
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 14)
+                .padding(.top, Spacing.cardQuoteTop)
         }
         if let apply = card.apply {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Spacing.cardSnug) {
                 Rectangle()
                     .fill(Palette.cardHairline)
                     .frame(height: 1)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, Spacing.cardSnug)
                 Text("APPLIED TO THIS CASE")
                     .font(Typography.smallLabel)
                     .tracking(Typography.smallLabelTracking)
@@ -174,7 +174,7 @@ struct PrincipleCardView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 16)
+            .padding(.top, Spacing.cardBlock)
         }
     }
 }

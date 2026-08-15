@@ -30,7 +30,7 @@ struct PrincipleCardList: View {
                 }
             }
             .frame(maxWidth: Typography.cardWidth, alignment: .leading)
-            .padding(.top, 4)
+            .padding(.top, Spacing.cardListTop)
         }
     }
 }
@@ -63,7 +63,7 @@ struct DiagnosisHeaderView: View {
     let diagnosis: Diagnosis
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Spacing.cardSnug) {
             Text("DIAGNOSIS")
                 .font(Typography.label)
                 .tracking(Typography.labelTracking)
@@ -85,7 +85,7 @@ struct DiagnosisHeaderView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(Spacing.cardBlock)
         .background(
             Palette.diagnosisBackground,
             in: RoundedRectangle(cornerRadius: Palette.diagnosisRadius)
@@ -128,7 +128,7 @@ struct DiagnosisHeaderView: View {
                 PrincipleCardModel(record: records[0]),
             ]
         )
-        .padding(20)
+        .padding(Spacing.cardPadding)
     }
     .frame(width: 600, height: 640)
 }

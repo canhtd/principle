@@ -3,6 +3,8 @@
 *.mobi
 .claude/skills/ask-ray/references/corpus.jsonl
 .claude/skills/ask-ray/references/index.md
+# build-corpus.py ghi ra .tmp rồi mới đổi tên; một lần chạy hỏng có thể để lại nó
+.claude/skills/ask-ray/references/*.tmp
 
 # Dữ liệu cá nhân — ca đã hỏi + mục tiêu, không đẩy lên remote công khai.
 # Neo vào gốc repo: không neo thì nuốt luôn repo giả lập của e2e

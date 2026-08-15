@@ -71,7 +71,68 @@ struct ProfileStoreRepairTests {
         #expect(try repo.memoryText() == "# MEMORY\n\n## Hồ sơ người hỏi\n\n- inserted\n")
     }
 
-    // MARK: - 2. Round trip and line endings
+    // MARK: - 2. Prose that was already under the title
+
+    /// The regression: inserting the heading and then rewriting "the body"
+    /// made the hand-written prose under the title the body of the new
+    /// section, and the save replaced it.
+    @Test("Prose under the title survives the section being inserted")
+    func saveKeepsProseThatSitsAboveTheOtherSections() throws {
+        let repo = try TempRepo(prefix: "profile")
+        try repo.writeMemory("# MEMORY\n\nGhi chú tay của anh Danny.\n\n## Index ca\n\n- a case\n")
+
+        try repo.profile.save("- inserted")
+
+        let text = try repo.memoryText()
+        #expect(
+            text == """
+                # MEMORY
+
+                Ghi chú tay của anh Danny.
+
+                ## Hồ sơ người hỏi
+
+                - inserted
+
+                ## Index ca
+
+                - a case
+
+                """
+        )
+        // The prose stayed outside the section, so the next save cannot eat it.
+        #expect(repo.profile.load() == "- inserted")
+        try repo.profile.save("- inserted")
+        #expect(try repo.memoryText() == text)
+    }
+
+    @Test("Prose and nothing else: the section is appended, the prose stays")
+    func saveIntoAFileOfTitleAndProseOnly() throws {
+        let repo = try TempRepo(prefix: "profile")
+        try repo.writeMemory("# MEMORY\n\nGhi chú tay của anh Danny.\n")
+
+        try repo.profile.save("- inserted")
+
+        #expect(
+            try repo.memoryText()
+                == "# MEMORY\n\nGhi chú tay của anh Danny.\n\n## Hồ sơ người hỏi\n\n- inserted\n")
+        #expect(repo.profile.load() == "- inserted")
+    }
+
+    @Test("A preamble with no title keeps its prose too")
+    func saveIntoAPreambleWithoutATitle() throws {
+        let repo = try TempRepo(prefix: "profile")
+        try repo.writeMemory("Ghi chú tay.\n\n## Index ca\n\n- a case\n")
+
+        try repo.profile.save("- inserted")
+
+        #expect(
+            try repo.memoryText()
+                == "Ghi chú tay.\n\n## Hồ sơ người hỏi\n\n- inserted\n\n## Index ca\n\n- a case\n")
+        #expect(repo.profile.load() == "- inserted")
+    }
+
+    // MARK: - 3. Round trip and line endings
 
     @Test("Save is idempotent: saving what was loaded changes nothing")
     func roundTripIsIdempotent() throws {
@@ -116,7 +177,7 @@ struct ProfileStoreRepairTests {
         #expect(repo.profile.load() == "- padded  \n  - kept")
     }
 
-    // MARK: - 3. Failure
+    // MARK: - 4. Failure
 
     @Test("An unreadable file is not overwritten with a fresh skeleton")
     func saveRefusesToClobberAnUnreadableFile() throws {

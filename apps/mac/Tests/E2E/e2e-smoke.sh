@@ -216,6 +216,14 @@ run_turn "$LOGS/turn2.jsonl" "$LOGS/turn2.prompt" --resume "$SESSION_ID" ||
 assert_result_ok "$LOGS/turn2.jsonl" "turn 2"
 note "answer: $(assistant_text "$LOGS/turn2.jsonl" | tr '\n' ' ' | cut -c1-110)…"
 
+# One session is one case: the system prompt rides every --resume turn, so a
+# follow-up that files a second case file would double the index over a consult.
+CASES_AFTER_TURN2="$(find "$WORK/memory/cases" -type f ! -name '_TEMPLATE.md' | LC_ALL=C sort)"
+if [ "$CASES_AFTER_TURN2" != "$NEW_CASES" ]; then
+    fail "turn 2 changed the set of case files — one session must stay one case file. After: $(printf '%s\n' "$CASES_AFTER_TURN2" | xargs -n1 basename | tr '\n' ' ')"
+fi
+note "case files after resume: unchanged"
+
 # --- isolation: the real repo must be untouched --------------------------------
 step "Isolation"
 AFTER="$(real_memory_snapshot)"

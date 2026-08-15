@@ -92,13 +92,6 @@ public final class SessionViewModel {
 
     public var statusLine: String? { phase.statusLine }
 
-    /// The cards to draw under a message: the ids it cited, resolved against
-    /// the local corpus and kept in the order they were cited. An id the corpus
-    /// does not know produces no card — the app never invents one (AE2).
-    public func principles(for message: ChatMessage) -> [PrincipleRecord] {
-        corpus.principles(ids: message.principleIDs)
-    }
-
     /// The answer as it should read while it is still streaming: the trailer is
     /// addressed to the app, never to the reader (KTD3).
     public var visibleStreamingText: String {

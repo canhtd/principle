@@ -113,10 +113,10 @@ public struct ProfileStore: Sendable {
 
     /// The section body replaced in place. Everything outside the returned
     /// range — title, other sections, the case index, trailing newline — comes
-    /// through untouched.
+    /// through untouched. A file with no section at all is not rewritten but
+    /// added to.
     static func replacingBody(with body: String, in text: String) -> String {
-        var updated = ensuringSection(in: text)
-        guard let section = section(in: updated) else { return updated }
+        guard let section = section(in: text) else { return inserting(body, into: text) }
         let replacement: String
         if body.isEmpty {
             replacement = "\n"
@@ -125,25 +125,41 @@ public struct ProfileStore: Sendable {
             let lead = section.headingUnterminated ? "\n\n" : "\n"
             replacement = lead + body + (section.isLast ? "\n" : "\n\n")
         }
+        var updated = text
         updated.replaceSubrange(section.body, with: replacement)
         return updated
     }
 
-    /// The same text with an empty section under the title when it had none.
-    /// Placed above the other `## ` sections because the profile is what the
-    /// engine reads first.
-    static func ensuringSection(in text: String) -> String {
-        guard section(in: text) == nil else { return text }
+    /// The section spliced in whole — heading *and* body in one write.
+    ///
+    /// Written this way because the two-step version cost data: inserting a
+    /// bare heading and then deriving a body range made whatever prose already
+    /// sat there the section's body, and the save overwrote it. For the same
+    /// reason the block goes in above the first `## ` heading — the profile is
+    /// what the engine reads first — but below any prose under the title,
+    /// which stays outside the section and out of reach of the next save.
+    static func inserting(_ body: String, into text: String) -> String {
+        let block = body.isEmpty ? "\(sectionHeading)\n" : "\(sectionHeading)\n\n\(body)\n"
         let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
-        guard let title = lines.firstIndex(where: { $0.hasPrefix("# ") }) else {
-            return "\(sectionHeading)\n\n" + text
+        guard let next = lines.firstIndex(where: { $0.hasPrefix("## ") }) else {
+            // Nothing to sit above: the section becomes the tail of the file.
+            return separated(trimmingTrailingNewlines(text)) + block
         }
-        let after = lines.index(after: title)
-        guard after < lines.endIndex else { return text + "\n\n\(sectionHeading)\n" }
-        var updated = text
-        let insertionPoint = lines[after].startIndex
-        updated.replaceSubrange(insertionPoint..<insertionPoint, with: "\n\(sectionHeading)\n")
-        return updated
+        let start = lines[next].startIndex
+        return separated(String(text[..<start])) + block + "\n" + String(text[start...])
+    }
+
+    /// A prefix ended so the next block starts after one blank line. Empty
+    /// stays empty: nothing precedes a section written at the top of a file.
+    private static func separated(_ prefix: String) -> String {
+        if prefix.isEmpty || prefix.hasSuffix("\n\n") { return prefix }
+        return prefix.hasSuffix("\n") ? prefix + "\n" : prefix + "\n\n"
+    }
+
+    private static func trimmingTrailingNewlines(_ text: String) -> String {
+        var trimmed = text
+        while trimmed.hasSuffix("\n") { trimmed.removeLast() }
+        return trimmed
     }
 }
 

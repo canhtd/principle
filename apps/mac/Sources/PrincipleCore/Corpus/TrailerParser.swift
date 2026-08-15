@@ -71,12 +71,29 @@ public enum TrailerParser {
     /// What to show while the answer is still arriving. Once the marker appears
     /// on the last line its JSON is still streaming in character by character,
     /// and machine syntax must never flash up in the transcript.
+    ///
+    /// The trailing newline is trimmed before the last line is located: a chunk
+    /// that ends just after the marker's own newline would otherwise make the
+    /// last segment empty, and the marker line would be shown as prose.
     public static func visibleText(streaming partial: String) -> String {
-        let lineStart = partial.range(of: "\n", options: .backwards)?.upperBound ?? partial.startIndex
-        guard partial[lineStart...].trimmingCharacters(in: .whitespaces).hasPrefix(marker) else {
+        let scanned = partial[..<endOfContent(in: partial)]
+        let lineStart = scanned.range(of: "\n", options: .backwards)?.upperBound ?? partial.startIndex
+        guard scanned[lineStart...].trimmingCharacters(in: .whitespaces).hasPrefix(marker) else {
             return partial
         }
         return String(partial[..<lineStart]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Just past the last character that is not blank — the end of the text
+    /// once trailing spaces and newlines are ignored.
+    private static func endOfContent(in text: String) -> String.Index {
+        var end = text.endIndex
+        while end > text.startIndex {
+            let previous = text.index(before: end)
+            guard text[previous].isWhitespace else { break }
+            end = previous
+        }
+        return end
     }
 
     /// The trailer on one line, or `nil` when the line is not one the app can

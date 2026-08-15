@@ -17,7 +17,10 @@ struct SettingsView: View {
         Form {
             Section("Profile") {
                 HStack {
+                    // A repo path that does not resolve would put the profile
+                    // in a MEMORY.md no consult ever reads.
                     Button("Edit Profile…") { isEditingProfile = true }
+                        .disabled(settings.repoPathWarning != nil)
                     Spacer()
                 }
                 caption(ProfileView.caption)

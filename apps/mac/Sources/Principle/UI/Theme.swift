@@ -26,6 +26,10 @@ enum Typography {
     /// Inline code inside an answer — `4.3e`, a file path, a command.
     static let mono = Font.system(size: bodySize - 1, design: .monospaced)
 
+    /// The disclosure chevron on a card: a glyph, not text — small enough to
+    /// read as punctuation next to the word it belongs to.
+    static let chevron = Font.system(size: 8, weight: .semibold)
+
     /// The one thing the eye is meant to catch first on a card, so it is the
     /// only place besides the red label that is allowed weight 600.
     static let cardTitleSize: CGFloat = 20
@@ -92,11 +96,27 @@ enum Spacing {
     /// Between a bullet and its text.
     static let listMarkerGap = Typography.bodySize * 0.45
 
+    /// Inside a bordered control — the gap between the border and the text.
+    static let controlPadding = Typography.bodySize * 0.5
+
+    // MARK: Principle cards
+
     /// Inside a principle card. The spec's ≥480px padding, since a Mac window
     /// is never the 380px phone the artifact was drawn for.
     static let cardPadding: CGFloat = 20
     /// Between two cards in a stack.
     static let cardGap: CGFloat = 12
+    /// The card's own rhythm, from `references/artifact-spec.md`. Named by step
+    /// rather than by role: the card is drawn on four fixed values, and a token
+    /// per place that uses one would be a longer list than the view itself.
+    static let cardTight: CGFloat = 6
+    static let cardSnug: CGFloat = 8
+    static let cardRow: CGFloat = 12
+    /// Where the card stops being a heading and becomes the book.
+    static let cardQuoteTop: CGFloat = 14
+    static let cardBlock: CGFloat = 16
+    /// Between an answer's prose and the cards drawn under it.
+    static let cardListTop: CGFloat = 4
 }
 
 extension View {

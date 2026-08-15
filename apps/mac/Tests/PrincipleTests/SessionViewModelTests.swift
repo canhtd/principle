@@ -398,7 +398,7 @@ struct SessionViewModelTests {
             corpus: corpus)
 
         let cited = ChatMessage(role: .assistant, text: "Trả lời.", principleIDs: ["life:5.6", "life:999.9"])
-        #expect(model.principles(for: cited).map(\.id) == ["life:5.6"])
-        #expect(model.principles(for: ChatMessage(role: .assistant, text: "Trả lời.")).isEmpty)
+        #expect(model.cards(for: cited).map(\.record.id) == ["life:5.6"])
+        #expect(model.cards(for: ChatMessage(role: .assistant, text: "Trả lời.")).isEmpty)
     }
 }

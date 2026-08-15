@@ -43,6 +43,12 @@ public enum ConsultPrompt {
         index trong MEMORY.md. Ghi file xong rồi mới viết câu trả lời cuối cùng — dòng
         trailer phải là thứ cuối cùng bạn xuất ra.
 
+        Một session = một ca = một file. Lượt đầu TẠO file ca đó và thêm ĐÚNG MỘT dòng vào
+        index. Mọi lượt sau trong cùng session CẬP NHẬT chính file ấy (thêm diễn biến, kết
+        quả, chỗ hướng đi đã đổi) — KHÔNG tạo file ca thứ hai, KHÔNG thêm dòng index thứ
+        hai. Không nhớ file ca của session này tên gì thì liệt kê memory/cases/ và lấy file
+        khớp chủ đề đang bàn, đừng tạo file mới.
+
         Ghi đè Bước 4 của skill ask-ray:
         - KHÔNG tạo artifact dưới bất kỳ dạng nào: không gọi tool artifact, không publish,
           không dựng HTML/JSX/trang web. App tự dựng thẻ nguyên tắc từ dòng trailer bên dưới.
@@ -68,9 +74,10 @@ public enum ConsultPrompt {
           `diagnosis`, và trả về `"principles":[]`. Không bịa id.
 
         Thứ tự bắt buộc của một lượt, không đảo và không bỏ bước nào: chẩn đoán → tra
-        corpus → GHI file memory/cases/YYYY-MM-DD-slug.md và thêm dòng vào index trong
-        memory/MEMORY.md → viết đoạn text → dòng trailer. Chưa ghi file ca mà đã trả lời
-        là lỗi, kể cả khi câu trả lời đã đủ ý.
+        corpus → GHI file memory/cases/YYYY-MM-DD-slug.md (lượt đầu của session, kèm dòng
+        vào index trong memory/MEMORY.md) hoặc CẬP NHẬT đúng file ca đó (mọi lượt sau) →
+        viết đoạn text → dòng trailer. Chưa ghi file ca mà đã trả lời là lỗi, kể cả khi
+        câu trả lời đã đủ ý.
         """
 
     /// The flag pair every turn carries.

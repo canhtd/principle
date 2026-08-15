@@ -148,6 +148,34 @@ struct ConsultPromptTests {
         #expect(prompt.contains("Chưa ghi file ca mà đã trả lời"))
     }
 
+    /// The system prompt rides every `--resume` turn, so an order phrased for
+    /// the first turn alone reads as "write a case file" on turn 5 too — and a
+    /// two-turn consult ends up as two cases in the index.
+    @Test("System prompt: một session = một ca = một file, lượt sau chỉ cập nhật")
+    func systemPromptKeepsOneSessionToOneCaseFile() {
+        let prompt = ConsultPrompt.systemPrompt
+
+        #expect(prompt.contains("Một session = một ca = một file"))
+        #expect(prompt.contains("ĐÚNG MỘT dòng vào"))
+        #expect(prompt.contains("CẬP NHẬT chính file ấy"))
+        #expect(prompt.contains("KHÔNG tạo file ca thứ hai"))
+        #expect(prompt.contains("KHÔNG thêm dòng index thứ"))
+        // The order block is restated last on purpose; it has to carry the same
+        // distinction, or recency alone re-orders a second file on every turn.
+        #expect(prompt.contains("CẬP NHẬT đúng file ca đó (mọi lượt sau)"))
+    }
+
+    /// Recency is the whole reason the order block exists — nothing may be
+    /// appended after it.
+    @Test("Khối thứ tự bắt buộc vẫn nằm ở cuối system prompt")
+    func theMandatoryOrderBlockStaysLast() throws {
+        let prompt = ConsultPrompt.systemPrompt
+        let order = try #require(prompt.range(of: "Thứ tự bắt buộc của một lượt"))
+
+        #expect(prompt.hasSuffix("là lỗi, kể cả khi\ncâu trả lời đã đủ ý."))
+        #expect(!prompt[order.upperBound...].contains("Một session = một ca"))
+    }
+
     @Test("Trailer đi kèm mọi lượt qua --append-system-prompt")
     func systemPromptTravelsAsAnArgument() {
         #expect(ConsultPrompt.systemPromptArguments == ["--append-system-prompt", ConsultPrompt.systemPrompt])

@@ -17,6 +17,8 @@ struct ProfileView: View {
     /// measured against, and what Revert goes back to.
     @State private var saved = ""
     @State private var errorMessage: String?
+    /// Escape and Close both leave; with edits on screen they ask first.
+    @State private var isConfirmingDiscard = false
 
     static let caption = """
         Ray reads this before every consult. Write it the way you'd brief a mentor: \
@@ -44,6 +46,16 @@ struct ProfileView: View {
         .frame(width: 520, height: 480)
         // A terminal session may have rewritten MEMORY.md since the app opened.
         .onAppear(perform: reload)
+        .confirmationDialog(
+            "Discard unsaved changes?",
+            isPresented: $isConfirmingDiscard,
+            titleVisibility: .visible
+        ) {
+            Button("Discard", role: .destructive) { dismiss() }
+            Button("Keep Editing", role: .cancel) {}
+        } message: {
+            Text("Your edits to the profile have not been written to MEMORY.md.")
+        }
     }
 
     // MARK: - Pieces
@@ -53,7 +65,7 @@ struct ProfileView: View {
             .font(Typography.body)
             .lineSpacing(Typography.bodyLineSpacing)
             .scrollContentBackground(.hidden)
-            .padding(Spacing.headingTop)
+            .padding(Spacing.controlPadding)
             .background(Color(nsColor: .textBackgroundColor))
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
@@ -83,7 +95,7 @@ struct ProfileView: View {
             Spacer()
             Button("Revert") { draft = saved }
                 .disabled(!isDirty)
-            Button("Close") { dismiss() }
+            Button("Close", action: close)
                 .keyboardShortcut(.cancelAction)
             Button("Save", action: save)
                 .keyboardShortcut(.defaultAction)
@@ -92,6 +104,12 @@ struct ProfileView: View {
     }
 
     // MARK: - Actions
+
+    /// Closing is not a save. The editor holds the only copy of what was
+    /// typed, so an unsaved draft has to be given up on purpose.
+    private func close() {
+        if isDirty { isConfirmingDiscard = true } else { dismiss() }
+    }
 
     private func reload() {
         saved = store.load()
