@@ -3,13 +3,18 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var section: AppSection = .chat
+    @State private var model = SessionViewModel.live()
+    @State private var isCreatingSession = false
+    /// Pinned open: the session list is how a consultation is found again (R1),
+    /// and AppKit otherwise restores whatever collapsed state it saw last.
+    @State private var columns = NavigationSplitViewVisibility.all
 
     var body: some View {
-        NavigationSplitView {
-            Sidebar(section: section)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
+        NavigationSplitView(columnVisibility: $columns) {
+            sidebar
+                .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
         } detail: {
-            Detail(section: section)
+            detail
         }
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -22,47 +27,59 @@ struct ContentView: View {
                 .labelsHidden()
                 .frame(width: 220)
             }
-        }
-    }
-}
-
-private struct Sidebar: View {
-    let section: AppSection
-
-    var body: some View {
-        List {
-            Section(section.title) {
-                Label(placeholder, systemImage: section.systemImage)
-                    .foregroundStyle(.secondary)
+            ToolbarItem(placement: .primaryAction) {
+                Button("Phiên mới", systemImage: "square.and.pencil") { isCreatingSession = true }
+                    .disabled(section != .chat)
             }
         }
-        .listStyle(.sidebar)
-        .navigationTitle("Principle")
+        .sheet(isPresented: $isCreatingSession) {
+            NewSessionSheet { draft in model.createSession(from: draft) }
+        }
+        // KTD4: probe once at launch so a logged-out engine is visible before
+        // the first question rather than after it.
+        .task { await model.refreshAvailability() }
     }
 
-    private var placeholder: String {
+    @ViewBuilder
+    private var sidebar: some View {
         switch section {
-        case .chat: "Chưa có cuộc trò chuyện nào"
-        case .favorites: "Chưa lưu nguyên tắc nào"
+        case .chat:
+            SidebarView(model: model, isCreatingSession: $isCreatingSession)
+        case .favorites:
+            List {
+                Section(AppSection.favorites.title) {
+                    Label("Chưa lưu nguyên tắc nào", systemImage: AppSection.favorites.systemImage)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .listStyle(.sidebar)
+            .navigationTitle("Principle")
         }
     }
-}
 
-private struct Detail: View {
-    let section: AppSection
-
-    var body: some View {
-        ContentUnavailableView {
-            Label(section.title, systemImage: section.systemImage)
-        } description: {
-            Text(description)
-        }
-    }
-
-    private var description: String {
+    @ViewBuilder
+    private var detail: some View {
         switch section {
-        case .chat: "Hỏi Ray một tình huống để bắt đầu."
-        case .favorites: "Những nguyên tắc anh đánh dấu sẽ hiện ở đây."
+        case .chat:
+            if model.isEngineBlocked {
+                EngineStatusView(model: model)
+            } else if model.currentSession != nil {
+                ChatView(model: model)
+            } else {
+                ContentUnavailableView {
+                    Label(AppSection.chat.title, systemImage: AppSection.chat.systemImage)
+                } description: {
+                    Text("Hỏi Ray một tình huống để bắt đầu.")
+                } actions: {
+                    Button("Phiên mới") { isCreatingSession = true }
+                }
+            }
+        case .favorites:
+            ContentUnavailableView {
+                Label(AppSection.favorites.title, systemImage: AppSection.favorites.systemImage)
+            } description: {
+                Text("Những nguyên tắc anh đánh dấu sẽ hiện ở đây.")
+            }
         }
     }
 }
