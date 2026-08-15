@@ -46,13 +46,13 @@ thật. Không suy diễn kết quả từ việc đã đưa lời khuyên.
 
 ## Nguồn sự thật
 
-`.claude/skills/ask-ray/references/corpus.jsonl` — 515 nguyên tắc, mỗi dòng một
+`.claude/skills/ask-ray/references/corpus.jsonl` — 513 nguyên tắc, mỗi dòng một
 nguyên tắc trọn vẹn. **Đây là thứ được tra, không phải file sách.** File `.epub`
 chỉ cần khi dựng lại corpus.
 
 ```bash
 C=.claude/skills/ask-ray/references/corpus.jsonl
-grep '"num":"5.6"' "$C"
+grep '"num": "5.6"' "$C"   # JSONL ghi có khoảng trắng sau dấu hai chấm
 grep -i "giá trị kỳ vọng" "$C"
 ```
 
@@ -62,7 +62,7 @@ Dựng lại khi cần: `python3 .claude/skills/ask-ray/build-corpus.py /duong/d
 
 - **Không bịa nguyên tắc.** Không grep ra được thì không có. Model rất giỏi viết
   câu nghe hệt Dalio mà sách không hề có.
-- **248/515 nguyên tắc có `has_body: true`.** Phần còn lại chỉ có tiêu đề — tiêu
+- **492/513 nguyên tắc có `has_body: true`.** Phần còn lại chỉ có tiêu đề — tiêu
   đề chính LÀ nguyên tắc, đừng bịa thân bài để lấp chỗ trống.
 - **Không commit `corpus.jsonl` / `index.md` lên repo công khai.** Bản dịch có
   bản quyền. `.gitignore` đã chặn sẵn — đừng gỡ.
