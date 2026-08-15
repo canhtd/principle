@@ -17,7 +17,7 @@ extension SessionViewModel {
         guard !prompt.isEmpty, !phase.isStreaming, let sessionID = selectedSessionID else { return }
         // Claim the turn before the first suspension point: the availability
         // check below is an await, and with the phase still `.idle` a second
-        // tap on Gửi passed this same guard and spawned a duplicate turn.
+        // tap on Send passed this same guard and spawned a duplicate turn.
         phase = .preparing
         guard await ensureEngineAvailable() else {
             phase = .idle
@@ -37,7 +37,7 @@ extension SessionViewModel {
             // Claimed above but never reached `runTurn`, which is what would
             // otherwise hand the phase back.
             phase = .idle
-            errorMessage = "Không ghi được câu hỏi vào phiên: \(error.localizedDescription)"
+            errorMessage = "Could not save the question to the session: \(error.localizedDescription)"
             Self.logger.error("Persisting the question failed: \(String(describing: error), privacy: .public)")
         }
     }
@@ -57,7 +57,7 @@ extension SessionViewModel {
             await runTurn(prompt: prompt, session: try store.load(id: sessionID))
         } catch {
             phase = .idle
-            errorMessage = "Không mở lại được phiên: \(error.localizedDescription)"
+            errorMessage = "Could not reopen the session: \(error.localizedDescription)"
         }
     }
 
@@ -187,7 +187,7 @@ extension SessionViewModel {
                 )
             }
         } catch {
-            errorMessage = "Không lưu được câu trả lời: \(error.localizedDescription)"
+            errorMessage = "Could not save the answer: \(error.localizedDescription)"
             Self.logger.error("Persisting the answer failed: \(String(describing: error), privacy: .public)")
         }
     }

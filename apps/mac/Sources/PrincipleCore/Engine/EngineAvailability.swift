@@ -7,7 +7,7 @@ public enum EngineAvailability: Sendable, Equatable {
     /// No `claude` binary at the override path or any known location.
     case notInstalled
     /// Binary found but not usable without the user doing something first;
-    /// `guidance` is the Vietnamese sentence the UI shows verbatim.
+    /// `guidance` is the sentence the UI shows verbatim.
     case loggedOut(guidance: String)
     /// Engine fine, working directory wrong: `repoPath` has no
     /// `.claude/skills/ask-ray/SKILL.md`, so the consultation the app asks for
@@ -126,9 +126,12 @@ public struct EngineAvailabilityChecker: Sendable {
     }
 
     static let loggedOutGuidance =
-        "Claude Code chưa đăng nhập. Mở Terminal, chạy `claude login`, rồi thử lại."
+        "Claude Code is not signed in. Open Terminal, run `claude login`, then try again."
     static let unknownGuidance =
-        "Không đọc được trạng thái đăng nhập của Claude Code. Mở Terminal, chạy `claude auth status` để kiểm tra, đăng nhập nếu cần, rồi thử lại."
+        """
+        Could not read the Claude Code sign-in status. Open Terminal, run `claude auth status` \
+        to check, sign in if needed, then try again.
+        """
 
     /// `claude auth status` prints `{"loggedIn":true,"subscriptionType":"max"}`,
     /// possibly with other lines around it.

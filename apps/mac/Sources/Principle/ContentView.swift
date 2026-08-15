@@ -34,7 +34,7 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Picker("Khu vực", selection: $section) {
+                Picker("Section", selection: $section) {
                     ForEach(AppSection.allCases) { section in
                         Text(section.title).tag(section)
                     }
@@ -44,7 +44,7 @@ struct ContentView: View {
                 .frame(width: 220)
             }
             ToolbarItem(placement: .primaryAction) {
-                Button("Phiên mới", systemImage: "square.and.pencil") { isCreatingSession = true }
+                Button("New Session", systemImage: "square.and.pencil") { isCreatingSession = true }
                     .disabled(section != .chat)
             }
         }
@@ -68,13 +68,18 @@ struct ContentView: View {
                         Label(FavoritesModel.emptyTitle, systemImage: AppSection.favorites.systemImage)
                             .foregroundStyle(.secondary)
                     } else {
-                        Label("\(favorites.ids.count) nguyên tắc đã lưu", systemImage: "heart.fill")
+                        Label(savedCount, systemImage: "heart.fill")
                     }
                 }
             }
             .listStyle(.sidebar)
             .navigationTitle("Principle")
         }
+    }
+
+    private var savedCount: String {
+        let count = favorites.ids.count
+        return "\(count) principle\(count == 1 ? "" : "s") saved"
     }
 
     @ViewBuilder
@@ -89,9 +94,9 @@ struct ContentView: View {
                 ContentUnavailableView {
                     Label(AppSection.chat.title, systemImage: AppSection.chat.systemImage)
                 } description: {
-                    Text("Hỏi Ray một tình huống để bắt đầu.")
+                    Text("Tell Ray a situation to get started.")
                 } actions: {
-                    Button("Phiên mới") { isCreatingSession = true }
+                    Button("New Session") { isCreatingSession = true }
                 }
             }
         case .favorites:

@@ -16,7 +16,7 @@ public struct ChapterContext: Identifiable, Equatable, Sendable {
 
     /// What to show for the handful of records outside any chapter, so the
     /// sheet says why it is empty instead of drawing a blank pane.
-    public static let noChapterMessage = "Nguyên tắc này không thuộc chương nào, nên không có ngữ cảnh chương."
+    public static let noChapterMessage = "This principle does not sit in any chapter, so there is no chapter context."
 
     public init(corpus: CorpusStore, record: PrincipleRecord) {
         current = record

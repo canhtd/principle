@@ -22,8 +22,8 @@ public final class FavoritesModel {
 
     private static let logger = Logger(subsystem: PrincipleInfo.bundleIdentifier, category: "FavoritesModel")
 
-    public static let emptyTitle = "Chưa lưu nguyên tắc nào"
-    public static let emptyHint = "Bấm ♥ trên thẻ nguyên tắc trong lúc trò chuyện để giữ nó lại đây."
+    public static let emptyTitle = "No saved principles yet"
+    public static let emptyHint = "Tap ♥ on a principle card during a chat to keep it here."
 
     public init(store: FavoritesStore, corpus: CorpusStore) {
         self.store = store
@@ -71,7 +71,7 @@ public final class FavoritesModel {
                 ids.insert(id, at: 0)
             }
         } catch {
-            errorMessage = "Không ghi được danh sách yêu thích: \(error.localizedDescription)"
+            errorMessage = "Could not update the favorites list: \(error.localizedDescription)"
             Self.logger.error("Writing favourites failed: \(String(describing: error), privacy: .public)")
         }
     }

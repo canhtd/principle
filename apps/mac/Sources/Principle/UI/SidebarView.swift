@@ -21,23 +21,28 @@ struct SidebarView: View {
         .overlay {
             if model.groups.isEmpty {
                 ContentUnavailableView {
-                    Label("Chưa có cuộc trò chuyện nào", systemImage: AppSection.chat.systemImage)
+                    Label("No conversations yet", systemImage: AppSection.chat.systemImage)
                 } description: {
-                    Text("Tạo một phiên để kể tình huống của anh.")
+                    Text("Create a session and tell Ray the situation.")
                 } actions: {
-                    Button("Phiên mới") { isCreatingSession = true }
+                    Button("New Session") { isCreatingSession = true }
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
             if !model.skippedFiles.isEmpty {
-                Label("\(model.skippedFiles.count) file phiên không đọc được", systemImage: "exclamationmark.triangle")
+                Label(skippedLabel, systemImage: "exclamationmark.triangle")
                     .font(Typography.caption)
                     .foregroundStyle(.secondary)
                     .padding(8)
             }
         }
         .navigationTitle("Principle")
+    }
+
+    private var skippedLabel: String {
+        let count = model.skippedFiles.count
+        return "\(count) session file\(count == 1 ? "" : "s") could not be read"
     }
 }
 
@@ -59,20 +64,23 @@ private struct SessionRow: View {
 
     private var subtitle: String {
         let time = session.createdAt.formatted(date: .omitted, time: .shortened)
-        guard !session.messages.isEmpty else { return "\(time) · chưa hỏi" }
-        return "\(time) · \(session.messages.count) lượt"
+        let count = session.messages.count
+        guard count > 0 else { return "\(time) · no questions yet" }
+        return "\(time) · \(count) message\(count == 1 ? "" : "s")"
     }
 }
 
 /// Section headers: recent days get a name, older ones a date.
 enum DayLabel {
     static func text(for day: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
-        if calendar.isDateInToday(day) { return "Hôm nay" }
-        if calendar.isDateInYesterday(day) { return "Hôm qua" }
-        return day.formatted(.dateTime.weekday(.wide).day().month(.wide).year().locale(vietnamese))
+        if calendar.isDateInToday(day) { return "Today" }
+        if calendar.isDateInYesterday(day) { return "Yesterday" }
+        return day.formatted(.dateTime.weekday(.wide).day().month(.wide).year().locale(english))
     }
 
-    private static let vietnamese = Locale(identifier: "vi_VN")
+    /// The app speaks English regardless of the Mac's region, so the header does
+    /// not switch language halfway down the list.
+    private static let english = Locale(identifier: "en_US")
 }
 
 #Preview {

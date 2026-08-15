@@ -21,11 +21,11 @@ public enum TurnPhase: Equatable, Sendable {
     /// The progress line, or `nil` when there is nothing to report.
     public var statusLine: String? {
         switch self {
-        case .preparing: "Đang chuẩn bị…"
-        case .thinking: "Đang suy nghĩ…"
+        case .preparing: "Preparing…"
+        case .thinking: "Thinking…"
         case .runningTool(let description): description
-        case .subagent: "Đang tra cứu (subagent)…"
-        case .answering: "Đang trả lời…"
+        case .subagent: "Looking up (subagent)…"
+        case .answering: "Answering…"
         case .idle: nil
         }
     }
@@ -45,11 +45,11 @@ public enum ToolProgress {
             return description
         }
         switch use.name {
-        case "Grep", "Glob": return "Đang tra corpus…"
-        case "Read": return "Đang đọc tài liệu…"
-        case "Task": return "Đang tra cứu (subagent)…"
-        case "Write", "Edit": return "Đang ghi lại ca…"
-        default: return "Đang chạy \(use.name)…"
+        case "Grep", "Glob": return "Searching the corpus…"
+        case "Read": return "Reading documents…"
+        case "Task": return "Looking up (subagent)…"
+        case "Write", "Edit": return "Recording the case…"
+        default: return "Running \(use.name)…"
         }
     }
 }
@@ -64,7 +64,7 @@ public enum ModelAlias {
 
     public static let all = [fable, opus]
 
-    /// Vietnamese label for the chat header (AE4) and the model picker.
+    /// The label for the chat header (AE4) and the model picker.
     public static func displayName(_ alias: String) -> String {
         switch alias {
         case fable: "Fable 5"
@@ -75,7 +75,7 @@ public enum ModelAlias {
 }
 
 /// What the new-session sheet collects. Lives here rather than in the view so
-/// the "Tạo" rule (R1: a session always has a topic) is testable.
+/// the "Create" rule (R1: a session always has a topic) is testable.
 public struct NewSessionDraft: Equatable, Sendable {
     public var topic: String
     public var model: String

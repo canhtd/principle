@@ -24,8 +24,9 @@ cd apps/mac && swift run        # chạy thẳng lúc đang sửa code
 apps/mac/scripts/make-app.sh    # dựng Principle.app vào ~/Applications
 ```
 
-Trong **Cài đặt** của app: model trả lời, thư mục repo (nơi ghi phiên và ca), và
-đường dẫn `claude` — để trống thì app tự tìm.
+UI của app bằng tiếng Anh; nội dung Ray trả lời vẫn tiếng Việt. Trong **Settings**
+(⌘,): **Response Model**, **Repo Folder** (nơi ghi phiên và ca), và đường dẫn
+`claude` — để trống thì app tự tìm.
 
 Kiểm tra vòng lặp có chạy thật không:
 

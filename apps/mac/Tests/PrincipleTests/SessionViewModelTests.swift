@@ -97,7 +97,7 @@ struct SessionViewModelTests {
 
         engine.emit(toolUse("Tra corpus", inSubagent: true))
         #expect(await waitUntil { model.phase == .subagent })
-        #expect(model.statusLine == "Đang tra cứu (subagent)…")
+        #expect(model.statusLine == "Looking up (subagent)…")
 
         engine.emit(.text("ghi chú nội bộ của subagent", inSubagent: true))
         #expect(await waitUntil { model.phase == .subagent })
@@ -294,13 +294,13 @@ struct SessionViewModelTests {
 
         #expect(engine.calls.count == 1)
         #expect(model.canResend)
-        #expect(model.errorMessage?.contains("treo") == true)
+        #expect(model.errorMessage?.contains("stuck") == true)
         #expect(model.currentSession?.claudeSessionID == "alive-1")
     }
 
     // MARK: - 8. Header model (AE4)
 
-    @Test("Header chat hiện model của phiên bằng tiếng Việt")
+    @Test("Header chat hiện đúng model của phiên")
     func headerShowsSessionModel() throws {
         let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine()

@@ -26,7 +26,7 @@ struct EngineStatusView: View {
                 .frame(maxWidth: 420)
                 .textSelection(.enabled)
 
-            Button(isChecking ? "Đang kiểm tra…" : "Kiểm tra lại") {
+            Button(isChecking ? "Checking…" : "Check Again") {
                 isChecking = true
                 Task {
                     await model.refreshAvailability()

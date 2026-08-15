@@ -77,7 +77,7 @@ public final class EngineService: @unchecked Sendable {
         }
     }
 
-    /// Stops every turn in flight — what the Dừng button calls.
+    /// Stops every turn in flight — what the Stop button calls.
     public func cancel() {
         lock.lock()
         let inFlight = Array(runs.values)

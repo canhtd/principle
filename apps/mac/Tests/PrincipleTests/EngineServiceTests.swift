@@ -153,7 +153,7 @@ struct EngineServiceTests {
 
     // MARK: - Watchdog (KTD1)
 
-    @Test("Silence past the threshold kills the process and reports 'engine treo'")
+    @Test("Silence past the threshold kills the process and reports a stuck engine")
     func watchdogTerminatesHungProcess() async throws {
         let engine = try FakeEngine(
             script: """
@@ -170,7 +170,7 @@ struct EngineServiceTests {
         // The event that did arrive is kept; only the silence after it is fatal.
         #expect(outcome.events.first?.sessionStarted?.sessionID == "s-hang")
         #expect(outcome.error as? EngineError == .hung(silence: 0.6))
-        #expect(outcome.error?.localizedDescription.contains("treo") == true)
+        #expect(outcome.error?.localizedDescription.contains("stuck") == true)
         #expect(engine.spawnedProcessIsGone)
         #expect(engine.service.isRunning == false)
     }

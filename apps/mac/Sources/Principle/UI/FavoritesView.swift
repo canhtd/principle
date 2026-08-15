@@ -48,10 +48,7 @@ struct FavoritesView: View {
         // AE2: an id the corpus cannot resolve is reported, never drawn as a
         // card with invented text.
         if !favorites.unresolvedIDs.isEmpty {
-            Label(
-                "\(favorites.unresolvedIDs.count) nguyên tắc đã lưu không tra được trong corpus",
-                systemImage: "exclamationmark.triangle"
-            )
+            Label(unresolvedLabel, systemImage: "exclamationmark.triangle")
             .font(Typography.caption)
             .foregroundStyle(.secondary)
         }
@@ -62,13 +59,18 @@ struct FavoritesView: View {
         }
     }
 
+    private var unresolvedLabel: String {
+        let count = favorites.unresolvedIDs.count
+        return "\(count) saved principle\(count == 1 ? "" : "s") not found in the corpus"
+    }
+
     private var empty: some View {
         ContentUnavailableView {
             Label(FavoritesModel.emptyTitle, systemImage: AppSection.favorites.systemImage)
         } description: {
             Text(FavoritesModel.emptyHint)
         } actions: {
-            Button("Mở trò chuyện", action: openChat)
+            Button("Open Chat", action: openChat)
         }
     }
 }

@@ -26,7 +26,7 @@ struct ChapterContextView: View {
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Ngữ cảnh chương")
+                Text("Chapter context")
                     .font(Typography.caption)
                     .foregroundStyle(.secondary)
                 Text(context.chapter.isEmpty ? context.current.part : context.chapter)
@@ -34,7 +34,7 @@ struct ChapterContextView: View {
                     .lineSpacing(Typography.titleLineSpacing)
             }
             Spacer(minLength: 0)
-            Button("Đóng") { dismiss() }
+            Button("Close") { dismiss() }
                 .keyboardShortcut(.cancelAction)
         }
         .padding(.horizontal, 20)
@@ -60,7 +60,7 @@ struct ChapterContextView: View {
 
     private var empty: some View {
         ContentUnavailableView {
-            Label("Không có ngữ cảnh chương", systemImage: "book.closed")
+            Label("No chapter context", systemImage: "book.closed")
         } description: {
             Text(ChapterContext.noChapterMessage)
         }
@@ -81,7 +81,7 @@ private struct ChapterRow: View {
                     .font(Typography.caption)
                     .foregroundStyle(.secondary)
                 if isCurrent {
-                    Text("Đang xem")
+                    Text("Viewing")
                         .font(Typography.caption)
                         .foregroundStyle(Color.accentColor)
                 }

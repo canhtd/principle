@@ -39,7 +39,7 @@ public final class SessionViewModel {
     /// simply renders no cards.
     public let corpus: CorpusStore
     private let availabilityProvider: any EngineAvailabilityProviding
-    /// Kept so "Gửi lại" retries the same question without asking it twice.
+    /// Kept so "Resend" retries the same question without asking it twice.
     var lastPrompt: String?
 
     static let logger = Logger(subsystem: PrincipleInfo.bundleIdentifier, category: "SessionViewModel")
@@ -85,7 +85,7 @@ public final class SessionViewModel {
 
     public var messages: [ChatMessage] { currentSession?.messages ?? [] }
 
-    /// The model of *this* session, in Vietnamese, for the chat header (AE4).
+    /// The model of *this* session, for the chat header (AE4).
     public var modelLabel: String {
         "Model: \(ModelAlias.displayName(currentSession?.model ?? ModelAlias.default))"
     }
@@ -150,7 +150,7 @@ public final class SessionViewModel {
             skippedFiles = report.skipped
             reconcileSelection()
         } catch {
-            errorMessage = "Không đọc được danh sách phiên: \(error.localizedDescription)"
+            errorMessage = "Could not read the session list: \(error.localizedDescription)"
             Self.logger.error("Loading sessions failed: \(String(describing: error), privacy: .public)")
         }
     }
@@ -206,7 +206,7 @@ public final class SessionViewModel {
         do {
             try createSession(topic: draft.trimmedTopic, model: draft.model)
         } catch {
-            errorMessage = "Không tạo được phiên: \(error.localizedDescription)"
+            errorMessage = "Could not create the session: \(error.localizedDescription)"
             Self.logger.error("Creating a session failed: \(String(describing: error), privacy: .public)")
         }
     }

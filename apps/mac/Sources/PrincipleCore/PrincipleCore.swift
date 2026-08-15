@@ -17,8 +17,8 @@ public enum AppSection: String, CaseIterable, Identifiable, Sendable {
     /// User-facing label.
     public var title: String {
         switch self {
-        case .chat: "Trò chuyện"
-        case .favorites: "Yêu thích"
+        case .chat: "Chat"
+        case .favorites: "Favorites"
         }
     }
 

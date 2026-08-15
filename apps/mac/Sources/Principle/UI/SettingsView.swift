@@ -23,7 +23,7 @@ struct SettingsView: View {
                 caption(ProfileView.caption)
             }
 
-            Section("Model trả lời") {
+            Section("Response Model") {
                 Picker("Model", selection: $settings.responseModel) {
                     ForEach(AppSettings.selectableModels, id: \.self) { alias in
                         Text(ModelAlias.displayName(alias)).tag(alias)
@@ -31,31 +31,41 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                caption("Áp dụng cho phiên mới. Phiên đã tạo giữ nguyên model của nó — đổi model thì tạo phiên mới.")
+                caption(
+                    """
+                    Applies to new sessions. A session already created keeps its own model — \
+                    to change it, start a new session.
+                    """
+                )
             }
 
-            Section("Thư mục repo") {
+            Section("Repo Folder") {
                 pathField(
                     text: $settings.repoPath,
                     prompt: RepoLocation.current(defaults: nil).path,
                     choose: chooseRepo
                 )
-                caption("Đang dùng: \(settings.repoURL.path)")
+                caption("Using: \(settings.repoURL.path)")
                 warning(settings.repoPathWarning)
             }
 
             Section("Claude Code") {
                 pathField(
                     text: $settings.claudeBinaryOverride,
-                    prompt: "Để trống để app tự tìm",
+                    prompt: "Leave empty to let the app find it",
                     choose: chooseBinary
                 )
-                caption("Đang dùng: \(settings.resolvedBinary()?.path ?? "chưa tìm thấy")")
+                caption("Using: \(settings.resolvedBinary()?.path ?? "not found")")
                 warning(settings.binaryOverrideWarning)
-                caption("Đổi thư mục repo hoặc đường dẫn Claude Code sẽ có hiệu lực sau khi mở lại app.")
+                caption(
+                    """
+                    A new repo folder or Claude Code path takes effect the next time the app \
+                    is opened.
+                    """
+                )
             }
 
-            Section("Trạng thái engine") {
+            Section("Engine Status") {
                 engineStatus
             }
         }
@@ -79,7 +89,7 @@ struct SettingsView: View {
             Text(statusTitle)
                 .font(Typography.body)
             Spacer()
-            Button(isChecking ? "Đang kiểm tra…" : "Kiểm tra lại") {
+            Button(isChecking ? "Checking…" : "Check Again") {
                 Task { await check() }
             }
             .disabled(isChecking)
@@ -94,7 +104,7 @@ struct SettingsView: View {
         }
     }
 
-    private var statusTitle: String { availability?.settingsTitle ?? "Đang kiểm tra…" }
+    private var statusTitle: String { availability?.settingsTitle ?? "Checking…" }
 
     private var statusGuidance: String? { availability?.guidance }
 
@@ -134,7 +144,7 @@ struct SettingsView: View {
                 // which makes the two path rows come out different widths.
                 .labelsHidden()
                 .frame(maxWidth: .infinity)
-            Button("Chọn…", action: choose)
+            Button("Choose…", action: choose)
         }
     }
 
@@ -163,7 +173,7 @@ struct SettingsView: View {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
-        panel.prompt = "Chọn"
+        panel.prompt = "Choose"
         panel.directoryURL = settings.repoURL
         if panel.runModal() == .OK, let url = panel.url { settings.repoPath = url.path }
     }
@@ -174,7 +184,7 @@ struct SettingsView: View {
         panel.canChooseFiles = true
         // The binary usually lives in a dot-directory the panel hides by default.
         panel.showsHiddenFiles = true
-        panel.prompt = "Chọn"
+        panel.prompt = "Choose"
         if panel.runModal() == .OK, let url = panel.url { settings.claudeBinaryOverride = url.path }
     }
 }

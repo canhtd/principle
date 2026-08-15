@@ -109,7 +109,7 @@ struct ChatView: View {
                 .frame(height: 72)
                 .overlay(alignment: .topLeading) {
                     if model.draft.isEmpty {
-                        Text("Kể tình huống của anh…")
+                        Text("Tell Ray the situation…")
                             .font(Typography.body)
                             .foregroundStyle(.tertiary)
                             .padding(.top, 8)
@@ -120,10 +120,10 @@ struct ChatView: View {
                 .focused($composerFocused)
 
             if model.canStop {
-                Button("Dừng", systemImage: "stop.fill") { model.stop() }
+                Button("Stop", systemImage: "stop.fill") { model.stop() }
                     .labelStyle(.titleOnly)
             }
-            Button("Gửi") {
+            Button("Send") {
                 Task { await model.send(model.draft) }
             }
             .keyboardShortcut(.return, modifiers: .command)
@@ -163,7 +163,7 @@ private struct ErrorBanner: View {
                 .lineSpacing(Typography.captionLineSpacing)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if canResend {
-                Button("Gửi lại", action: resend)
+                Button("Resend", action: resend)
             }
         }
         .padding(12)

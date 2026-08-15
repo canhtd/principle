@@ -7,16 +7,19 @@ import Foundation
 /// ways. Icons and tints stay with the views — those are looks, not words.
 extension EngineAvailability {
     public static let notInstalledGuidance =
-        "Không tìm thấy Claude Code trên máy. Cài đặt rồi mở lại app, hoặc trỏ đúng đường dẫn trong Cài đặt."
+        """
+        Claude Code was not found on this Mac. Install it and reopen the app, or point Settings \
+        at the right path.
+        """
 
     /// Also used by Settings for the repo field, so the two places that can
     /// report a wrong repo say the same thing.
     public static func skillMissingGuidance(repoPath: String) -> String {
         """
-        Thư mục đang dùng không phải repo Principle: \(repoPath)
-        Ở đó không có \(PrincipleRepo.skillRelativePath), nên Claude Code không chạy được cuộc tư vấn.
-        Mở Cài đặt → Thư mục repo và chọn thư mục gốc của repo Principle — thư mục có \
-        \(PrincipleRepo.markerRelativePath) và thư mục .claude/skills/ask-ray/.
+        This folder is not the Principle repo: \(repoPath)
+        It has no \(PrincipleRepo.skillRelativePath), so Claude Code cannot run the consultation.
+        Open Settings → Repo Folder and choose the root folder of the Principle repo — the one \
+        that has \(PrincipleRepo.markerRelativePath) and a .claude/skills/ask-ray/ folder.
         """
     }
 
@@ -34,9 +37,9 @@ extension EngineAvailability {
     /// The one-line status in Settings, where the version is worth reading.
     public var settingsTitle: String {
         switch self {
-        case .ready(let version): "Sẵn sàng — Claude Code \(version)"
-        case .notInstalled: "Không tìm thấy Claude Code"
-        case .loggedOut: "Chưa đăng nhập"
+        case .ready(let version): "Ready — Claude Code \(version)"
+        case .notInstalled: "Claude Code not found"
+        case .loggedOut: "Not signed in"
         case .skillMissing: Self.skillMissingTitle
         }
     }
@@ -45,15 +48,15 @@ extension EngineAvailability {
     /// (AE5). `.ready` never reaches it — that screen is only shown when blocked.
     public var blockedTitle: String {
         switch self {
-        case .notInstalled: "Chưa tìm thấy Claude Code"
-        case .loggedOut: "Claude Code chưa sẵn sàng"
+        case .notInstalled: "Claude Code not found"
+        case .loggedOut: "Claude Code is not ready"
         case .skillMissing: Self.skillMissingTitle
         case .ready: EngineAvailability.checkingTitle
         }
     }
 
-    static let skillMissingTitle = "Chưa trỏ tới repo Principle"
+    static let skillMissingTitle = "Not pointed at the Principle repo"
 
     /// Shown until the first check comes back.
-    public static let checkingTitle = "Đang kiểm tra engine"
+    public static let checkingTitle = "Checking the engine"
 }

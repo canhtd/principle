@@ -83,7 +83,7 @@ struct EngineAvailabilityTests {
         #expect(checker.check() == .ready(version: "2.1.233"))
     }
 
-    @Test("loggedIn false gives Vietnamese guidance, not a dead end")
+    @Test("loggedIn false gives actionable guidance, not a dead end")
     func loggedOutCarriesGuidance() throws {
         let box = try FakeBinaries()
         defer { box.cleanUp() }
@@ -99,7 +99,7 @@ struct EngineAvailabilityTests {
             Issue.record("expected .loggedOut")
             return
         }
-        #expect(guidance.contains("đăng nhập"))
+        #expect(guidance.contains("not signed in"))
         #expect(guidance.contains("claude login"))
     }
 
@@ -173,7 +173,7 @@ struct EngineAvailabilityTests {
 
         #expect(state.guidance?.contains("/tmp/not-the-repo") == true)
         #expect(state.guidance?.contains(PrincipleRepo.skillRelativePath) == true)
-        #expect(state.guidance?.contains("Cài đặt") == true)
+        #expect(state.guidance?.contains("Settings") == true)
         #expect(state.blockedTitle == EngineAvailability.skillMissingTitle)
         #expect(state.settingsTitle == EngineAvailability.skillMissingTitle)
         #expect(EngineAvailability.ready(version: "2.1.233").guidance == nil)

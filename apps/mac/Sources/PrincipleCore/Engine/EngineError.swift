@@ -1,7 +1,7 @@
 import Foundation
 
-/// Why a turn ended badly. Messages are user-facing Vietnamese: the chat shows
-/// them on the failed session and offers a resend, it never retries silently.
+/// Why a turn ended badly. Messages are user-facing: the chat shows them on the
+/// failed session and offers a resend, it never retries silently.
 public enum EngineError: Error, Equatable, LocalizedError, Sendable {
     /// The process could not be started at all.
     case launchFailed(String)
@@ -15,20 +15,24 @@ public enum EngineError: Error, Equatable, LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .launchFailed(let reason):
-            "Không chạy được Claude Code: \(reason)"
+            "Could not run Claude Code: \(reason)"
         case .hung(let silence):
-            "Engine treo — không có phản hồi mới trong \(Self.duration(silence)). Đã dừng phiên, gửi lại khi sẵn sàng."
+            "The engine is stuck — nothing new for \(Self.duration(silence)). The turn was stopped; resend when you are ready."
         case .failed(let message):
-            message.isEmpty ? "Engine báo lỗi, không rõ nguyên nhân." : message
+            message.isEmpty ? "The engine reported an error with no details." : message
         case .exited(let code, let message):
             message.isEmpty
-                ? "Engine thoát bất thường (mã \(code))." : "Engine thoát bất thường (mã \(code)): \(message)"
+                ? "The engine exited unexpectedly (code \(code))."
+                : "The engine exited unexpectedly (code \(code)): \(message)"
         }
     }
 
     private static func duration(_ seconds: TimeInterval) -> String {
-        seconds >= 60
-            ? "\(Int((seconds / 60).rounded())) phút"
-            : "\(Int(seconds.rounded())) giây"
+        if seconds >= 60 {
+            let minutes = Int((seconds / 60).rounded())
+            return "\(minutes) minute\(minutes == 1 ? "" : "s")"
+        }
+        let whole = Int(seconds.rounded())
+        return "\(whole) second\(whole == 1 ? "" : "s")"
     }
 }

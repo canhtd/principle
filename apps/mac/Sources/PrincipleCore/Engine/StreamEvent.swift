@@ -20,7 +20,7 @@ public enum StreamEvent: Sendable, Equatable {
     case result(RunResult)
 
     /// True when the event happened inside a subagent (`parent_tool_use_id != null`),
-    /// which the UI shows as "đang tra cứu (subagent)…" rather than as the answer.
+    /// which the UI shows as "Looking up (subagent)…" rather than as the answer.
     public var isInSubagent: Bool {
         switch self {
         case .thinking(_, let inSubagent), .text(_, let inSubagent): inSubagent

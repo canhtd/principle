@@ -26,7 +26,7 @@ struct FavoritesModelTests {
         #expect(model.unresolvedIDs.isEmpty)
         #expect(!FavoritesModel.emptyTitle.isEmpty)
         #expect(FavoritesModel.emptyHint.contains("♥"))
-        #expect(FavoritesModel.emptyHint.contains("trò chuyện"))
+        #expect(FavoritesModel.emptyHint.contains("chat"))
     }
 
     // MARK: - 1. Toggling writes the file the section reads (R7)

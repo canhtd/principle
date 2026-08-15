@@ -133,9 +133,12 @@ public struct AppSettings: Equatable, Sendable {
         case .unset, .valid:
             nil
         case .missing:
-            "Không tìm thấy thư mục này. Kiểm tra lại đường dẫn — phiên sẽ được ghi vào đây khi anh hỏi câu đầu tiên."
+            """
+            This folder does not exist. Check the path — sessions are written here the moment \
+            you ask your first question.
+            """
         case .notAFolder:
-            "Đường dẫn này là một tệp, không phải thư mục. Chọn thư mục gốc của repo Principle."
+            "This path is a file, not a folder. Choose the root folder of the Principle repo."
         case .notPrincipleRepo:
             // Same sentence the blocked chat screen shows, so Settings and the
             // chat cannot describe one problem two ways.
@@ -157,7 +160,7 @@ public struct AppSettings: Equatable, Sendable {
         guard let override = engineOverridePath else { return nil }
         // Candidates deliberately empty: this asks about the override alone.
         guard EngineBinaryResolver.resolve(override: override, candidates: []) == nil else { return nil }
-        return "Không có tệp thực thi ở đường dẫn này. Để trống để app tự tìm Claude Code."
+        return "There is no executable at this path. Leave it empty to let the app find Claude Code."
     }
 
     public func availabilityProbe(

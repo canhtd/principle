@@ -1,7 +1,7 @@
 import PrincipleCore
 import SwiftUI
 
-/// Names the consultation before it starts (R1). "Tạo" stays off until the
+/// Names the consultation before it starts (R1). "Create" stays off until the
 /// topic has something in it — the rule lives in `NewSessionDraft`.
 struct NewSessionSheet: View {
     /// Opens on the model chosen in Settings, so a change there applies to the
@@ -12,15 +12,15 @@ struct NewSessionSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Phiên mới")
+            Text("New Session")
                 .font(Typography.title)
                 .lineSpacing(Typography.titleLineSpacing)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Chủ đề")
+                Text("Topic")
                     .font(Typography.caption)
                     .foregroundStyle(.secondary)
-                TextField("", text: $draft.topic, prompt: Text("Ví dụ: Có nên đổi việc không"))
+                TextField("", text: $draft.topic, prompt: Text("For example: whether to change jobs"))
                     .textFieldStyle(.roundedBorder)
                     .font(Typography.body)
                     .onSubmit { if draft.canCreate { submit() } }
@@ -36,9 +36,9 @@ struct NewSessionSheet: View {
 
             HStack {
                 Spacer()
-                Button("Huỷ", role: .cancel) { dismiss() }
+                Button("Cancel", role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Tạo") { submit() }
+                Button("Create") { submit() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!draft.canCreate)
             }
