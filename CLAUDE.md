@@ -44,6 +44,13 @@ chính là bước suy ngẫm của `1.7` (đau + suy ngẫm = tiến bộ).
 **Trường `Kết quả` trong file ca để trống khi tạo** — chỉ điền khi có kết quả
 thật. Không suy diễn kết quả từ việc đã đưa lời khuyên.
 
+**Trong app macOS, bước 1 và 2 do app làm, không phải model.** Model đọc memory
+(app đã cấp sẵn) rồi trả về trường `case` trong dòng trailer; app ghi file ca và
+dòng index từ đó, cùng định dạng trên. Soạn file bằng `Write` từng tốn ~29 giây
+của một lượt trước khi chữ đầu tiên của câu trả lời kịp ra. Bước 3 và 4 vẫn là
+việc của model. Chạy `/ask-ray` trong terminal thì giao thức trên giữ nguyên
+từng chữ — model tự ghi cả bốn bước.
+
 ## Nguồn sự thật
 
 `.claude/skills/ask-ray/references/corpus.jsonl` — 513 nguyên tắc, mỗi dòng một

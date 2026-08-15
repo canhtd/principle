@@ -182,18 +182,20 @@ extension SessionViewModel {
                     apply(session)
                 }
             } else {
-                apply(
-                    try store.appendMessage(
-                        ChatMessage(
-                            role: .assistant,
-                            text: answer.text,
-                            diagnosis: answer.diagnosis,
-                            principles: answer.principles
-                        ),
-                        to: sessionID,
-                        claudeSessionID: outcome.engineSessionID
-                    )
+                let updated = try store.appendMessage(
+                    ChatMessage(
+                        role: .assistant,
+                        text: answer.text,
+                        diagnosis: answer.diagnosis,
+                        principles: answer.principles
+                    ),
+                    to: sessionID,
+                    claudeSessionID: outcome.engineSessionID
                 )
+                apply(updated)
+                // Only once the answer is safely on disk: filing the case is the
+                // second half of the loop, never a way to lose the first.
+                fileCase(answer, in: updated)
             }
         } catch {
             errorMessage = "Could not save the answer: \(error.localizedDescription)"

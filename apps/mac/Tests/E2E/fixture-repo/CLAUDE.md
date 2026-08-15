@@ -18,6 +18,11 @@ dung sách.
 2. Thêm một dòng vào index trong `memory/MEMORY.md`.
 3. Ca chạm tới mục tiêu nào → cập nhật `goals/GOALS.md`.
 
+**Trong app macOS, bước 1 và 2 do app làm, không phải model.** Model trả về
+trường `case` trong dòng trailer; app ghi file ca và dòng index từ đó. Đừng gọi
+`Write` hay `Edit` cho `memory/cases/` lẫn cho dòng index. Bước 3 vẫn là việc của
+model. Chạy `/ask-ray` trong terminal thì model tự ghi cả ba bước.
+
 **Trường `Kết quả` trong file ca để trống khi tạo** — chỉ điền khi có kết quả thật.
 
 ## Nguồn sự thật

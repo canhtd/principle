@@ -10,14 +10,24 @@ public struct ParsedAnswer: Equatable, Sendable {
     /// Cited principles, in the order the answer cited them, each with the
     /// bridge the engine wrote for this case.
     public let principles: [PrincipleRef]
+    /// The case file dictated in the same line, when the engine dictated one.
+    /// The app writes the file from it (``CaseFileStore``); the engine spends no
+    /// tool call on `memory/cases/`.
+    public let caseSummary: CaseSummary?
 
     /// Just the cited ids, for the lookups that need nothing else.
     public var principleIDs: [String] { principles.map(\.id) }
 
-    public init(text: String, diagnosis: Diagnosis? = nil, principles: [PrincipleRef] = []) {
+    public init(
+        text: String,
+        diagnosis: Diagnosis? = nil,
+        principles: [PrincipleRef] = [],
+        caseSummary: CaseSummary? = nil
+    ) {
         self.text = text
         self.diagnosis = diagnosis
         self.principles = principles
+        self.caseSummary = caseSummary
     }
 
     /// Ids with no bridge text — the legacy trailer shape.
@@ -31,10 +41,12 @@ public struct ParsedAnswer: Equatable, Sendable {
 /// Exactly one line at the very end of an answer:
 ///
 ///     PRINCIPLES_JSON: {"diagnosis":{"kind":"…","why":"…"},
-///                       "principles":[{"id":"life:5.6","apply":"…"}]}
+///                       "principles":[{"id":"life:5.6","apply":"…"}],
+///                       "case":{"slug":"…","problem":"…","direction":"…", …}}
 ///
-/// The older `{"ids":["life:5.6"]}` shape is still read, so sessions filed
-/// before the rich trailer keep rendering their cards.
+/// Both older shapes are still read — `{"ids":["life:5.6"]}`, and a trailer with
+/// no `case` — so sessions filed before each addition keep rendering their
+/// cards. A trailer without `case` simply files no case.
 ///
 /// Keyed by corpus `id`, never by `num` — "2.1" exists in both parts of the
 /// book. Anything else (no trailer, malformed JSON, the marker somewhere other
@@ -48,6 +60,23 @@ public enum TrailerParser {
         let principles: [PrincipleRef]?
         /// Legacy shape.
         let ids: [String]?
+        let caseSummary: CaseSummary?
+
+        private enum CodingKeys: String, CodingKey {
+            case diagnosis, principles, ids
+            case caseSummary = "case"
+        }
+
+        /// The citation half decodes strictly — a trailer the app cannot read as
+        /// a citation is not trusted at all. The `case` half decodes leniently:
+        /// a malformed case costs the case file, never the cards.
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            diagnosis = try container.decodeIfPresent(Diagnosis.self, forKey: .diagnosis)
+            principles = try container.decodeIfPresent([PrincipleRef].self, forKey: .principles)
+            ids = try container.decodeIfPresent([String].self, forKey: .ids)
+            caseSummary = try? container.decodeIfPresent(CaseSummary.self, forKey: .caseSummary)
+        }
     }
 
     public static func parse(_ answer: String) -> ParsedAnswer {
@@ -64,7 +93,8 @@ public enum TrailerParser {
         return ParsedAnswer(
             text: text,
             diagnosis: trailer.diagnosis?.cleaned,
-            principles: references(in: trailer)
+            principles: references(in: trailer),
+            caseSummary: trailer.caseSummary?.cleaned
         )
     }
 

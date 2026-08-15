@@ -27,6 +27,11 @@ public struct ChatSession: Codable, Identifiable, Equatable, Sendable {
     /// vanish, so it is optional and clearable.
     public var claudeSessionID: String?
     public var messages: [ChatMessage]
+    /// The case file this consult was filed into, relative to the repo root
+    /// (`memory/cases/…`). One consult is one case: later turns append to this
+    /// file instead of opening a second one. `nil` until the first answer that
+    /// carried a `case` in its trailer.
+    public var caseFilePath: String?
 
     public init(
         id: UUID = UUID(),
@@ -34,7 +39,8 @@ public struct ChatSession: Codable, Identifiable, Equatable, Sendable {
         createdAt: Date = Date(),
         model: String,
         claudeSessionID: String? = nil,
-        messages: [ChatMessage] = []
+        messages: [ChatMessage] = [],
+        caseFilePath: String? = nil
     ) {
         self.id = id
         self.topic = topic
@@ -42,6 +48,7 @@ public struct ChatSession: Codable, Identifiable, Equatable, Sendable {
         self.model = model
         self.claudeSessionID = claudeSessionID
         self.messages = messages
+        self.caseFilePath = caseFilePath
     }
 
     public var nextTurnStart: TurnStart {
@@ -58,6 +65,7 @@ public struct ChatSession: Codable, Identifiable, Equatable, Sendable {
         case model
         case claudeSessionID = "claude_session_id"
         case messages
+        case caseFilePath = "case_file"
     }
 
     public init(from decoder: any Decoder) throws {
@@ -68,6 +76,8 @@ public struct ChatSession: Codable, Identifiable, Equatable, Sendable {
         model = try container.decode(String.self, forKey: .model)
         claudeSessionID = try container.decodeIfPresent(String.self, forKey: .claudeSessionID)
         messages = try container.decodeIfPresent([ChatMessage].self, forKey: .messages) ?? []
+        // Absent in every session filed before the app owned the case file.
+        caseFilePath = try container.decodeIfPresent(String.self, forKey: .caseFilePath)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -79,6 +89,7 @@ public struct ChatSession: Codable, Identifiable, Equatable, Sendable {
         // Always emit the key, even when nil, so the file shape stays stable.
         try container.encode(claudeSessionID, forKey: .claudeSessionID)
         try container.encode(messages, forKey: .messages)
+        try container.encode(caseFilePath, forKey: .caseFilePath)
     }
 }
 

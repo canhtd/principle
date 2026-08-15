@@ -19,6 +19,12 @@ cd .claude/skills && zip -r ../../dist/ask-ray.zip ask-ray
 App chat riêng, vẫn dùng Claude Code làm engine: hỏi ca, thấy thẻ nguyên tắc, ca
 được ghi vào `memory/cases/` y như khi gọi `/ask-ray` trong terminal.
 
+Khác một chỗ: file ca và dòng index trong `memory/MEMORY.md` do **app** ghi, lấy
+từ cùng dòng trailer mà nó đã dùng để dựng thẻ. Model chỉ nghĩ và trả lời — nó
+không mở `Write` cho hai chỗ đó nữa, vì soạn file bằng tay từng ăn mất ~29 giây
+đầu mỗi lượt. Định dạng file vẫn theo `memory/cases/_TEMPLATE.md`, nên bản
+terminal đọc tiếp được bình thường.
+
 ```bash
 cd apps/mac && swift run        # chạy thẳng lúc đang sửa code
 apps/mac/scripts/make-app.sh    # dựng Principle.app vào ~/Applications

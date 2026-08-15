@@ -35,6 +35,9 @@ public final class SessionViewModel {
 
     let engine: any TurnRunning
     let store: SessionStore
+    /// Where a consult gets filed: `memory/cases/` plus the index line in
+    /// `memory/MEMORY.md`. The app writes both, from the trailer's `case`.
+    let caseFiles: CaseFileStore
     /// The local principle corpus (KTD3). Loaded once: a repo without the file
     /// simply renders no cards.
     public let corpus: CorpusStore
@@ -55,6 +58,7 @@ public final class SessionViewModel {
     ) {
         self.engine = engine
         self.store = store
+        caseFiles = CaseFileStore(repoURL: store.repoURL)
         self.availabilityProvider = availabilityProvider
         // Defaults to the corpus that sits in the same repo as the sessions.
         let loaded = corpus ?? CorpusStore(repoURL: store.repoURL)

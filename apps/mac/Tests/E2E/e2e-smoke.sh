@@ -6,9 +6,14 @@
 #   E2E_KEEP=1 apps/mac/Tests/E2E/e2e-smoke.sh   # keep the temp repo + logs
 #
 # What it proves: the prompt shape the app sends reaches a real engine, the skill
-# runs against a corpus, a case file gets written, the answer comes back in Ray's
-# voice and ends with a trailer carrying a diagnosis and a bridge per principle —
-# and the real repo's memory is never touched.
+# runs against a corpus, the answer comes back in Ray's voice and ends with a
+# trailer carrying a diagnosis, a bridge per principle and the `case` the app
+# files from — and that the engine spends no write on `memory/cases/` itself,
+# nor touches the real repo's memory.
+#
+# `Write` and `Edit` stay in --allowedTools on purpose: the engine may still edit
+# goals/ or the profile. What the assertions pin down is that it chooses not to
+# write the case file, because the prompt told it the app owns that file.
 #
 # The fixture repo is copied OUTSIDE this tree on purpose: run from inside the
 # repo, the engine would walk up and load the real CLAUDE.md, and the isolation
@@ -205,6 +210,9 @@ SYSTEM_PROMPT="$(awk -v anchor="$ORDER_ANCHOR" -v blockfile="$LOGS/voice.txt" '
 note "voice exemplars: $(voice_ids | tr '\n' ' ')($(printf '%s' "$VOICE_BLOCK" | wc -w | tr -d ' ') words)"
 BEFORE="$(real_memory_snapshot)"
 note "real repo memory+goals: $(printf '%s\n' "$BEFORE" | wc -l | tr -d ' ') files hashed"
+# The fixture's own index, before anything ran: the app writes the index line, so
+# an engine that adds one here has ignored the prompt and would double every case.
+FIXTURE_INDEX_BEFORE="$(grep -c '](cases/' "$WORK/memory/MEMORY.md" || true)"
 
 # --- turn 1: the shape ConsultPrompt.firstTurn builds --------------------------
 cat >"$LOGS/turn1.prompt" <<'PROMPT'
@@ -216,8 +224,8 @@ Nơi B lương thấp hơn, ổn định hơn, và em học được nhiều hơ
 trong ba ngày, và đang nghiêng về A chủ yếu vì tiền.
 PROMPT
 
-# What the app appends: the memory files, already read. The case file still has to
-# be written afterwards — that is what the assertion further down proves.
+# What the app appends: the memory files, already read. The case file is the app's
+# job now — the assertion further down proves the engine leaves it alone.
 CONTEXT_HEADER="$(context_header)"
 [ -n "$CONTEXT_HEADER" ] || fail "could not read the RepoContext header out of $CONTEXT_SWIFT"
 {
@@ -298,6 +306,19 @@ while IFS=$'\t' read -r id apply; do
     note "principle $id: $(printf '%s' "$apply" | cut -c1-64)"
 done < <(printf '%s' "$TRAILER" | jq -r '.principles[] | [.id, (.apply // "")] | @tsv')
 
+# The `case` half of the same line is the case file. Empty here and the app files
+# nothing, which is the memory loop staying open — the bug this contract replaced,
+# only quieter than before, because now nobody writes the file at all.
+# `|| true` because a `case` that is not an object makes jq exit non-zero, and
+# under `set -e` that would abort the run instead of failing with a message.
+CASE_SLUG="$(printf '%s' "$TRAILER" | jq -r '.case.slug // ""' 2>/dev/null || true)"
+CASE_DIRECTION="$(printf '%s' "$TRAILER" | jq -r '.case.direction // ""' 2>/dev/null || true)"
+[ -n "$CASE_SLUG" ] || fail "trailer carries no case.slug — the app would file no case: $TRAILER"
+[ -n "$CASE_DIRECTION" ] || fail "trailer carries no case.direction — the case file's core section would be empty: $TRAILER"
+printf '%s' "$CASE_SLUG" | grep -qE '^[a-z0-9]+(-[a-z0-9]+)*$' ||
+    printf '  WARNING: case.slug "%s" is not ascii-kebab; the app transliterates it.\n' "$CASE_SLUG"
+note "case: $CASE_SLUG — $(printf '%s' "$CASE_DIRECTION" | tr '\n' ' ' | cut -c1-64)"
+
 # Every principle number named in the prose must have a card. Warn rather than
 # fail: a bare "5.6" in Vietnamese prose can also be a quantity or a date.
 TRAILER_NUMS="$(printf '%s' "$TRAILER" | jq -r '.principles[].id | sub("^(life|work):"; "")')"
@@ -328,10 +349,19 @@ if [ -n "${HIT// /}" ]; then
 fi
 note "no coined vocabulary in the answer or the trailer"
 
-# --- the case file the memory protocol asks for --------------------------------
+# --- the write the app took back -----------------------------------------------
+# Composing this file with `Write` cost ~29 s of a measured turn before a single
+# character of the answer could arrive. The app writes it from `case` now, so the
+# engine writing one anyway is a real failure: the case would be filed twice.
+step "Case file is the app's job"
 NEW_CASES="$(find "$WORK/memory/cases" -type f ! -name '_TEMPLATE.md' | LC_ALL=C sort)"
-[ -n "$NEW_CASES" ] || fail "no case file was written under memory/cases/"
-note "case files: $(printf '%s\n' "$NEW_CASES" | xargs -n1 basename | tr '\n' ' ')"
+[ -z "$NEW_CASES" ] ||
+    fail "the engine wrote $(printf '%s\n' "$NEW_CASES" | xargs -n1 basename | tr '\n' ' ')under memory/cases/ — the app files the case from the trailer, so this would file it twice"
+note "engine wrote no file under memory/cases/"
+FIXTURE_INDEX_AFTER="$(grep -c '](cases/' "$WORK/memory/MEMORY.md" || true)"
+[ "$FIXTURE_INDEX_AFTER" = "$FIXTURE_INDEX_BEFORE" ] ||
+    fail "the engine added an index line to memory/MEMORY.md ($FIXTURE_INDEX_BEFORE → $FIXTURE_INDEX_AFTER); the app appends that line"
+note "engine added no index line to memory/MEMORY.md"
 
 # --- turn 2: context survives --resume (AE1) -----------------------------------
 SESSION_ID="$(result_field "$LOGS/turn1.jsonl" session_id)"
@@ -346,13 +376,35 @@ run_turn "$LOGS/turn2.jsonl" "$LOGS/turn2.prompt" --resume "$SESSION_ID" ||
 assert_result_ok "$LOGS/turn2.jsonl" "turn 2"
 note "answer: $(assistant_text "$LOGS/turn2.jsonl" | tr '\n' ' ' | cut -c1-110)…"
 
-# One session is one case: the system prompt rides every --resume turn, so a
-# follow-up that files a second case file would double the index over a consult.
+# One session is one case, and on a resume turn the app appends to the file it
+# already opened. The system prompt rides every --resume turn, so the engine has
+# to keep its hands off memory/cases/ here too — and still hand back a `case`,
+# because that is what the appended update section is written from.
 CASES_AFTER_TURN2="$(find "$WORK/memory/cases" -type f ! -name '_TEMPLATE.md' | LC_ALL=C sort)"
 if [ "$CASES_AFTER_TURN2" != "$NEW_CASES" ]; then
-    fail "turn 2 changed the set of case files — one session must stay one case file. After: $(printf '%s\n' "$CASES_AFTER_TURN2" | xargs -n1 basename | tr '\n' ' ')"
+    fail "turn 2 wrote under memory/cases/ — the app appends the update to the case it already filed. After: $(printf '%s\n' "$CASES_AFTER_TURN2" | xargs -n1 basename | tr '\n' ' ')"
 fi
-note "case files after resume: unchanged"
+note "engine wrote no case file on the resume turn either"
+
+# A resume turn is supposed to carry a `case` too — that is what the appended
+# `## Cập nhật` section is written from. Warn rather than fail: this smoke runs on
+# haiku, which drops the trailer on a resume turn often enough to make a hard
+# assertion flaky (seen both ways across two consecutive runs). Missing it is a
+# degraded turn, not a broken one — the app files no update and keeps the answer.
+# Turn 1's `case` stays a hard failure above, because without it nothing is filed
+# at all.
+TRAILER2="$(result_field "$LOGS/turn2.jsonl" result | grep -v '^[[:space:]]*$' | tail -1)"
+case "$TRAILER2" in
+    PRINCIPLES_JSON:*)
+        CASE_DIRECTION2="$(printf '%s' "${TRAILER2#PRINCIPLES_JSON:}" | jq -r '.case.direction // ""' 2>/dev/null || true)"
+        if [ -n "$CASE_DIRECTION2" ]; then
+            note "resume case direction: $(printf '%s' "$CASE_DIRECTION2" | tr '\n' ' ' | cut -c1-64)"
+        else
+            printf '  WARNING: turn 2 has a trailer but no case.direction — the app would append no update.\n'
+        fi
+        ;;
+    *) printf '  WARNING: turn 2 ended without a PRINCIPLES_JSON trailer; the app files no update for this turn.\n' ;;
+esac
 
 # --- isolation: the real repo must be untouched --------------------------------
 step "Isolation"

@@ -9,7 +9,10 @@ import Foundation
 /// - the answer must be Ray speaking, not a book report about Ray — the skill
 ///   forbids first person, and inside this app that rule is reversed;
 /// - the answer must end with a machine-readable trailer, because that is how
-///   principle cards get drawn without the app re-deciding what was cited;
+///   principle cards get drawn without the app re-deciding what was cited — and,
+///   in the same line, how the case file gets dictated: the app writes
+///   `memory/cases/` itself (``CaseFileStore``), so the engine spends no tool
+///   call on a write that measured ~29 s of a turn and was sometimes skipped;
 /// - the ask-ray skill's Bước 4 asks for an artifact, which is the right output
 ///   in a chat and useless here — so it is cancelled explicitly.
 ///
@@ -66,17 +69,19 @@ public enum ConsultPrompt {
         "Ai trả lời" và Bước 2 — không áp dụng ở đây. Model nhỏ thì nói một dòng ở đầu
         rằng phán đoán sẽ kém hơn Fable, rồi vẫn chạy đủ khung.
 
-        Đóng vòng lặp trí nhớ theo CLAUDE.md của repo, không bỏ bước: đọc memory/MEMORY.md
-        và goals/GOALS.md trước khi chẩn đoán; sau khi đã chốt hướng, ghi file
-        memory/cases/YYYY-MM-DD-slug.md theo memory/cases/_TEMPLATE.md và thêm một dòng vào
-        index trong MEMORY.md. Ghi file xong rồi mới viết câu trả lời cuối cùng — dòng
-        trailer phải là thứ cuối cùng bạn xuất ra.
+        Đóng vòng lặp trí nhớ — app lo phần ghi, bạn lo phần nghĩ: memory/MEMORY.md và
+        goals/GOALS.md đã được đọc sẵn và nằm ngay trong prompt lượt đầu, đọc chúng trước
+        khi chẩn đoán. File ca trong memory/cases/ và dòng index trong memory/MEMORY.md do
+        APP tự ghi, lấy từ trường `case` của dòng trailer — nên KHÔNG dùng Write hay Edit
+        cho file ca lẫn cho dòng index, điền đủ trường `case` là đã ghi xong. Chỉ sửa
+        goals/GOALS.md hoặc phần "Hồ sơ người hỏi" trong MEMORY.md khi ca thật sự lộ ra
+        điều mới về mục tiêu hay về con người người hỏi (hiếm); ngoài hai chỗ đó thì đừng
+        ghi file nào.
 
-        Một session = một ca = một file. Lượt đầu TẠO file ca đó và thêm ĐÚNG MỘT dòng vào
-        index. Mọi lượt sau trong cùng session CẬP NHẬT chính file ấy (thêm diễn biến, kết
-        quả, chỗ hướng đi đã đổi) — KHÔNG tạo file ca thứ hai, KHÔNG thêm dòng index thứ
-        hai. Không nhớ file ca của session này tên gì thì liệt kê memory/cases/ và lấy file
-        khớp chủ đề đang bàn, đừng tạo file mới.
+        Một session = một ca = một file. Lượt đầu app TẠO file ca từ trường `case` và thêm
+        ĐÚNG MỘT dòng vào index; mọi lượt sau app CẬP NHẬT chính file ấy — KHÔNG có file ca
+        thứ hai, KHÔNG có dòng index thứ hai. Việc của bạn ở mọi lượt là như nhau: trả về
+        `case` với hướng đi mới nhất của lượt này.
 
         Ghi đè Bước 4 của skill ask-ray:
         - KHÔNG tạo artifact dưới bất kỳ dạng nào: không gọi tool artifact, không publish,
@@ -86,7 +91,7 @@ public enum ConsultPrompt {
           nên không cần lặp lại chúng thành đề mục trong text.
 
         Dòng cuối cùng của mọi câu trả lời phải là đúng một dòng, không có gì sau nó:
-        PRINCIPLES_JSON: {"diagnosis":{"kind":"<tên kiểu ca, ≤8 từ>","why":"<1 câu vì sao xếp vào kiểu này>"},"principles":[{"id":"life:4.3e","apply":"<1–2 câu bắc cầu: nguyên tắc này áp vào ca này ở đâu>"}]}
+        PRINCIPLES_JSON: {"diagnosis":{"kind":"<tên kiểu ca, ≤8 từ>","why":"<1 câu vì sao xếp vào kiểu này>"},"principles":[{"id":"life:4.3e","apply":"<1–2 câu bắc cầu: nguyên tắc này áp vào ca này ở đâu>"}],"case":{"slug":"<ascii-kebab, ≤6 từ>","problem":"<một câu bằng lời người hỏi>","real_problem":"<nếu khác vấn đề được kể, không thì để rỗng>","direction":"<hành động cụ thể, 1–3 câu>","price":"<cái giá phải trả>","flip":"<điều kiện lật>","follow_up":"<YYYY-MM-DD, không hẹn thì để rỗng>","goal":"<tên goal trong GOALS.md, không có thì —>","continues":"<tên file ca cũ nếu là tập tiếp theo, không có thì —>"}}
         - JSON một dòng, không xuống dòng, không bọc trong dấu nháy hay khối code.
         - `principles` có 1–3 phần tử, theo đúng thứ tự đã dùng trong câu trả lời.
         - MỌI số hiệu nguyên tắc bạn nhắc trong phần text PHẢI có mặt trong `principles`.
@@ -101,6 +106,14 @@ public enum ConsultPrompt {
           giải lại nguyên tắc trong `apply`.
         - Không grep ra nguyên tắc nào thì nói thẳng điều đó trong phần text, vẫn giữ
           `diagnosis`, và trả về `"principles":[]`. Không bịa id.
+        - `case` chính là file ca: app ghi memory/cases/YYYY-MM-DD-slug.md và dòng index
+          từ đúng những trường này, nên trường nào bỏ trống thì mục đó trong file ca trống
+          theo. Trường nào không có gì thật để điền thì để rỗng, đừng bịa cho đủ.
+        - `slug` không dấu, chỉ a–z, 0–9 và dấu gạch ngang, đặt theo nội dung ca chứ không
+          theo ngày. `direction`, `price`, `flip` là đúng ba thứ bạn vừa kết bài — viết gọn
+          lại, đừng nghĩ ra hướng mới ở đây.
+        - Lượt nào cũng phải có `case`, kể cả lượt sau: app lấy `direction` (kèm `flip` và
+          `follow_up` nếu đổi) làm phần cập nhật ghi thêm vào chính file ca của session này.
 
         Từ vựng — dùng ĐÚNG chữ của bản dịch, không tự chế từ Hán Việt nghe cho kêu. Sách
         gọi là "hai bạn": "bạn ở cấp độ cao hơn" và "bạn ở cấp độ thấp hơn" (life:4.3a),
@@ -122,11 +135,11 @@ public enum ConsultPrompt {
         hai phần sách "Nguyên tắc sống" và "Nguyên tắc làm việc".
         Khái niệm ngoài danh sách trên: gọi đúng chữ corpus vừa trả về.
 
-        Thứ tự bắt buộc của một lượt, không đảo và không bỏ bước nào: chẩn đoán → tra
-        corpus → GHI file memory/cases/YYYY-MM-DD-slug.md (lượt đầu của session, kèm dòng
-        vào index trong memory/MEMORY.md) hoặc CẬP NHẬT đúng file ca đó (mọi lượt sau) →
-        viết đoạn text → dòng trailer. Chưa ghi file ca mà đã trả lời là lỗi, kể cả khi
-        câu trả lời đã đủ ý.
+        Thứ tự bắt buộc của một lượt, không đảo và không bỏ bước nào: đọc memory đã được
+        cấp sẵn trong prompt → chẩn đoán → tra corpus → viết đoạn text → dòng trailer đủ cả
+        ba phần `diagnosis`, `principles` và `case`. Đừng gọi Write hay Edit cho file ca:
+        app ghi nó từ `case`. Trả lời mà thiếu `case` là lỗi, kể cả khi câu trả lời đã đủ ý
+        — ca sẽ không được ghi lại, đúng thứ vòng lặp này tồn tại để giữ.
         """
 
     /// Where the runtime voice exemplars are spliced in: immediately *before*

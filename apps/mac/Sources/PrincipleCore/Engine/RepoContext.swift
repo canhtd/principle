@@ -12,8 +12,9 @@ import Foundation
 /// text in the engine's own context, and repeating it every turn would pay for the
 /// same tokens again on each one.
 ///
-/// Handing the text over is not permission to skip the write: the memory loop is
-/// closed by the case file, and that still has to be written. The header says so.
+/// The case file at the other end of the loop is not asked for here at all: the
+/// app writes it from the trailer's `case` object (``CaseFileStore``). The header
+/// says so, so an engine handed the memory does not spend a `Write` on it.
 public struct RepoContext: Sendable, Equatable {
     public var memory: String?
     public var goals: String?
@@ -52,8 +53,8 @@ public struct RepoContext: Sendable, Equatable {
     /// would reach the engine as raw `\(...)` backslashes. A test keeps it clean.
     public static let header = """
         App đã đọc sẵn các file dưới đây từ repo — dùng luôn, đừng gọi Read cho chúng
-        nữa. Việc GHI file ca vào memory/cases/ và thêm dòng vào index trong
-        memory/MEMORY.md vẫn phải làm đủ như thường.
+        nữa. File ca trong memory/cases/ và dòng index trong memory/MEMORY.md thì app tự
+        ghi từ trường `case` của dòng trailer, nên đừng Write hay Edit hai chỗ đó.
         """
 
     /// The block appended to the opening prompt, empty when there was nothing to

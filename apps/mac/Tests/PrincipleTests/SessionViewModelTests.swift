@@ -114,7 +114,7 @@ struct SessionViewModelTests {
         #expect(systemPrompt.contains(VoiceExemplars.headerTitle))
         #expect(systemPrompt.contains("[FIXTURE] từ1 từ2"))
         // The order block keeps the recency slot it was put there for.
-        #expect(systemPrompt.hasSuffix("là lỗi, kể cả khi\ncâu trả lời đã đủ ý."))
+        #expect(systemPrompt.hasSuffix("đúng thứ vòng lặp này tồn tại để giữ."))
     }
 
     /// What `--include-partial-messages` buys, seen from the screen's side: the

@@ -237,9 +237,8 @@ struct ConsultPromptTests {
         #expect(prompt.contains("publish"))
     }
 
-    /// Both clauses were added because a real haiku turn broke on them: the skill
-    /// asks a small model to hand the judgment to Fable, and nothing else made
-    /// the case file get written.
+    /// The delegation clauses were added because a real haiku turn broke on them:
+    /// the skill asks a small model to hand the judgment to Fable.
     @Test("System prompt giữ phán đoán ở model người dùng chọn và bắt đóng vòng lặp trí nhớ")
     func systemPromptKeepsTheTurnSelfContained() {
         let prompt = ConsultPrompt.systemPrompt
@@ -252,10 +251,43 @@ struct ConsultPromptTests {
         #expect(prompt.contains("Bước 2"))
         #expect(prompt.contains("memory/cases/"))
         #expect(prompt.contains("memory/MEMORY.md"))
-        // Restated at the end as an order: a real haiku run read memory/ and
-        // then answered without writing the case file until this line existed.
+        // Restated at the end as an order: recency is why the block sits last.
         #expect(prompt.contains("Thứ tự bắt buộc của một lượt"))
-        #expect(prompt.contains("Chưa ghi file ca mà đã trả lời"))
+        #expect(prompt.contains("thiếu `case` là lỗi"))
+    }
+
+    /// Composing the case file with `Write` cost ~29 s of a measured turn before
+    /// the answer could start, and a small model sometimes skipped it. The app
+    /// writes the file now, so the prompt has to say the write is not the
+    /// engine's job any more — and say it where the old order used to be.
+    @Test("System prompt giao file ca cho app, cấm engine Write/Edit vào đó")
+    func systemPromptHandsTheCaseFileToTheApp() {
+        let prompt = ConsultPrompt.systemPrompt
+
+        #expect(prompt.contains("APP tự ghi"))
+        #expect(prompt.contains("KHÔNG dùng Write hay Edit"))
+        #expect(prompt.contains("Đừng gọi Write hay Edit cho file ca"))
+        // Nothing may read as the old order to write the file itself.
+        #expect(!prompt.contains("GHI file memory/cases/"))
+        // The two edits that stay allowed, because no other writer makes them.
+        #expect(prompt.contains("goals/GOALS.md"))
+        #expect(prompt.contains("Hồ sơ người hỏi"))
+    }
+
+    /// The card contract and the case file now ride the same line: one trailer,
+    /// no extra tool call for either.
+    @Test("Trailer mang cả trường `case` để app ghi file ca")
+    func systemPromptSpellsOutTheCaseObject() {
+        let prompt = ConsultPrompt.systemPrompt
+
+        #expect(prompt.contains("\"case\":{\"slug\":"))
+        for key in ["problem", "real_problem", "direction", "price", "flip", "follow_up", "goal", "continues"] {
+            #expect(prompt.contains("\"\(key)\":"), "trailer contract is missing \(key)")
+        }
+        // Empty is a valid answer; a filled-in guess is not (AE2).
+        #expect(prompt.contains("đừng bịa cho đủ"))
+        // The trailer is a wire format read out of this source by e2e-smoke.sh.
+        #expect(!prompt.contains("\\("))
     }
 
     /// The system prompt rides every `--resume` turn, so an order phrased for
@@ -266,13 +298,12 @@ struct ConsultPromptTests {
         let prompt = ConsultPrompt.systemPrompt
 
         #expect(prompt.contains("Một session = một ca = một file"))
-        #expect(prompt.contains("ĐÚNG MỘT dòng vào"))
+        #expect(prompt.contains("ĐÚNG MỘT dòng vào index"))
         #expect(prompt.contains("CẬP NHẬT chính file ấy"))
-        #expect(prompt.contains("KHÔNG tạo file ca thứ hai"))
-        #expect(prompt.contains("KHÔNG thêm dòng index thứ"))
-        // The order block is restated last on purpose; it has to carry the same
-        // distinction, or recency alone re-orders a second file on every turn.
-        #expect(prompt.contains("CẬP NHẬT đúng file ca đó (mọi lượt sau)"))
+        #expect(prompt.contains("KHÔNG có file ca"))
+        #expect(prompt.contains("KHÔNG có dòng index thứ hai"))
+        // Which makes the engine's job identical on every turn: return a `case`.
+        #expect(prompt.contains("Lượt nào cũng phải có `case`"))
     }
 
     /// Recency is the whole reason the order block exists — nothing may be
@@ -282,7 +313,7 @@ struct ConsultPromptTests {
         let prompt = ConsultPrompt.systemPrompt
         let order = try #require(prompt.range(of: "Thứ tự bắt buộc của một lượt"))
 
-        #expect(prompt.hasSuffix("là lỗi, kể cả khi\ncâu trả lời đã đủ ý."))
+        #expect(prompt.hasSuffix("đúng thứ vòng lặp này tồn tại để giữ."))
         #expect(!prompt[order.upperBound...].contains("Một session = một ca"))
         // The glossary is long; appended after the order block it would take the
         // recency slot the order block exists to hold.
@@ -333,7 +364,7 @@ struct ConsultPromptTests {
         let order = try #require(delivered.range(of: ConsultPrompt.orderBlockAnchor))
         #expect(quote.lowerBound < order.lowerBound)
         // Recency belongs to the order block: nothing may sit after it.
-        #expect(delivered.hasSuffix("là lỗi, kể cả khi\ncâu trả lời đã đủ ý."))
+        #expect(delivered.hasSuffix("đúng thứ vòng lặp này tồn tại để giữ."))
         // Everything the literal already said still travels.
         #expect(delivered.contains("Từ của sách, dùng nguyên dạng:"))
         #expect(delivered.contains("PRINCIPLES_JSON:"))

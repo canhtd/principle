@@ -51,14 +51,17 @@ struct RepoContextTests {
         #expect(!section.contains("_TEMPLATE.md"))
     }
 
-    /// Handing the memory over saves the reads; it must not be read as permission
-    /// to skip the write that closes the loop.
-    @Test("The header still orders the case file to be written")
-    func theWriteIsStillOrdered() {
+    /// Handing the memory over saves the reads. The case file at the other end
+    /// of the loop is the app's job now, and the header has to say so — an
+    /// engine that writes it anyway files the case twice.
+    @Test("The header hands the case file and the index to the app")
+    func theCaseFileIsTheAppsJob() {
         let section = RepoContext(memory: "Hồ sơ.").promptSection
 
         #expect(section.contains("đừng gọi Read"))
-        #expect(section.contains("GHI file ca vào memory/cases/"))
+        #expect(section.contains("app tự"))
+        #expect(section.contains("đừng Write hay Edit"))
+        #expect(section.contains("memory/cases/"))
         #expect(section.hasPrefix(RepoContext.header))
         // e2e-smoke.sh reads the header out of the source with awk, so an
         // interpolation would reach a real engine as the literal `\(...)`.
