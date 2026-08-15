@@ -8,14 +8,14 @@ import SwiftUI
 struct MessageRow: View {
     let message: ChatMessage
     /// The principles this message cited, already resolved against the corpus.
-    let principles: [PrincipleRecord]
+    var cards: [PrincipleCardModel] = []
     var isFavorite: (PrincipleRecord) -> Bool = { _ in false }
     var toggleFavorite: (PrincipleRecord) -> Void = { _ in }
     var showChapterContext: (PrincipleRecord) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(message.role == .user ? "Anh Danny" : "Ray")
+            Text(message.role == .user ? "You" : "Ray")
                 .font(Typography.caption)
                 .foregroundStyle(.secondary)
             if !message.text.isEmpty {
@@ -24,7 +24,8 @@ struct MessageRow: View {
                 MarkdownText(text: message.text)
             }
             PrincipleCardList(
-                principles: principles,
+                diagnosis: message.diagnosis?.cleaned,
+                cards: cards,
                 isFavorite: isFavorite,
                 toggleFavorite: toggleFavorite,
                 showChapterContext: showChapterContext
@@ -35,8 +36,7 @@ struct MessageRow: View {
 
 #Preview {
     MessageRow(
-        message: ChatMessage(role: .assistant, text: "[PREVIEW] Đây là đoạn trả lời của Ray."),
-        principles: []
+        message: ChatMessage(role: .assistant, text: "[PREVIEW] Đây là đoạn trả lời của Ray.")
     )
     .padding()
     .frame(width: 520)

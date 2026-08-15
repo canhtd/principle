@@ -49,7 +49,7 @@ struct ChatView: View {
                     ForEach(model.messages) { message in
                         MessageRow(
                             message: message,
-                            principles: model.principles(for: message),
+                            cards: model.cards(for: message),
                             isFavorite: { favorites.isFavorite($0.id) },
                             toggleFavorite: { favorites.toggle($0.id) },
                             showChapterContext: { chapterContext = ChapterContext(corpus: model.corpus, record: $0) }
@@ -61,7 +61,7 @@ struct ChatView: View {
                     {
                         // Cards wait for the finished turn: the ids arrive in the
                         // trailer, at the very end.
-                        MessageRow(message: ChatMessage(role: .assistant, text: streaming), principles: [])
+                        MessageRow(message: ChatMessage(role: .assistant, text: streaming))
                             .id(Self.streamingAnchor)
                     }
                     if let status = statusLine {
