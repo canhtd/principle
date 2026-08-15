@@ -34,8 +34,10 @@ public struct ProcessCommandRunner: CommandRunning {
         while process.isRunning, Date() < deadline {
             Thread.sleep(forTimeInterval: 0.02)
         }
+        // A probe that ignores SIGTERM would otherwise keep the timeout it just
+        // blew, since `waitUntilExit` below waits for it however long it takes.
         if process.isRunning {
-            process.terminate()
+            ProcessTermination.terminate(process)
         }
         process.waitUntilExit()
         let (out, err) = collected.wait()

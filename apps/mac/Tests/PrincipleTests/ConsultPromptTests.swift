@@ -76,7 +76,10 @@ struct ConsultPromptTests {
         let prompt = ConsultPrompt.systemPrompt
 
         #expect(prompt.contains(TrailerParser.marker))
-        #expect(prompt.contains("{\"ids\":[]}"))
+        // Spelled out as well as interpolated: the prompt is a wire format, and
+        // the engine has no way to know what the app renamed the marker to.
+        #expect(prompt.contains("PRINCIPLES_JSON: {\"ids\":[\"life:5.6\",\"work:2.1\"]}"))
+        #expect(prompt.contains("PRINCIPLES_JSON: {\"ids\":[]}"))
         // Cards are keyed by corpus id: `num` collides across the two parts.
         #expect(prompt.contains("`id`"))
         #expect(prompt.contains("`num`"))

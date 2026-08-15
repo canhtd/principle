@@ -52,14 +52,24 @@ public final class FavoritesModel {
     // MARK: - Actions
 
     public func toggle(_ id: String) {
+        let wasFavorite = isFavorite(id)
         do {
-            if isFavorite(id) {
+            if wasFavorite {
                 try store.unfavorite(id: id)
             } else {
                 try store.favorite(id: id)
             }
             errorMessage = nil
-            refresh()
+            // The appended line is the only change, and replaying the file would
+            // land on exactly this: a save goes to the top of the list (newest
+            // first), an un-save leaves it.
+            if wasFavorite {
+                active.remove(id)
+                ids.removeAll { $0 == id }
+            } else {
+                active.insert(id)
+                ids.insert(id, at: 0)
+            }
         } catch {
             errorMessage = "Không ghi được danh sách yêu thích: \(error.localizedDescription)"
             Self.logger.error("Writing favourites failed: \(String(describing: error), privacy: .public)")

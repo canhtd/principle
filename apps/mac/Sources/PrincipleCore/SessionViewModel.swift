@@ -14,7 +14,6 @@ public final class SessionViewModel {
     // MARK: - Sessions
 
     public private(set) var sessions: [ChatSession] = []
-    public private(set) var groups: [SessionDayGroup] = []
     /// Session files that could not be read; surfaced instead of silently dropped.
     public private(set) var skippedFiles: [SkippedSessionFile] = []
     public private(set) var selectedSessionID: UUID?
@@ -80,6 +79,10 @@ public final class SessionViewModel {
         sessions.first { $0.id == selectedSessionID }
     }
 
+    /// What the sidebar draws (R1). Derived: `sessions` is the only state, so a
+    /// turn that updates one session cannot leave the day list behind.
+    public var groups: [SessionDayGroup] { store.groupedByDay(sessions) }
+
     public var messages: [ChatMessage] { currentSession?.messages ?? [] }
 
     /// The model of *this* session, in Vietnamese, for the chat header (AE4).
@@ -120,9 +123,6 @@ public final class SessionViewModel {
 
     // MARK: - Engine availability (KTD4, AE5)
 
-    public static let notInstalledGuidance =
-        "Không tìm thấy Claude Code trên máy. Cài đặt rồi mở lại app, hoặc trỏ đúng đường dẫn trong Cài đặt."
-
     public var isEngineBlocked: Bool {
         guard let availability else { return false }
         if case .ready = availability { return false }
@@ -130,13 +130,7 @@ public final class SessionViewModel {
     }
 
     /// What to tell the user when the engine cannot run.
-    public var engineGuidance: String? {
-        switch availability {
-        case .ready, nil: nil
-        case .notInstalled: Self.notInstalledGuidance
-        case .loggedOut(let guidance): guidance
-        }
-    }
+    public var engineGuidance: String? { availability?.guidance }
 
     public func refreshAvailability() async {
         availability = await availabilityProvider.currentAvailability()
@@ -144,21 +138,41 @@ public final class SessionViewModel {
 
     // MARK: - Session list
 
+    /// Re-reads every session file. For launch and for changes made from outside
+    /// the app — a turn of its own updates the list from what the store handed
+    /// back, without walking the directory again.
     public func refreshSessions() {
         do {
             let report = try store.loadAllWithReport()
             sessions = report.sessions
             skippedFiles = report.skipped
-            groups = store.groupedByDay(report.sessions)
-            if let selected = selectedSessionID, !sessions.contains(where: { $0.id == selected }) {
-                selectedSessionID = nil
-            }
-            if selectedSessionID == nil {
-                selectedSessionID = groups.first?.sessions.first?.id
-            }
+            reconcileSelection()
         } catch {
             errorMessage = "Không đọc được danh sách phiên: \(error.localizedDescription)"
             Self.logger.error("Loading sessions failed: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    /// Takes in a session the store just wrote. What it returned is exactly what
+    /// landed on disk, so re-reading the whole directory would only cost a turn
+    /// its responsiveness.
+    func apply(_ session: ChatSession) {
+        if let index = sessions.firstIndex(where: { $0.id == session.id }) {
+            sessions[index] = session
+        } else {
+            sessions.append(session)
+        }
+        reconcileSelection()
+    }
+
+    /// Keeps the selection on a session that still exists, falling back to the
+    /// newest one when there is nothing selected.
+    private func reconcileSelection() {
+        if let selected = selectedSessionID, !sessions.contains(where: { $0.id == selected }) {
+            selectedSessionID = nil
+        }
+        if selectedSessionID == nil {
+            selectedSessionID = groups.first?.sessions.first?.id
         }
     }
 
@@ -178,7 +192,7 @@ public final class SessionViewModel {
     @discardableResult
     public func createSession(topic: String, model: String = ModelAlias.default) throws -> ChatSession {
         let session = try store.create(topic: topic, model: model)
-        refreshSessions()
+        apply(session)
         select(session.id)
         return session
     }

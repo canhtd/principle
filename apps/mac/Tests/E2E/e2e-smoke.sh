@@ -43,9 +43,21 @@ system_prompt() {
     ' "$CONSULT_SWIFT"
 }
 
-# Every file under the real repo's personal data, with its hash.
+# Every file under the real repo's personal data, with its hash. A fresh clone
+# has neither directory yet; an empty snapshot is still a valid baseline, since
+# what the comparison proves is that the engine created nothing here either.
 real_memory_snapshot() {
-    (cd "$REPO_ROOT" && find memory goals -type f -exec shasum {} + | LC_ALL=C sort)
+    local dirs=()
+    local dir
+    for dir in memory goals; do
+        if [ -d "$REPO_ROOT/$dir" ]; then
+            dirs+=("$dir")
+        fi
+    done
+    if [ ${#dirs[@]} -eq 0 ]; then
+        return 0
+    fi
+    (cd "$REPO_ROOT" && find "${dirs[@]}" -type f -exec shasum {} + | LC_ALL=C sort)
 }
 
 run_turn() {

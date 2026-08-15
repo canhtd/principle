@@ -88,27 +88,9 @@ public struct FavoritesStore: Sendable {
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        // Opened for update rather than writing: the separator check below has
-        // to read the last byte back.
-        guard let handle = try? FileHandle(forUpdating: fileURL) else {
-            try line.write(to: fileURL, options: .atomic)
-            return
-        }
-        defer { try? handle.close() }
-        try handle.seekToEnd()
-        // A hand-edited file may end without a newline; without this the new
-        // entry would be glued onto the last one and both would be unreadable.
-        if try needsSeparator(handle) { try handle.write(contentsOf: Data("\n".utf8)) }
-        try handle.write(contentsOf: line)
-    }
-
-    private func needsSeparator(_ handle: FileHandle) throws -> Bool {
-        let end = try handle.offset()
-        guard end > 0 else { return false }
-        try handle.seek(toOffset: end - 1)
-        let last = try handle.read(upToCount: 1)
-        try handle.seekToEnd()
-        return last != Data("\n".utf8)
+        // O_APPEND, not seek-then-write: the app and a terminal session share
+        // this file, so two writers must not be able to land on the same offset.
+        try AppendOnlyFile.append(line, to: fileURL)
     }
 
     // MARK: - Read
@@ -116,24 +98,13 @@ public struct FavoritesStore: Sendable {
     /// Every readable line, in file order. An unreadable line is skipped and
     /// logged rather than taking the whole list down with it.
     public func entries() -> [FavoriteEntry] {
-        guard let data = try? Data(contentsOf: fileURL), let text = String(data: data, encoding: .utf8) else {
+        guard let result = JSONLFile.decodeLines(at: fileURL, as: FavoriteEntry.self, decoder: Self.decoder) else {
             return []
         }
-        var entries: [FavoriteEntry] = []
-        var skipped = 0
-        for line in text.split(separator: "\n", omittingEmptySubsequences: true) {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            guard let entry = try? Self.decoder.decode(FavoriteEntry.self, from: Data(trimmed.utf8)) else {
-                skipped += 1
-                continue
-            }
-            entries.append(entry)
+        if result.skipped > 0 {
+            Self.logger.error("Skipped \(result.skipped, privacy: .public) unreadable favourite line(s)")
         }
-        if skipped > 0 {
-            Self.logger.error("Skipped \(skipped, privacy: .public) unreadable favourite line(s)")
-        }
-        return entries
+        return result.records
     }
 
     /// The current list: the ids still saved, oldest save first. Replaying in

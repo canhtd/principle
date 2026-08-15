@@ -99,10 +99,6 @@ public struct SessionStore: Sendable {
         return session
     }
 
-    public func delete(id: UUID) throws {
-        try FileManager.default.removeItem(at: fileURL(for: id))
-    }
-
     // MARK: - Read
 
     public func load(id: UUID) throws -> ChatSession {

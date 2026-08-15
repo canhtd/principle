@@ -32,12 +32,12 @@ public enum ConsultPrompt {
         - Câu trả lời chỉ gồm đoạn text định hướng (đúng bốn ý của Bước 4), rồi dòng trailer.
 
         Dòng cuối cùng của mọi câu trả lời phải là đúng một dòng, không có gì sau nó:
-        PRINCIPLES_JSON: {"ids":["life:5.6","work:2.1"]}
+        \(TrailerParser.marker) {"ids":["life:5.6","work:2.1"]}
         - Dùng trường `id` của corpus, KHÔNG dùng `num` — cùng một số hiệu tồn tại ở cả hai
           phần sách, chỉ `id` là duy nhất.
         - Tối đa 3 id, theo đúng thứ tự đã dùng trong câu trả lời.
         - Không grep ra nguyên tắc nào thì nói thẳng điều đó trong phần text và trả về
-          PRINCIPLES_JSON: {"ids":[]}. Không bịa id.
+          \(TrailerParser.marker) {"ids":[]}. Không bịa id.
         """
 
     /// The flag pair every turn carries.

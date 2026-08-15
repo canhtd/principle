@@ -3,24 +3,6 @@ import Testing
 
 @testable import PrincipleCore
 
-/// Every test runs against a throwaway repo in the system temp dir — never the
-/// real repo's `memory/`.
-private struct TempRepo: ~Copyable {
-    let root: URL
-
-    init() throws {
-        root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-            .appendingPathComponent("principle-tests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-    }
-
-    var store: SessionStore { SessionStore(repoURL: root) }
-
-    deinit {
-        try? FileManager.default.removeItem(at: root)
-    }
-}
-
 private func daysAgo(_ days: Int) -> Date {
     Calendar.current.date(byAdding: .day, value: -days, to: Date())!
 }
@@ -31,10 +13,10 @@ struct SessionStoreTests {
 
     @Test("Creating a session writes memory/sessions/<uuid>.json and round-trips every field")
     func createRoundTrip() throws {
-        let repo = try TempRepo()
-        let store = repo.store
+        let repo = try TempRepo(prefix: "store")
+        let store = repo.sessions
 
-        var session = try store.create(topic: "Bỏ thuốc lá", model: "fable")
+        var session = try store.create(topic: "Bỏ thuốc lá", model: ModelAlias.fable)
         let file = repo.root
             .appendingPathComponent("memory/sessions", isDirectory: true)
             .appendingPathComponent("\(session.id.uuidString.lowercased()).json")
@@ -51,7 +33,7 @@ struct SessionStoreTests {
         let reloaded = try store.load(id: session.id)
         #expect(reloaded.id == session.id)
         #expect(reloaded.topic == "Bỏ thuốc lá")
-        #expect(reloaded.model == "fable")
+        #expect(reloaded.model == ModelAlias.fable)
         #expect(reloaded.claudeSessionID == "engine-abc-123")
         #expect(reloaded.messages.count == 2)
         #expect(reloaded.messages[0].role == .user)
@@ -69,11 +51,11 @@ struct SessionStoreTests {
 
     @Test("The sessions directory is created on demand")
     func createsDirectoryWhenMissing() throws {
-        let repo = try TempRepo()
+        let repo = try TempRepo(prefix: "store")
         let dir = repo.root.appendingPathComponent("memory/sessions", isDirectory: true)
         #expect(!FileManager.default.fileExists(atPath: dir.path))
 
-        _ = try repo.store.create(topic: "Ca đầu tiên", model: "fable")
+        _ = try repo.sessions.create(topic: "Ca đầu tiên", model: ModelAlias.fable)
         #expect(FileManager.default.fileExists(atPath: dir.path))
     }
 
@@ -81,12 +63,12 @@ struct SessionStoreTests {
 
     @Test("Two sessions today plus one yesterday group into 2 days, newest first")
     func groupsByDayNewestFirst() throws {
-        let repo = try TempRepo()
-        let store = repo.store
+        let repo = try TempRepo(prefix: "store")
+        let store = repo.sessions
 
-        let older = try store.create(topic: "Hôm nay sớm", model: "fable", createdAt: Date().addingTimeInterval(-3600))
-        let newer = try store.create(topic: "Hôm nay muộn", model: "fable", createdAt: Date())
-        let yesterday = try store.create(topic: "Hôm qua", model: "opus", createdAt: daysAgo(1))
+        let older = try store.create(topic: "Hôm nay sớm", model: ModelAlias.fable, createdAt: Date().addingTimeInterval(-3600))
+        let newer = try store.create(topic: "Hôm nay muộn", model: ModelAlias.fable, createdAt: Date())
+        let yesterday = try store.create(topic: "Hôm qua", model: ModelAlias.opus, createdAt: daysAgo(1))
 
         let groups = try store.sidebarGroups()
         #expect(groups.count == 2)
@@ -100,11 +82,11 @@ struct SessionStoreTests {
 
     @Test("A corrupt session file is skipped and reported; the rest still load")
     func corruptFileIsSkipped() throws {
-        let repo = try TempRepo()
-        let store = repo.store
+        let repo = try TempRepo(prefix: "store")
+        let store = repo.sessions
 
-        let good1 = try store.create(topic: "Ca lành 1", model: "fable")
-        let good2 = try store.create(topic: "Ca lành 2", model: "fable")
+        let good1 = try store.create(topic: "Ca lành 1", model: ModelAlias.fable)
+        let good2 = try store.create(topic: "Ca lành 2", model: ModelAlias.fable)
 
         let dir = repo.root.appendingPathComponent("memory/sessions", isDirectory: true)
         let broken = dir.appendingPathComponent("broken.json")
@@ -124,19 +106,19 @@ struct SessionStoreTests {
 
     @Test("Loading from a repo with no sessions directory yields an empty list")
     func loadsEmptyWhenDirectoryMissing() throws {
-        let repo = try TempRepo()
-        #expect(try repo.store.loadAll().isEmpty)
-        #expect(try repo.store.sidebarGroups().isEmpty)
+        let repo = try TempRepo(prefix: "store")
+        #expect(try repo.sessions.loadAll().isEmpty)
+        #expect(try repo.sessions.sidebarGroups().isEmpty)
     }
 
     // MARK: - 4. Resume id (F2 / AE1 at store level)
 
     @Test("Opening a session that has a claude_session_id offers it as the resume id")
     func openSessionOffersResumeID() throws {
-        let repo = try TempRepo()
-        let store = repo.store
+        let repo = try TempRepo(prefix: "store")
+        let store = repo.sessions
 
-        let created = try store.create(topic: "Ca cũ", model: "fable")
+        let created = try store.create(topic: "Ca cũ", model: ModelAlias.fable)
         #expect(created.nextTurnStart == .fresh)
 
         let afterTurn = try store.appendMessage(
@@ -153,10 +135,10 @@ struct SessionStoreTests {
 
     @Test("appendMessage keeps the existing resume id when the turn does not report a new one")
     func appendKeepsResumeIDWhenNotReported() throws {
-        let repo = try TempRepo()
-        let store = repo.store
+        let repo = try TempRepo(prefix: "store")
+        let store = repo.sessions
 
-        let created = try store.create(topic: "Ca cũ", model: "fable")
+        let created = try store.create(topic: "Ca cũ", model: ModelAlias.fable)
         _ = try store.appendMessage(
             ChatMessage(role: .user, text: "Lượt một."),
             to: created.id,
@@ -169,8 +151,8 @@ struct SessionStoreTests {
 
     @Test("Appending to an unknown session id throws instead of creating a stray file")
     func appendToUnknownSessionThrows() throws {
-        let repo = try TempRepo()
-        let store = repo.store
+        let repo = try TempRepo(prefix: "store")
+        let store = repo.sessions
         let ghost = UUID()
         #expect(throws: SessionStoreError.sessionNotFound(ghost)) {
             _ = try store.appendMessage(ChatMessage(role: .user, text: "Xin chào"), to: ghost)
@@ -181,10 +163,10 @@ struct SessionStoreTests {
 
     @Test("Clearing an orphaned resume id keeps the transcript and starts the next turn fresh-with-seed")
     func clearOrphanedResumeID() throws {
-        let repo = try TempRepo()
-        let store = repo.store
+        let repo = try TempRepo(prefix: "store")
+        let store = repo.sessions
 
-        let created = try store.create(topic: "Ca mồ côi", model: "fable")
+        let created = try store.create(topic: "Ca mồ côi", model: ModelAlias.fable)
         _ = try store.appendMessage(
             ChatMessage(role: .user, text: "Tôi nên làm gì?"),
             to: created.id,

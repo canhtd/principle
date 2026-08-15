@@ -15,22 +15,28 @@ extension SessionViewModel {
     public func send(_ text: String) async {
         let prompt = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty, !phase.isStreaming, let sessionID = selectedSessionID else { return }
-
-        // KTD4: checked again right before every send, not just at launch.
-        await refreshAvailability()
-        guard !isEngineBlocked else {
-            errorMessage = engineGuidance
+        // Claim the turn before the first suspension point: the availability
+        // check below is an await, and with the phase still `.idle` a second
+        // tap on Gửi passed this same guard and spawned a duplicate turn.
+        phase = .preparing
+        guard await ensureEngineAvailable() else {
+            phase = .idle
             return
         }
 
         errorMessage = nil
         lastPrompt = prompt
+        // Cleared only once the turn is really going, so a blocked engine hands
+        // the question back instead of eating it.
         draft = ""
         do {
             let session = try store.appendMessage(ChatMessage(role: .user, text: prompt), to: sessionID)
-            refreshSessions()
+            apply(session)
             await runTurn(prompt: prompt, session: session)
         } catch {
+            // Claimed above but never reached `runTurn`, which is what would
+            // otherwise hand the phase back.
+            phase = .idle
             errorMessage = "Không ghi được câu hỏi vào phiên: \(error.localizedDescription)"
             Self.logger.error("Persisting the question failed: \(String(describing: error), privacy: .public)")
         }
@@ -40,16 +46,28 @@ extension SessionViewModel {
     /// the transcript, so it is not appended a second time.
     public func resend() async {
         guard canResend, let prompt = lastPrompt, let sessionID = selectedSessionID else { return }
-        await refreshAvailability()
-        guard !isEngineBlocked else {
-            errorMessage = engineGuidance
+        // Same claim as `send`: `canResend` reads the phase, so it has to stop
+        // being `.idle` before the await, not after it.
+        phase = .preparing
+        guard await ensureEngineAvailable() else {
+            phase = .idle
             return
         }
         do {
             await runTurn(prompt: prompt, session: try store.load(id: sessionID))
         } catch {
+            phase = .idle
             errorMessage = "Không mở lại được phiên: \(error.localizedDescription)"
         }
+    }
+
+    /// KTD4: the check runs again right before every turn, not just at launch.
+    /// A blocked engine leaves the reason on screen instead of a dead spawn.
+    private func ensureEngineAvailable() async -> Bool {
+        await refreshAvailability()
+        guard isEngineBlocked else { return true }
+        errorMessage = engineGuidance
+        return false
     }
 
     /// Stops the turn in flight. The stream ends normally, so whatever already
@@ -149,15 +167,17 @@ extension SessionViewModel {
                     var session = try store.load(id: sessionID)
                     session.claudeSessionID = engineSessionID
                     try store.save(session)
+                    apply(session)
                 }
             } else {
-                try store.appendMessage(
-                    ChatMessage(role: .assistant, text: answer.text, principleIDs: answer.principleIDs),
-                    to: sessionID,
-                    claudeSessionID: outcome.engineSessionID
+                apply(
+                    try store.appendMessage(
+                        ChatMessage(role: .assistant, text: answer.text, principleIDs: answer.principleIDs),
+                        to: sessionID,
+                        claudeSessionID: outcome.engineSessionID
+                    )
                 )
             }
-            refreshSessions()
         } catch {
             errorMessage = "Không lưu được câu trả lời: \(error.localizedDescription)"
             Self.logger.error("Persisting the answer failed: \(String(describing: error), privacy: .public)")
@@ -167,7 +187,7 @@ extension SessionViewModel {
     private func clearDeadSession(_ session: ChatSession) -> ChatSession {
         do {
             let cleared = try store.clearClaudeSessionID(for: session.id)
-            refreshSessions()
+            apply(cleared)
             return cleared
         } catch {
             // The file is unwritable; still retry seeded rather than give up.

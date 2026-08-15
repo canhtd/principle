@@ -40,11 +40,7 @@ struct EngineStatusView: View {
     }
 
     private var title: String {
-        switch model.availability {
-        case .notInstalled: "Chưa tìm thấy Claude Code"
-        case .loggedOut: "Claude Code chưa sẵn sàng"
-        case .ready, nil: "Đang kiểm tra engine"
-        }
+        model.availability?.blockedTitle ?? EngineAvailability.checkingTitle
     }
 }
 

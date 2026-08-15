@@ -22,7 +22,7 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                caption("Áp dụng cho phiên mới và lượt gửi tiếp theo. Phiên đã tạo giữ nguyên model của nó.")
+                caption("Áp dụng cho phiên mới. Phiên đã tạo giữ nguyên model của nó — đổi model thì tạo phiên mới.")
             }
 
             Section("Thư mục repo") {
@@ -80,22 +80,9 @@ struct SettingsView: View {
         }
     }
 
-    private var statusTitle: String {
-        switch availability {
-        case .ready(let version): "Sẵn sàng — Claude Code \(version)"
-        case .notInstalled: "Không tìm thấy Claude Code"
-        case .loggedOut: "Chưa đăng nhập"
-        case nil: "Đang kiểm tra…"
-        }
-    }
+    private var statusTitle: String { availability?.settingsTitle ?? "Đang kiểm tra…" }
 
-    private var statusGuidance: String? {
-        switch availability {
-        case .ready, nil: nil
-        case .notInstalled: SessionViewModel.notInstalledGuidance
-        case .loggedOut(let guidance): guidance
-        }
-    }
+    private var statusGuidance: String? { availability?.guidance }
 
     private var statusIcon: String {
         switch availability {

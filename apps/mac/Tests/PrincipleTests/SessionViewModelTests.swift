@@ -3,36 +3,20 @@ import Testing
 
 @testable import PrincipleCore
 
-/// Every test writes into a throwaway repo under the system temp dir and never
-/// spawns a real engine.
-private final class TempRepoDir {
-    let root: URL
-
-    init() throws {
-        root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-            .appendingPathComponent("principle-vm-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-    }
-
-    var store: SessionStore { SessionStore(repoURL: root) }
-
-    deinit { try? FileManager.default.removeItem(at: root) }
-}
-
 @MainActor
 private func makeViewModel(
-    repo: TempRepoDir,
+    repo: TempRepo,
     engine: MockTurnEngine,
     availability: EngineAvailability = .ready(version: "2.1.233"),
     existing: ChatSession? = nil
 ) throws -> SessionViewModel {
     let model = SessionViewModel(
         engine: engine,
-        store: repo.store,
+        store: repo.sessions,
         availabilityProvider: StubAvailabilityProvider(value: availability)
     )
     if let existing {
-        try repo.store.save(existing)
+        try repo.sessions.save(existing)
         model.refreshSessions()
         model.select(existing.id)
     } else {
@@ -60,7 +44,7 @@ struct SessionViewModelTests {
 
     @Test("init → tool_use → text → result đưa trạng thái đi đúng thứ tự")
     func phasesProgressThroughATurn() async throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine()
         let model = try makeViewModel(repo: repo, engine: engine)
 
@@ -104,7 +88,7 @@ struct SessionViewModelTests {
 
     @Test("Event trong subagent hiện trạng thái tra cứu, không đổ vào câu trả lời")
     func subagentEventsShowLookupStatus() async throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine()
         let model = try makeViewModel(repo: repo, engine: engine)
 
@@ -127,7 +111,7 @@ struct SessionViewModelTests {
 
     @Test("Turn lỗi hiện thông báo và cho gửi lại, không nhân đôi câu hỏi")
     func failedTurnOffersResend() async throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine(responses: [
             .script(events: [sessionStarted("eng-1")], failure: EngineError.failed(message: "Engine bó tay.")),
             .script(events: [result("eng-2", text: "Xong rồi.")]),
@@ -158,7 +142,7 @@ struct SessionViewModelTests {
 
     @Test("Engine đăng xuất thì chặn gửi và hiện màn hình trạng thái")
     func loggedOutBlocksSend() async throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine()
         let guidance = EngineAvailabilityChecker.loggedOutGuidance
         let model = try makeViewModel(repo: repo, engine: engine, availability: .loggedOut(guidance: guidance))
@@ -177,7 +161,7 @@ struct SessionViewModelTests {
 
     @Test("Dừng chỉ bật khi đang stream, huỷ engine và giữ phần đã nhận")
     func stopCancelsAndKeepsPartialText() async throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine()
         let model = try makeViewModel(repo: repo, engine: engine)
         #expect(!model.canStop)
@@ -220,7 +204,7 @@ struct SessionViewModelTests {
 
     @Test("Resume id mồ côi bị xoá và turn chạy lại một lần như phiên mới có seed")
     func deadResumeRetriesOnceWithSeed() async throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine(responses: [
             .script(
                 events: [],
@@ -258,7 +242,7 @@ struct SessionViewModelTests {
 
     @Test("Lỗi không phải session chết thì không chạy lại")
     func unrelatedFailureDoesNotRetry() async throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine(responses: [
             .script(events: [], failure: EngineError.hung(silence: 300))
         ])
@@ -281,7 +265,7 @@ struct SessionViewModelTests {
 
     @Test("Header chat hiện model của phiên bằng tiếng Việt")
     func headerShowsSessionModel() throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine()
         let model = try makeViewModel(repo: repo, engine: engine)
         #expect(model.modelLabel == "Model: Fable 5")
@@ -294,16 +278,16 @@ struct SessionViewModelTests {
 
     @Test("Sidebar nhóm phiên theo ngày, mới nhất lên đầu")
     func sidebarGroupsByDay() throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine()
         let today = Date()
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
-        try repo.store.save(ChatSession(topic: "Ca hôm qua", createdAt: yesterday, model: ModelAlias.default))
-        try repo.store.save(ChatSession(topic: "Ca hôm nay", createdAt: today, model: ModelAlias.default))
+        try repo.sessions.save(ChatSession(topic: "Ca hôm qua", createdAt: yesterday, model: ModelAlias.default))
+        try repo.sessions.save(ChatSession(topic: "Ca hôm nay", createdAt: today, model: ModelAlias.default))
 
         let model = SessionViewModel(
             engine: engine,
-            store: repo.store,
+            store: repo.sessions,
             availabilityProvider: StubAvailabilityProvider(value: .ready(version: "2.1.233")))
         model.refreshSessions()
 
@@ -316,7 +300,7 @@ struct SessionViewModelTests {
 
     @Test("Kết thúc lượt: trailer bị tách khỏi transcript, id vào principle_ids")
     func turnFilesCitedPrincipleIDs() async throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine(responses: [
             .script(events: [
                 sessionStarted("eng-1"),
@@ -332,13 +316,13 @@ struct SessionViewModelTests {
         #expect(answer.text == "Bắt đầu từ chẩn đoán.")
         #expect(answer.principleIDs == ["life:5.6", "work:2.1"])
         // Persisted, so reopening the session re-renders the cards offline.
-        #expect(try repo.store.load(id: #require(model.selectedSessionID)).messages.last?.principleIDs
+        #expect(try repo.sessions.load(id: #require(model.selectedSessionID)).messages.last?.principleIDs
             == ["life:5.6", "work:2.1"])
     }
 
     @Test("Không có trailer → không id nào được ghi, text nguyên vẹn")
     func turnWithoutATrailerFilesNoIDs() async throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let engine = MockTurnEngine(responses: [
             .script(events: [sessionStarted("eng-1"), result("eng-1", text: "Chưa trích nguyên tắc nào.")])
         ])
@@ -352,7 +336,7 @@ struct SessionViewModelTests {
 
     @Test("Thẻ chỉ dựng từ corpus: id lạ không sinh thẻ nào")
     func cardsComeOnlyFromTheCorpus() throws {
-        let repo = try TempRepoDir()
+        let repo = try TempRepo(prefix: "vm")
         let corpus = CorpusStore(records: [
             PrincipleRecord(
                 id: "life:5.6",
@@ -365,7 +349,7 @@ struct SessionViewModelTests {
         ])
         let model = SessionViewModel(
             engine: MockTurnEngine(),
-            store: repo.store,
+            store: repo.sessions,
             availabilityProvider: StubAvailabilityProvider(value: .ready(version: "2.1.233")),
             corpus: corpus)
 

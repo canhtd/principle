@@ -13,14 +13,6 @@ private func fixtureStore() throws -> CorpusStore {
     CorpusStore(fileURL: try fixtureURL())
 }
 
-/// A throwaway directory; nothing here ever writes into the real repo.
-private func makeTempDirectory() throws -> URL {
-    let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-        .appendingPathComponent("principle-corpus-\(UUID().uuidString)", isDirectory: true)
-    try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-    return url
-}
-
 @Suite("CorpusStore")
 struct CorpusStoreTests {
     // MARK: - Loading
@@ -37,7 +29,8 @@ struct CorpusStoreTests {
 
     @Test("Không có corpus trên đĩa → store rỗng, không crash")
     func missingCorpusLoadsEmpty() throws {
-        let store = CorpusStore(repoURL: try makeTempDirectory())
+        let repo = try TempRepo(prefix: "corpus")
+        let store = CorpusStore(repoURL: repo.root)
         #expect(store.isEmpty)
         #expect(store.principle(id: "life:5.6") == nil)
         #expect(store.principles(ids: ["life:5.6"]).isEmpty)
@@ -45,21 +38,21 @@ struct CorpusStoreTests {
 
     @Test("File corpus rác → store rỗng, không crash")
     func unreadableCorpusLoadsEmpty() throws {
-        let repo = try makeTempDirectory()
-        let corpus = CorpusStore.corpusURL(inRepo: repo)
+        let repo = try TempRepo(prefix: "corpus")
+        let corpus = CorpusStore.corpusURL(inRepo: repo.root)
         try FileManager.default.createDirectory(
             at: corpus.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
         try Data("khong-phai-json\n{{{\n".utf8).write(to: corpus)
 
-        #expect(CorpusStore(repoURL: repo).isEmpty)
+        #expect(CorpusStore(repoURL: repo.root).isEmpty)
     }
 
     @Test("Đường dẫn corpus suy từ repo đúng vị trí KTD")
     func resolvesCorpusPathInsideTheRepo() throws {
-        let repo = try makeTempDirectory()
-        let corpus = CorpusStore.corpusURL(inRepo: repo)
+        let repo = try TempRepo(prefix: "corpus")
+        let corpus = CorpusStore.corpusURL(inRepo: repo.root)
         #expect(corpus.path.hasSuffix(".claude/skills/ask-ray/references/corpus.jsonl"))
 
         try FileManager.default.createDirectory(
@@ -67,7 +60,7 @@ struct CorpusStoreTests {
             withIntermediateDirectories: true
         )
         try FileManager.default.copyItem(at: try fixtureURL(), to: corpus)
-        #expect(CorpusStore(repoURL: repo).count == 6)
+        #expect(CorpusStore(repoURL: repo.root).count == 6)
     }
 
     // MARK: - 1. Lookup by id

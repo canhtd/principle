@@ -139,28 +139,16 @@ public struct CorpusStore: Sendable {
     // MARK: - Reading the file
 
     private static func decodeRecords(at fileURL: URL) -> [PrincipleRecord] {
-        guard let data = try? Data(contentsOf: fileURL), let text = String(data: data, encoding: .utf8) else {
+        // One broken line must not cost the other 514 principles.
+        guard let result = JSONLFile.decodeLines(at: fileURL, as: PrincipleRecord.self) else {
             logger.notice(
                 "No readable corpus at \(fileURL.path, privacy: .public); principle cards are unavailable"
             )
             return []
         }
-        let decoder = JSONDecoder()
-        var records: [PrincipleRecord] = []
-        var skipped = 0
-        for line in text.split(separator: "\n", omittingEmptySubsequences: true) {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            // One broken line must not cost the other 514 principles.
-            guard let record = try? decoder.decode(PrincipleRecord.self, from: Data(trimmed.utf8)) else {
-                skipped += 1
-                continue
-            }
-            records.append(record)
+        if result.skipped > 0 {
+            logger.error("Skipped \(result.skipped, privacy: .public) unreadable corpus line(s)")
         }
-        if skipped > 0 {
-            logger.error("Skipped \(skipped, privacy: .public) unreadable corpus line(s)")
-        }
-        return records
+        return result.records
     }
 }

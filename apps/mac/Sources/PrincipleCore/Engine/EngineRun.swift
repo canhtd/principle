@@ -160,8 +160,12 @@ final class EngineRun: @unchecked Sendable {
         return terminal
     }
 
+    /// On its own thread: the SIGTERM → SIGKILL escalation waits out a grace
+    /// window, and `cancel()` is called from the main actor when the user
+    /// presses Dừng. The read loop is already parked on the pipe, so it picks
+    /// up the EOF whenever the process actually dies.
     private func terminateProcess() {
-        if process.isRunning { process.terminate() }
+        Thread.detachNewThread { [self] in ProcessTermination.terminate(process) }
     }
 
     private func finish(terminal: RunResult?) {

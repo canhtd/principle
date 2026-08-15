@@ -14,21 +14,6 @@ private final class TempSuite {
     deinit { UserDefaults().removePersistentDomain(forName: name) }
 }
 
-/// A throwaway repo root, so a repo-path test never points at the real `memory/`.
-private final class TempDir {
-    let root: URL
-
-    init(create: Bool = true) throws {
-        root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-            .appendingPathComponent("principle-settings-\(UUID().uuidString)", isDirectory: true)
-        if create {
-            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        }
-    }
-
-    deinit { try? FileManager.default.removeItem(at: root) }
-}
-
 @Suite("AppSettings")
 struct AppSettingsTests {
     // MARK: - 1. Response model (KTD8, AE4)
@@ -61,7 +46,7 @@ struct AppSettingsTests {
     @MainActor
     func opusReachesTheSpawnPath() async throws {
         let suite = TempSuite()
-        let repo = try TempDir()
+        let repo = try TempRepo(prefix: "settings")
 
         var settings = suite.settings
         settings.responseModel = ModelAlias.opus
@@ -99,7 +84,7 @@ struct AppSettingsTests {
     @MainActor
     func existingSessionKeepsItsModel() async throws {
         let suite = TempSuite()
-        let repo = try TempDir()
+        let repo = try TempRepo(prefix: "settings")
         let store = SessionStore(repoURL: repo.root)
         let existing = try store.create(topic: "Ca cũ", model: ModelAlias.fable)
 
@@ -124,7 +109,7 @@ struct AppSettingsTests {
     @Test("A configured repo path is what RepoLocation and the store use")
     func repoPathMovesTheStore() throws {
         let suite = TempSuite()
-        let repo = try TempDir()
+        let repo = try TempRepo(prefix: "settings")
         var settings = suite.settings
         settings.repoPath = repo.root.path
 
@@ -152,7 +137,7 @@ struct AppSettingsTests {
     @Test("A repo path that is not there is flagged, and reading it still does not crash")
     func missingRepoPathIsFlagged() throws {
         let suite = TempSuite()
-        let repo = try TempDir(create: false)
+        let repo = try TempRepo(prefix: "settings", create: false)
         var settings = suite.settings
         settings.repoPath = repo.root.path
 
@@ -167,7 +152,7 @@ struct AppSettingsTests {
     @Test("A repo path pointing at a file is flagged as not a folder")
     func fileRepoPathIsFlagged() throws {
         let suite = TempSuite()
-        let repo = try TempDir()
+        let repo = try TempRepo(prefix: "settings")
         let file = repo.root.appendingPathComponent("CLAUDE.md")
         try "x".write(to: file, atomically: true, encoding: .utf8)
 
