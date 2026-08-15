@@ -25,18 +25,21 @@ private func record(
 struct PrincipleCardModelTests {
     // MARK: - The red label
 
-    @Test("Id life: → nhãn LIFE PRINCIPLE kèm số hiệu")
+    @Test("Id life: → mặt thẻ chỉ ghi LIFE PRINCIPLE, số hiệu để dành cho sheet")
     func lifeLabel() {
         let card = PrincipleCardModel(record: record(id: "life:4.3e", num: "4.3e"))
         #expect(card.part == .life)
-        #expect(card.label == "LIFE PRINCIPLE · 4.3e")
+        #expect(card.partLabel == "LIFE PRINCIPLE")
+        #expect(card.number == "4.3e")
+        #expect(card.detailLabel == "LIFE PRINCIPLE · 4.3e")
     }
 
     @Test("Id work: → nhãn WORK PRINCIPLE, không phụ thuộc chuỗi part")
     func workLabel() {
         let card = PrincipleCardModel(record: record(id: "work:13.5c", part: "", num: "13.5c"))
         #expect(card.part == .work)
-        #expect(card.label == "WORK PRINCIPLE · 13.5c")
+        #expect(card.partLabel == "WORK PRINCIPLE")
+        #expect(card.detailLabel == "WORK PRINCIPLE · 13.5c")
     }
 
     @Test("Id không có tiền tố → đọc từ chuỗi part tiếng Việt")
@@ -51,24 +54,26 @@ struct PrincipleCardModelTests {
     func unknownPartDoesNotGuess() {
         let card = PrincipleCardModel(record: record(id: "5.6", part: "", num: "5.6"))
         #expect(card.part == .unknown)
-        #expect(card.label == "PRINCIPLE · 5.6")
+        #expect(card.partLabel == "PRINCIPLE")
+        #expect(card.detailLabel == "PRINCIPLE · 5.6")
     }
 
     @Test("Bản ghi không có số hiệu → nhãn không có dấu · thừa")
     func labelWithoutANumber() {
-        #expect(PrincipleCardModel(record: record(id: "life:x", num: "")).label == "LIFE PRINCIPLE")
-        #expect(PrincipleCardModel(record: record(id: "life:x", num: "  ")).label == "LIFE PRINCIPLE")
+        #expect(PrincipleCardModel(record: record(id: "life:x", num: "")).number == nil)
+        #expect(PrincipleCardModel(record: record(id: "life:x", num: "  ")).number == nil)
+        #expect(PrincipleCardModel(record: record(id: "life:x", num: "  ")).detailLabel == "LIFE PRINCIPLE")
     }
 
     // MARK: - Quote and bridge (AE2, AE3)
 
-    @Test("Bản ghi chỉ có tiêu đề → không có trích dẫn, thẻ vẫn mở được nếu có phần áp vào")
+    @Test("Bản ghi chỉ có tiêu đề → không có trích dẫn; hai dòng trên thẻ lấy phần áp vào")
     func headingOnlyRecordHasNoQuote() {
         let card = PrincipleCardModel(record: record(id: "life:5.6"), apply: "[FIXTURE] Áp vào ca.")
         #expect(card.quote == nil)
         #expect(!card.hasQuote)
         #expect(card.hasApply)
-        #expect(card.isExpandable)
+        #expect(card.excerpt == "[FIXTURE] Áp vào ca.")
     }
 
     @Test("Thân bài có sẵn → trích dẫn nguyên văn, cắt ở 40 từ")
@@ -87,9 +92,18 @@ struct PrincipleCardModelTests {
         #expect(!PrincipleCardModel(record: record(id: "life:5.6"), apply: "  \n ").hasApply)
     }
 
-    @Test("Không có gì để mở → thẻ không mời mở ra")
-    func headingOnlyWithoutApplyIsNotExpandable() {
-        #expect(!PrincipleCardModel(record: record(id: "life:5.6")).isExpandable)
+    @Test("Không trích được, không có phần áp vào → mặt thẻ dừng ở tiêu đề")
+    func headingOnlyWithoutApplyHasNoExcerpt() {
+        #expect(PrincipleCardModel(record: record(id: "life:5.6")).excerpt == nil)
+    }
+
+    @Test("Có thân bài thì hai dòng dưới tiêu đề là sách, không phải phần áp vào")
+    func excerptPrefersTheBook() throws {
+        let card = PrincipleCardModel(
+            record: record(id: "life:5.6", body: "[FIXTURE] Thân bài", hasBody: true),
+            apply: "[FIXTURE] Áp vào ca."
+        )
+        #expect(card.excerpt == "[FIXTURE] Thân bài")
     }
 
     @Test("Phần áp vào ca được cắt khoảng trắng thừa nhưng giữ nguyên chữ")
@@ -128,7 +142,8 @@ struct PrincipleCardModelTests {
         )
 
         #expect(cards.map(\.apply) == ["A", "B"])
-        #expect(cards.map(\.label) == ["LIFE PRINCIPLE · 1", "WORK PRINCIPLE · 2"])
+        #expect(cards.map(\.partLabel) == ["LIFE PRINCIPLE", "WORK PRINCIPLE"])
+        #expect(cards.map(\.detailLabel) == ["LIFE PRINCIPLE · 1", "WORK PRINCIPLE · 2"])
     }
 
     @Test("Danh sách yêu thích: thẻ từ bản ghi trần, không có phần áp vào và không bị cắt còn 3")

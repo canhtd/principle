@@ -9,7 +9,6 @@ struct ChatView: View {
     /// the section reads (R7).
     let favorites: FavoritesModel
     @FocusState private var composerFocused: Bool
-    @State private var chapterContext: ChapterContext?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,7 +18,6 @@ struct ChatView: View {
             Divider()
             composer
         }
-        .sheet(item: $chapterContext) { ChapterContextView(context: $0) }
         .onAppear { composerFocused = true }
     }
 
@@ -52,7 +50,7 @@ struct ChatView: View {
                             cards: model.cards(for: message),
                             isFavorite: { favorites.isFavorite($0.id) },
                             toggleFavorite: { favorites.toggle($0.id) },
-                            showChapterContext: { chapterContext = ChapterContext(corpus: model.corpus, record: $0) }
+                            chapterContext: { ChapterContext(corpus: model.corpus, record: $0) }
                         )
                         .id(message.id)
                     }

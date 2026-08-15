@@ -39,7 +39,14 @@ enum Typography {
     /// reads loose.
     static let cardTitleTracking: CGFloat = -0.2
 
-    /// `LIFE PRINCIPLE · 4.3e` and the other small caps labels.
+    /// The headline of the detail sheet — the one place a principle gets the
+    /// whole width to itself, so it is set a step above the card title.
+    static let detailTitleSize: CGFloat = 26
+    static let detailTitle = Font.system(size: detailTitleSize, weight: .semibold)
+    static let detailTitleLineSpacing = detailTitleSize * 0.3
+    static let detailTitleTracking: CGFloat = -0.4
+
+    /// `LIFE PRINCIPLE` and the other small caps labels.
     static let labelSize: CGFloat = 11
     static let label = Font.system(size: labelSize, weight: .semibold)
     static let labelLineSpacing = labelSize * 0.4
@@ -56,6 +63,11 @@ enum Typography {
     /// Cards stop well short of the prose column: ~62 characters of Vietnamese
     /// once the card's own padding is taken off.
     static let cardWidth: CGFloat = 520
+
+    /// A sheet is a document, not a window: fixed so the principle is read at
+    /// the width it was set for. Matches the chapter sheet.
+    static let sheetWidth: CGFloat = 560
+    static let sheetHeight: CGFloat = 620
 }
 
 /// The card palette, straight from `references/artifact-spec.md`.
@@ -73,6 +85,10 @@ enum Palette {
     /// Separates the bridge from the principle, and the card from a dark page.
     static let cardHairline = Color.white.opacity(0.10)
     static let cardRadius: CGFloat = 20
+
+    /// The two lines of the book showing through the card face. Same grey as
+    /// the quote it is cut from.
+    static let cardExcerpt = cardQuote
 
     /// The diagnosis sits on a light panel so the black cards below read as a
     /// second, heavier register.
@@ -115,8 +131,17 @@ enum Spacing {
     /// Where the card stops being a heading and becomes the book.
     static let cardQuoteTop: CGFloat = 14
     static let cardBlock: CGFloat = 16
-    /// Between an answer's prose and the cards drawn under it.
-    static let cardListTop: CGFloat = 4
+    /// Between the card stack and the prose it opens (cards come first: the
+    /// principles are what the answer is decided by).
+    static let cardListGap: CGFloat = 16
+
+    // MARK: Sheets
+
+    /// Inside a sheet — wider than a card, because the sheet is one column of
+    /// reading rather than an object on a page.
+    static let sheetPadding: CGFloat = 24
+    /// Around the sheet's own chrome row (close button).
+    static let sheetChrome: CGFloat = 14
 }
 
 extension View {

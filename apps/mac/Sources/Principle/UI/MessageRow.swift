@@ -11,27 +11,34 @@ struct MessageRow: View {
     var cards: [PrincipleCardModel] = []
     var isFavorite: (PrincipleRecord) -> Bool = { _ in false }
     var toggleFavorite: (PrincipleRecord) -> Void = { _ in }
-    var showChapterContext: (PrincipleRecord) -> Void = { _ in }
+    var chapterContext: (PrincipleRecord) -> ChapterContext? = { _ in nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(message.role == .user ? "You" : "Ray")
                 .font(Typography.caption)
                 .foregroundStyle(.secondary)
-            if !message.text.isEmpty {
-                // The engine answers in Markdown; showing it verbatim leaves
-                // `**bold**` and one wall of text on screen.
-                MarkdownText(text: message.text)
-            }
+            // Cards before prose: the diagnosis and the principles are what the
+            // answer was decided by, so they are what the reader meets first.
+            // While the answer streams there is no trailer yet and no cards —
+            // they arrive above the text when the turn lands.
             PrincipleCardList(
                 diagnosis: message.diagnosis?.cleaned,
                 cards: cards,
                 isFavorite: isFavorite,
                 toggleFavorite: toggleFavorite,
-                showChapterContext: showChapterContext
+                chapterContext: chapterContext
             )
+            .padding(.bottom, hasCards ? Spacing.cardListGap : 0)
+            if !message.text.isEmpty {
+                // The engine answers in Markdown; showing it verbatim leaves
+                // `**bold**` and one wall of text on screen.
+                MarkdownText(text: message.text)
+            }
         }
     }
+
+    private var hasCards: Bool { message.diagnosis?.cleaned != nil || !cards.isEmpty }
 }
 
 #Preview {

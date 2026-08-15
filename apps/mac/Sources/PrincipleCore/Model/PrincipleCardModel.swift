@@ -62,20 +62,36 @@ public struct PrincipleCardModel: Identifiable, Equatable, Sendable {
     public var id: String { record.id }
     public var title: String { record.title }
 
-    /// `LIFE PRINCIPLE · 4.3e` — the red label above the title.
-    public var label: String {
+    /// `LIFE PRINCIPLE` — the red label above the title, and all of it. The
+    /// number is real information but not scannable information: on a stack of
+    /// three cards it is noise between the reader and the sentence.
+    public var partLabel: String { part.label }
+
+    /// `4.3e`, or `nil` for a record the corpus numbers with nothing. Shown
+    /// where there is room to place a principle in the system — the detail
+    /// sheet, the chapter, the saved list.
+    public var number: String? {
         let num = record.num.trimmingCharacters(in: .whitespacesAndNewlines)
-        return num.isEmpty ? part.label : "\(part.label) · \(num)"
+        return num.isEmpty ? nil : num
+    }
+
+    /// `LIFE PRINCIPLE · 4.3e` — the detail sheet's header.
+    public var detailLabel: String {
+        guard let number else { return partLabel }
+        return "\(partLabel) · \(number)"
     }
 
     /// ≤40 words, verbatim from the book. `nil` for a heading-only record: the
     /// heading *is* the principle, and there is nothing to quote (AE3).
     public var quote: String? { record.quote }
 
+    /// The two lines under the title on a card face: the book's own words when
+    /// there are any, otherwise the bridge into this case. Never both — the card
+    /// is the door, not the room.
+    public var excerpt: String? { quote ?? apply }
+
     public var hasQuote: Bool { quote != nil }
     public var hasApply: Bool { apply != nil }
-    /// Nothing behind the disclosure means the card does not offer to open.
-    public var isExpandable: Bool { hasQuote || hasApply }
 
     public init(record: PrincipleRecord, apply: String? = nil) {
         self.record = record

@@ -12,7 +12,13 @@ struct PrincipleCardList: View {
     var cards: [PrincipleCardModel] = []
     var isFavorite: (PrincipleRecord) -> Bool = { _ in false }
     var toggleFavorite: (PrincipleRecord) -> Void = { _ in }
-    var showChapterContext: (PrincipleRecord) -> Void = { _ in }
+    /// The chapter a record sits in, for the detail sheet to open. `nil` keeps
+    /// the button dark — a design render has no corpus behind it.
+    var chapterContext: (PrincipleRecord) -> ChapterContext? = { _ in nil }
+
+    /// The card the reader opened. One sheet for the whole stack: the cards are
+    /// doors onto the same room.
+    @State private var opened: PrincipleCardModel?
 
     var body: some View {
         if diagnosis != nil || !cards.isEmpty {
@@ -21,16 +27,18 @@ struct PrincipleCardList: View {
                     DiagnosisHeaderView(diagnosis: diagnosis)
                 }
                 ForEach(cards) { card in
-                    PrincipleCardView(
-                        card: card,
-                        isFavorite: isFavorite(card.record),
-                        toggleFavorite: { toggleFavorite(card.record) },
-                        showChapterContext: { showChapterContext(card.record) }
-                    )
+                    PrincipleCardView(card: card) { opened = card }
                 }
             }
             .frame(maxWidth: Typography.cardWidth, alignment: .leading)
-            .padding(.top, Spacing.cardListTop)
+            .sheet(item: $opened) { card in
+                PrincipleDetailView(
+                    card: card,
+                    isFavorite: { isFavorite(card.record) },
+                    toggleFavorite: { toggleFavorite(card.record) },
+                    chapterContext: { chapterContext(card.record) }
+                )
+            }
         }
     }
 }
@@ -42,14 +50,14 @@ extension PrincipleCardList {
         principles: [PrincipleRecord],
         isFavorite: @escaping (PrincipleRecord) -> Bool = { _ in false },
         toggleFavorite: @escaping (PrincipleRecord) -> Void = { _ in },
-        showChapterContext: @escaping (PrincipleRecord) -> Void = { _ in }
+        chapterContext: @escaping (PrincipleRecord) -> ChapterContext? = { _ in nil }
     ) {
         self.init(
             diagnosis: nil,
             cards: PrincipleCardModel.cards(for: principles),
             isFavorite: isFavorite,
             toggleFavorite: toggleFavorite,
-            showChapterContext: showChapterContext
+            chapterContext: chapterContext
         )
     }
 }

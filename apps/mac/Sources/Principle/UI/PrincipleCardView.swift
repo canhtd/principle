@@ -2,70 +2,51 @@ import PrincipleCore
 import SwiftUI
 
 /// One principle, drawn the way `references/artifact-spec.md` asks for it: a
-/// black card, a red label carrying the number, the title verbatim from the
-/// book, and — behind a disclosure — the quote and the bridge into this case.
+/// black card, a red label, the title verbatim from the book, and two lines of
+/// what is behind it.
 ///
-/// Collapsed by default on purpose: three open cards are a wall of text, and
-/// the title is what the reader scans first.
+/// The card is a door, not the room. Everything that used to sit under a
+/// disclosure — the full body, the bridge into this case, ♥, the chapter — now
+/// lives in ``PrincipleDetailView``, because three cards half-opened in a
+/// transcript is the wall of text the stack was meant to replace.
 struct PrincipleCardView: View {
     let card: PrincipleCardModel
-    var isFavorite = false
-    var toggleFavorite: () -> Void = {}
-    var showChapterContext: () -> Void = {}
-
-    @State private var isExpanded: Bool
-
-    /// `expanded` is for previews and design renders only — in the chat every
-    /// card starts shut.
-    init(
-        card: PrincipleCardModel,
-        isFavorite: Bool = false,
-        toggleFavorite: @escaping () -> Void = {},
-        showChapterContext: @escaping () -> Void = {},
-        expanded: Bool = false
-    ) {
-        self.card = card
-        self.isFavorite = isFavorite
-        self.toggleFavorite = toggleFavorite
-        self.showChapterContext = showChapterContext
-        _isExpanded = State(initialValue: expanded)
-    }
+    /// Opens the detail sheet. The whole card is the target.
+    var open: () -> Void = {}
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            label
-            title
-            controls
-            if isExpanded { revealed }
+        Button(action: open) {
+            VStack(alignment: .leading, spacing: 0) {
+                label
+                title
+                excerpt
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.cardPadding)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Palette.cardRadius))
+            .overlay {
+                // Keeps the card an object rather than a hole when the window is
+                // itself dark.
+                RoundedRectangle(cornerRadius: Palette.cardRadius)
+                    .strokeBorder(Palette.cardHairline, lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: Palette.cardRadius))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.cardPadding)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Palette.cardRadius))
-        .overlay {
-            // Keeps the card an object rather than a hole when the window is
-            // itself dark.
-            RoundedRectangle(cornerRadius: Palette.cardRadius)
-                .strokeBorder(Palette.cardHairline, lineWidth: 1)
-        }
-        .contentShape(RoundedRectangle(cornerRadius: Palette.cardRadius))
-        .onTapGesture(perform: toggleExpanded)
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(card.detailLabel). \(card.title)")
+        .accessibilityHint("Opens the principle in full")
     }
 
-    private func toggleExpanded() {
-        guard card.isExpandable else { return }
-        withAnimation(.easeOut(duration: 0.15)) { isExpanded.toggle() }
-    }
+    // MARK: - Face
 
-    // MARK: - Header
-
-    /// The one place the spec lets itself be loud: the principle's number is
-    /// real information — where this sits in the system — so it gets the bar.
+    /// Which half of the book, and nothing more — the title below is the
+    /// headline now, so the label is back to being a category.
     private var label: some View {
         HStack(alignment: .top, spacing: Spacing.cardRow) {
             Rectangle()
                 .fill(Palette.red)
                 .frame(width: 3)
-            Text(card.label)
+            Text(card.partLabel)
                 .font(Typography.label)
                 .tracking(Typography.labelTracking)
                 .lineSpacing(Typography.labelLineSpacing)
@@ -81,100 +62,27 @@ struct PrincipleCardView: View {
             // Vietnamese marks stack above and below; 1.35 is the floor.
             .lineSpacing(Typography.cardTitleLineSpacing)
             .foregroundStyle(Palette.cardTitle)
-            .textSelection(.enabled)
+            .multilineTextAlignment(.leading)
+            // A principle that runs past three lines is quoted, not printed:
+            // the sheet has the rest.
+            .lineLimit(3)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, Spacing.cardRow)
     }
 
-    // MARK: - Controls
-
-    /// Disclosure on the left, the affordances that outlive the card on the
-    /// right — a favourite must stay one click away while the card is shut.
-    private var controls: some View {
-        HStack(spacing: Spacing.cardBlock) {
-            if card.isExpandable { disclosure }
-            Spacer(minLength: Spacing.cardSnug)
-            favoriteButton
-            chapterButton
-        }
-        .padding(.top, Spacing.cardRow)
-    }
-
-    private var disclosure: some View {
-        Button(action: toggleExpanded) {
-            HStack(spacing: Spacing.cardTight) {
-                Text(disclosureTitle)
-                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                    .font(Typography.chevron)
-            }
-            .foregroundStyle(Palette.cardMuted)
-        }
-        .buttonStyle(.plain)
-        .font(Typography.caption)
-        .accessibilityLabel(disclosureTitle)
-    }
-
-    private var disclosureTitle: String {
-        if isExpanded { return "Hide" }
-        return card.hasApply ? "Why this applies" : "The book’s words"
-    }
-
-    private var favoriteButton: some View {
-        Button(action: toggleFavorite) {
-            Image(systemName: isFavorite ? "heart.fill" : "heart")
-                .foregroundStyle(isFavorite ? Palette.red : Palette.cardMuted)
-        }
-        .buttonStyle(.plain)
-        .help(favoriteTitle)
-        .accessibilityLabel(favoriteTitle)
-    }
-
-    private var favoriteTitle: String {
-        isFavorite ? "Remove from favorites" : "Save to favorites"
-    }
-
-    private var chapterButton: some View {
-        Button("Chapter context", action: showChapterContext)
-            .buttonStyle(.plain)
-            .font(Typography.caption)
-            .foregroundStyle(Palette.cardMuted)
-            // The handful of records outside any chapter have no context to open.
-            .disabled(card.record.chapter.isEmpty)
-            .opacity(card.record.chapter.isEmpty ? 0.4 : 1)
-    }
-
-    // MARK: - Behind the disclosure
-
+    /// Fixed at two lines, always cut: the point is that there is more, not what
+    /// the more happens to be.
     @ViewBuilder
-    private var revealed: some View {
-        if let quote = card.quote {
-            Text("“\(quote)”")
+    private var excerpt: some View {
+        if let excerpt = card.excerpt {
+            Text(excerpt)
                 .vietnameseBody()
-                .foregroundStyle(Palette.cardQuote)
-                .textSelection(.enabled)
-                // Long prose asked for its ideal size is one endless line; this
-                // is what makes it wrap into the width it was given instead.
+                .foregroundStyle(Palette.cardExcerpt)
+                .multilineTextAlignment(.leading)
+                .lineLimit(2)
+                .truncationMode(.tail)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, Spacing.cardQuoteTop)
-        }
-        if let apply = card.apply {
-            VStack(alignment: .leading, spacing: Spacing.cardSnug) {
-                Rectangle()
-                    .fill(Palette.cardHairline)
-                    .frame(height: 1)
-                    .padding(.bottom, Spacing.cardSnug)
-                Text("APPLIED TO THIS CASE")
-                    .font(Typography.smallLabel)
-                    .tracking(Typography.smallLabelTracking)
-                    .foregroundStyle(Palette.cardMuted)
-                Text(apply)
-                    .vietnameseBody()
-                    .foregroundStyle(Palette.cardApply)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, Spacing.cardBlock)
         }
     }
 }

@@ -10,8 +10,6 @@ struct FavoritesView: View {
     /// Sends the reader back to the chat from the empty state.
     var openChat: () -> Void = {}
 
-    @State private var chapterContext: ChapterContext?
-
     var body: some View {
         Group {
             if favorites.isEmpty {
@@ -20,7 +18,6 @@ struct FavoritesView: View {
                 list
             }
         }
-        .sheet(item: $chapterContext) { ChapterContextView(context: $0) }
         // A terminal session may have appended to favorites.jsonl while the app
         // sat on the chat tab.
         .onAppear { favorites.refresh() }
@@ -33,7 +30,7 @@ struct FavoritesView: View {
                     principles: favorites.records,
                     isFavorite: { favorites.isFavorite($0.id) },
                     toggleFavorite: { favorites.toggle($0.id) },
-                    showChapterContext: { chapterContext = ChapterContext(corpus: favorites.corpus, record: $0) }
+                    chapterContext: { ChapterContext(corpus: favorites.corpus, record: $0) }
                 )
                 notices
             }
