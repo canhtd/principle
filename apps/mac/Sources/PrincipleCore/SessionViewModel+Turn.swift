@@ -139,7 +139,11 @@ extension SessionViewModel {
     private func finish(_ outcome: TurnOutcome, error: (any Error)?) {
         let sessionID = activeSessionID
         // On a stop or a failure, whatever streamed is still worth keeping.
-        let answer = (outcome.finalText ?? streamingText).trimmingCharacters(in: .whitespacesAndNewlines)
+        let raw = (outcome.finalText ?? streamingText).trimmingCharacters(in: .whitespacesAndNewlines)
+        // KTD3: the trailer is how the engine cites principles to the app. It is
+        // split off here so the transcript stores clean prose plus the ids, and
+        // reopening the session re-renders the cards without another turn.
+        let answer = TrailerParser.parse(raw)
         phase = .idle
         activeSessionID = nil
         streamingText = ""
@@ -150,7 +154,7 @@ extension SessionViewModel {
 
         guard let sessionID else { return }
         do {
-            if answer.isEmpty {
+            if answer.text.isEmpty, answer.principleIDs.isEmpty {
                 // Nothing to file, but the engine's id still buys a `--resume`.
                 if let engineSessionID = outcome.engineSessionID {
                     var session = try store.load(id: sessionID)
@@ -159,7 +163,7 @@ extension SessionViewModel {
                 }
             } else {
                 try store.appendMessage(
-                    ChatMessage(role: .assistant, text: answer),
+                    ChatMessage(role: .assistant, text: answer.text, principleIDs: answer.principleIDs),
                     to: sessionID,
                     claudeSessionID: outcome.engineSessionID
                 )

@@ -42,10 +42,15 @@ struct ChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 20) {
                     ForEach(model.messages) { message in
-                        MessageRow(message: message).id(message.id)
+                        MessageRow(message: message, principles: model.principles(for: message))
+                            .id(message.id)
                     }
-                    if model.isShowingActiveTurn, !model.streamingText.isEmpty {
-                        MessageRow(message: ChatMessage(role: .assistant, text: model.streamingText))
+                    if model.isShowingActiveTurn, case let streaming = model.visibleStreamingText,
+                        !streaming.isEmpty
+                    {
+                        // Cards wait for the finished turn: the ids arrive in the
+                        // trailer, at the very end.
+                        MessageRow(message: ChatMessage(role: .assistant, text: streaming), principles: [])
                             .id(Self.streamingAnchor)
                     }
                     if let status = statusLine {
@@ -122,16 +127,21 @@ struct ChatView: View {
 /// bubble: the answers are long-form and read better as a document.
 private struct MessageRow: View {
     let message: ChatMessage
+    /// The principles this message cited, already resolved against the corpus.
+    let principles: [PrincipleRecord]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(message.role == .user ? "Anh Danny" : "Ray")
                 .font(Typography.caption)
                 .foregroundStyle(.secondary)
-            Text(message.text)
-                .vietnameseBody()
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if !message.text.isEmpty {
+                Text(message.text)
+                    .vietnameseBody()
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            PrincipleCardList(principles: principles)
         }
     }
 }

@@ -303,4 +303,66 @@ struct SessionViewModelTests {
         #expect(model.groups.first?.sessions.first?.topic == "Ca hôm nay")
         #expect(model.groups.last?.sessions.first?.topic == "Ca hôm qua")
     }
+
+    // MARK: - 10. Principle cards (KTD3)
+
+    @Test("Kết thúc lượt: trailer bị tách khỏi transcript, id vào principle_ids")
+    func turnFilesCitedPrincipleIDs() async throws {
+        let repo = try TempRepoDir()
+        let engine = MockTurnEngine(responses: [
+            .script(events: [
+                sessionStarted("eng-1"),
+                result("eng-1", text: "Bắt đầu từ chẩn đoán.\nPRINCIPLES_JSON: {\"ids\":[\"life:5.6\",\"work:2.1\"]}"),
+            ])
+        ])
+        let model = try makeViewModel(repo: repo, engine: engine)
+
+        await model.send("Tôi nên chọn hướng nào?")
+
+        let answer = try #require(model.messages.last)
+        #expect(answer.role == .assistant)
+        #expect(answer.text == "Bắt đầu từ chẩn đoán.")
+        #expect(answer.principleIDs == ["life:5.6", "work:2.1"])
+        // Persisted, so reopening the session re-renders the cards offline.
+        #expect(try repo.store.load(id: #require(model.selectedSessionID)).messages.last?.principleIDs
+            == ["life:5.6", "work:2.1"])
+    }
+
+    @Test("Không có trailer → không id nào được ghi, text nguyên vẹn")
+    func turnWithoutATrailerFilesNoIDs() async throws {
+        let repo = try TempRepoDir()
+        let engine = MockTurnEngine(responses: [
+            .script(events: [sessionStarted("eng-1"), result("eng-1", text: "Chưa trích nguyên tắc nào.")])
+        ])
+        let model = try makeViewModel(repo: repo, engine: engine)
+
+        await model.send("Tôi nên chọn hướng nào?")
+
+        #expect(model.messages.last?.text == "Chưa trích nguyên tắc nào.")
+        #expect(model.messages.last?.principleIDs.isEmpty == true)
+    }
+
+    @Test("Thẻ chỉ dựng từ corpus: id lạ không sinh thẻ nào")
+    func cardsComeOnlyFromTheCorpus() throws {
+        let repo = try TempRepoDir()
+        let corpus = CorpusStore(records: [
+            PrincipleRecord(
+                id: "life:5.6",
+                part: "Nguyên tắc sống",
+                chapter: "Chương 5",
+                num: "5.6",
+                title: "[FIXTURE] Tiêu đề",
+                body: "[FIXTURE] Thân bài",
+                hasBody: true)
+        ])
+        let model = SessionViewModel(
+            engine: MockTurnEngine(),
+            store: repo.store,
+            availabilityProvider: StubAvailabilityProvider(value: .ready(version: "2.1.233")),
+            corpus: corpus)
+
+        let cited = ChatMessage(role: .assistant, text: "Trả lời.", principleIDs: ["life:5.6", "life:999.9"])
+        #expect(model.principles(for: cited).map(\.id) == ["life:5.6"])
+        #expect(model.principles(for: ChatMessage(role: .assistant, text: "Trả lời.")).isEmpty)
+    }
 }

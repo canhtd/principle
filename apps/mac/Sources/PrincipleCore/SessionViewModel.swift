@@ -36,6 +36,9 @@ public final class SessionViewModel {
 
     let engine: any TurnRunning
     let store: SessionStore
+    /// The local principle corpus (KTD3). Loaded once: a repo without the file
+    /// simply renders no cards.
+    public let corpus: CorpusStore
     private let availabilityProvider: any EngineAvailabilityProviding
     /// Kept so "Gửi lại" retries the same question without asking it twice.
     var lastPrompt: String?
@@ -45,11 +48,14 @@ public final class SessionViewModel {
     public init(
         engine: any TurnRunning,
         store: SessionStore,
-        availabilityProvider: any EngineAvailabilityProviding
+        availabilityProvider: any EngineAvailabilityProviding,
+        corpus: CorpusStore? = nil
     ) {
         self.engine = engine
         self.store = store
         self.availabilityProvider = availabilityProvider
+        // Defaults to the corpus that sits in the same repo as the sessions.
+        self.corpus = corpus ?? CorpusStore(repoURL: store.repoURL)
         refreshSessions()
     }
 
@@ -82,6 +88,19 @@ public final class SessionViewModel {
     }
 
     public var statusLine: String? { phase.statusLine }
+
+    /// The cards to draw under a message: the ids it cited, resolved against
+    /// the local corpus and kept in the order they were cited. An id the corpus
+    /// does not know produces no card — the app never invents one (AE2).
+    public func principles(for message: ChatMessage) -> [PrincipleRecord] {
+        corpus.principles(ids: message.principleIDs)
+    }
+
+    /// The answer as it should read while it is still streaming: the trailer is
+    /// addressed to the app, never to the reader (KTD3).
+    public var visibleStreamingText: String {
+        TrailerParser.visibleText(streaming: streamingText)
+    }
 
     /// True while the running turn belongs to the session on screen.
     public var isShowingActiveTurn: Bool {
