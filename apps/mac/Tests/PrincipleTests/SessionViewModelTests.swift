@@ -335,13 +335,16 @@ struct SessionViewModelTests {
 
     // MARK: - 10. Principle cards (KTD3)
 
-    @Test("Kết thúc lượt: trailer bị tách khỏi transcript, id vào principle_ids")
-    func turnFilesCitedPrincipleIDs() async throws {
+    @Test("Kết thúc lượt: trailer bị tách khỏi transcript, chẩn đoán và bắc cầu được ghi lại")
+    func turnFilesTheWholeCitation() async throws {
         let repo = try TempRepo(prefix: "vm")
+        let trailer = "PRINCIPLES_JSON: {\"diagnosis\":{\"kind\":\"Ca cửa một chiều\",\"why\":\"Nhận rồi khó rút ra.\"},"
+            + "\"principles\":[{\"id\":\"life:5.6\",\"apply\":\"Bạn đang cân cảm giác chắc chắn.\"},"
+            + "{\"id\":\"work:2.1\",\"apply\":\"Bất đồng đang lộ ra muộn.\"}]}"
         let engine = MockTurnEngine(responses: [
             .script(events: [
                 sessionStarted("eng-1"),
-                result("eng-1", text: "Bắt đầu từ chẩn đoán.\nPRINCIPLES_JSON: {\"ids\":[\"life:5.6\",\"work:2.1\"]}"),
+                result("eng-1", text: "Bắt đầu từ chẩn đoán.\n" + trailer),
             ])
         ])
         let model = try makeViewModel(repo: repo, engine: engine)
@@ -351,10 +354,14 @@ struct SessionViewModelTests {
         let answer = try #require(model.messages.last)
         #expect(answer.role == .assistant)
         #expect(answer.text == "Bắt đầu từ chẩn đoán.")
+        #expect(answer.diagnosis?.kind == "Ca cửa một chiều")
         #expect(answer.principleIDs == ["life:5.6", "work:2.1"])
+        #expect(answer.principles.first?.apply == "Bạn đang cân cảm giác chắc chắn.")
         // Persisted, so reopening the session re-renders the cards offline.
-        #expect(try repo.sessions.load(id: #require(model.selectedSessionID)).messages.last?.principleIDs
-            == ["life:5.6", "work:2.1"])
+        let sessionID = try #require(model.selectedSessionID)
+        let filed = try #require(repo.sessions.load(id: sessionID).messages.last)
+        #expect(filed.diagnosis == answer.diagnosis)
+        #expect(filed.principles == answer.principles)
     }
 
     @Test("Không có trailer → không id nào được ghi, text nguyên vẹn")

@@ -104,3 +104,89 @@ struct TrailerParserTests {
         #expect(TrailerParser.visibleText(streaming: "") == "")
     }
 }
+
+@Suite("TrailerParser — trailer giàu (chẩn đoán + bắc cầu)")
+struct RichTrailerParserTests {
+    private let answer = """
+        Đây là ca quyết định dưới sức ép thời gian.
+        PRINCIPLES_JSON: {"diagnosis":{"kind":"Ca cửa một chiều","why":"Nhận rồi thì một năm sau mới rút ra được."},"principles":[{"id":"life:5.6","apply":"Bạn đang cân cảm giác chắc chắn, chưa cân giá trị kỳ vọng."},{"id":"work:2.1","apply":"Bất đồng trong đội đang bị để lộ ra muộn."}]}
+        """
+
+    @Test("Trailer giàu → chẩn đoán, id, và câu bắc cầu đều về đủ")
+    func parsesDiagnosisAndBridges() throws {
+        let parsed = TrailerParser.parse(answer)
+
+        #expect(parsed.text == "Đây là ca quyết định dưới sức ép thời gian.")
+        #expect(parsed.diagnosis?.kind == "Ca cửa một chiều")
+        #expect(parsed.diagnosis?.why == "Nhận rồi thì một năm sau mới rút ra được.")
+        #expect(parsed.principles.map(\.id) == ["life:5.6", "work:2.1"])
+        #expect(parsed.principles.first?.apply == "Bạn đang cân cảm giác chắc chắn, chưa cân giá trị kỳ vọng.")
+        #expect(parsed.principles.last?.displayApply == "Bất đồng trong đội đang bị để lộ ra muộn.")
+        // The convenience the rest of the app still looks things up by.
+        #expect(parsed.principleIDs == ["life:5.6", "work:2.1"])
+    }
+
+    @Test("Id trùng trong trailer giàu → giữ lần trích đầu cùng câu bắc cầu của nó")
+    func deduplicatesKeepingTheFirstBridge() {
+        let parsed = TrailerParser.parse(
+            """
+            Nội dung.
+            PRINCIPLES_JSON: {"principles":[{"id":"life:5.6","apply":"Bắc cầu đầu."},{"id":" ","apply":"x"},{"id":"life:5.6","apply":"Bắc cầu sau."}]}
+            """
+        )
+        #expect(parsed.principles.count == 1)
+        #expect(parsed.principles.first?.apply == "Bắc cầu đầu.")
+    }
+
+    @Test("Chẩn đoán thiếu một nửa vẫn dùng được; thiếu cả hai thì coi như không có")
+    func toleratesAHalfDiagnosis() {
+        let half = TrailerParser.parse("Nội dung.\nPRINCIPLES_JSON: {\"diagnosis\":{\"kind\":\"Ca lặp lại\"}}")
+        #expect(half.diagnosis == Diagnosis(kind: "Ca lặp lại", why: ""))
+        #expect(half.principles.isEmpty)
+        #expect(half.text == "Nội dung.")
+
+        let blank = TrailerParser.parse("Nội dung.\nPRINCIPLES_JSON: {\"diagnosis\":{\"kind\":\" \",\"why\":\"\"}}")
+        #expect(blank.diagnosis == nil)
+    }
+
+    @Test("Không tra được nguyên tắc nào: giữ chẩn đoán, không thẻ, dòng máy vẫn bị giấu")
+    func keepsTheDiagnosisWhenNothingWasCited() {
+        let parsed = TrailerParser.parse(
+            "Không nguyên tắc nào khớp.\nPRINCIPLES_JSON: {\"diagnosis\":{\"kind\":\"Ca ngoài sách\",\"why\":\"Không grep ra gì.\"},\"principles\":[]}"
+        )
+        #expect(parsed.diagnosis?.kind == "Ca ngoài sách")
+        #expect(parsed.principles.isEmpty)
+        #expect(parsed.text == "Không nguyên tắc nào khớp.")
+    }
+
+    @Test("Trailer cũ {\"ids\":[…]} vẫn đọc được, chỉ là không có câu bắc cầu")
+    func stillReadsTheLegacyShape() {
+        let parsed = TrailerParser.parse("Nội dung.\nPRINCIPLES_JSON: {\"ids\":[\"life:5.6\"]}")
+        #expect(parsed.principles == [PrincipleRef(id: "life:5.6")])
+        #expect(parsed.principles.first?.apply.isEmpty == true)
+        #expect(parsed.principles.first?.displayApply == nil)
+        #expect(parsed.diagnosis == nil)
+    }
+
+    @Test("Có cả hai dạng thì dạng giàu thắng")
+    func theRichShapeWinsOverTheLegacyOne() {
+        let parsed = TrailerParser.parse(
+            "Nội dung.\nPRINCIPLES_JSON: {\"ids\":[\"life:1.8\"],\"principles\":[{\"id\":\"life:5.6\",\"apply\":\"Bắc cầu.\"}]}"
+        )
+        #expect(parsed.principleIDs == ["life:5.6"])
+    }
+
+    @Test("Trailer đúng cú pháp nhưng rỗng → không thẻ, và không để lộ dòng máy")
+    func hidesAWellFormedButEmptyTrailer() {
+        let parsed = TrailerParser.parse("Nội dung.\nPRINCIPLES_JSON: {}")
+        #expect(parsed.principles.isEmpty)
+        #expect(parsed.diagnosis == nil)
+        #expect(parsed.text == "Nội dung.")
+    }
+
+    @Test("Trailer giàu đang stream dở không lộ ra màn hình")
+    func hidesAPartialRichTrailerWhileStreaming() {
+        let partial = "Nội dung.\nPRINCIPLES_JSON: {\"diagnosis\":{\"kind\":\"Ca cửa một"
+        #expect(TrailerParser.visibleText(streaming: partial) == "Nội dung.")
+    }
+}

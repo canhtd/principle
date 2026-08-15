@@ -1,56 +1,5 @@
 import Foundation
 
-/// One rendered line of a conversation. The app owns the transcript (KTD2): the
-/// engine keeps model context via `--resume`, but everything drawn on screen —
-/// and everything used to re-seed a session whose engine context vanished — is
-/// persisted here.
-public struct ChatMessage: Codable, Identifiable, Equatable, Sendable {
-    public enum Role: String, Codable, Sendable {
-        case user
-        case assistant
-    }
-
-    public let id: UUID
-    public let role: Role
-    public let text: String
-    public let sentAt: Date
-    /// Corpus ids cited by this message (KTD3 trailer). Stored so reopening a
-    /// session can re-render its principle cards without calling the engine.
-    public let principleIDs: [String]
-
-    public init(
-        id: UUID = UUID(),
-        role: Role,
-        text: String,
-        sentAt: Date = Date(),
-        principleIDs: [String] = []
-    ) {
-        self.id = id
-        self.role = role
-        self.text = text
-        self.sentAt = sentAt
-        self.principleIDs = principleIDs
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case id
-        case role
-        case text
-        case sentAt = "sent_at"
-        case principleIDs = "principle_ids"
-    }
-
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        role = try container.decode(Role.self, forKey: .role)
-        text = try container.decode(String.self, forKey: .text)
-        sentAt = try container.decode(Date.self, forKey: .sentAt)
-        // Optional so hand-written or older files stay readable.
-        principleIDs = try container.decodeIfPresent([String].self, forKey: .principleIDs) ?? []
-    }
-}
-
 /// How the next turn of a session must be started.
 public enum TurnStart: Equatable, Sendable {
     /// Brand-new session: nothing to resume, nothing to seed.

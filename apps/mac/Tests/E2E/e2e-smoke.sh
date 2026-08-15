@@ -6,8 +6,9 @@
 #   E2E_KEEP=1 apps/mac/Tests/E2E/e2e-smoke.sh   # keep the temp repo + logs
 #
 # What it proves: the prompt shape the app sends reaches a real engine, the skill
-# runs against a corpus, a case file gets written, the answer ends with the
-# trailer the app parses into cards — and the real repo's memory is never touched.
+# runs against a corpus, a case file gets written, the answer comes back in Ray's
+# voice and ends with a trailer carrying a diagnosis and a bridge per principle —
+# and the real repo's memory is never touched.
 #
 # The fixture repo is copied OUTSIDE this tree on purpose: run from inside the
 # repo, the engine would walk up and load the real CLAUDE.md, and the isolation
@@ -112,6 +113,8 @@ mv "$WORK/claude-template" "$WORK/.claude"
 step "Setup"
 note "engine:  $CLAUDE_BIN"
 note "fixture: $WORK"
+CORPUS="$WORK/.claude/skills/ask-ray/references/corpus.jsonl"
+[ -f "$CORPUS" ] || fail "fixture corpus missing at $CORPUS"
 BEFORE="$(real_memory_snapshot)"
 note "real repo memory+goals: $(printf '%s\n' "$BEFORE" | wc -l | tr -d ' ') files hashed"
 
@@ -141,19 +144,59 @@ TEXT="$(assistant_text "$LOGS/turn1.jsonl")"
 note "answer: $(printf '%s' "$TEXT" | tr '\n' ' ' | cut -c1-110)…"
 assert_result_ok "$LOGS/turn1.jsonl" "turn 1"
 
+# --- voice: Ray in the first person, talking to "bạn" --------------------------
+step "Voice"
+if printf '%s' "$TEXT" | grep -qi 'anh danny'; then
+    fail "the answer greets the user as 'Anh Danny'; inside the app the voice rule is 'bạn'"
+fi
+if printf '%s' "$TEXT" | grep -qi 'bạn'; then
+    note "addresses the reader as 'bạn'"
+else
+    printf '  WARNING: the answer never says "bạn" — check the voice rule reached the engine.\n'
+fi
+
 # --- trailer (KTD3) ------------------------------------------------------------
+# Hard assertions: a card is diagnosis + verbatim corpus text + the model's
+# bridge. Any missing piece means the app draws a card with a hole in it, which
+# is exactly the bug this contract replaced.
+step "Trailer"
 LAST_LINE="$(result_field "$LOGS/turn1.jsonl" result | grep -v '^[[:space:]]*$' | tail -1)"
 case "$LAST_LINE" in
-    PRINCIPLES_JSON:*)
-        IDS="$(printf '%s' "${LAST_LINE#PRINCIPLES_JSON:}" | jq -r '.ids | join(", ")' 2>/dev/null)" ||
-            fail "trailer present but its JSON does not parse: $LAST_LINE"
-        note "trailer parsed: ids = [${IDS}]"
-        ;;
-    *)
-        printf '  WARNING: no PRINCIPLES_JSON trailer on the last line — the app draws no cards.\n'
-        printf '  WARNING: last line was: %s\n' "${LAST_LINE:0:110}"
-        ;;
+    PRINCIPLES_JSON:*) ;;
+    *) fail "no PRINCIPLES_JSON trailer on the last line — the app draws no cards. Last line: ${LAST_LINE:0:110}" ;;
 esac
+
+TRAILER="${LAST_LINE#PRINCIPLES_JSON:}"
+printf '%s' "$TRAILER" | jq -e . >/dev/null 2>&1 || fail "trailer JSON does not parse: ${LAST_LINE:0:160}"
+
+KIND="$(printf '%s' "$TRAILER" | jq -r '.diagnosis.kind // ""')"
+WHY="$(printf '%s' "$TRAILER" | jq -r '.diagnosis.why // ""')"
+[ -n "$KIND" ] || fail "trailer carries no diagnosis.kind: $TRAILER"
+[ -n "$WHY" ] || fail "trailer carries no diagnosis.why: $TRAILER"
+note "diagnosis: $KIND — $(printf '%s' "$WHY" | cut -c1-70)"
+
+CITED="$(printf '%s' "$TRAILER" | jq -r '.principles | length')"
+[ "$CITED" -ge 1 ] || fail "trailer cited no principle: $TRAILER"
+[ "$CITED" -le 3 ] || fail "trailer cited $CITED principles; the contract caps it at 3"
+
+while IFS=$'\t' read -r id apply; do
+    [ -n "$id" ] && [ "$id" != "null" ] || fail "trailer has a principle with no id: $TRAILER"
+    [ -n "$apply" ] && [ "$apply" != "null" ] ||
+        fail "principle $id has an empty 'apply' — the bridge is the whole point of the card"
+    grep -qF "\"id\":\"$id\"" "$CORPUS" ||
+        fail "principle id $id is not in the corpus — the app would resolve it to no card"
+    note "principle $id: $(printf '%s' "$apply" | cut -c1-64)"
+done < <(printf '%s' "$TRAILER" | jq -r '.principles[] | [.id, (.apply // "")] | @tsv')
+
+# Every principle number named in the prose must have a card. Warn rather than
+# fail: a bare "5.6" in Vietnamese prose can also be a quantity or a date.
+TRAILER_NUMS="$(printf '%s' "$TRAILER" | jq -r '.principles[].id | sub("^(life|work):"; "")')"
+MODEL_NAMES='s/(Haiku|Sonnet|Opus|Fable|Claude)[[:space:]]+[0-9]+(\.[0-9]+)?//g'
+for num in $(printf '%s' "$TEXT" | sed -E "$MODEL_NAMES" |
+    grep -oE '\b[0-9]{1,2}\.[0-9]{1,2}[a-z]?\b' | LC_ALL=C sort -u); do
+    printf '%s\n' "$TRAILER_NUMS" | grep -qxF "$num" ||
+        printf '  WARNING: the prose mentions %s but the trailer has no card for it.\n' "$num"
+done
 
 # --- the case file the memory protocol asks for --------------------------------
 NEW_CASES="$(find "$WORK/memory/cases" -type f ! -name '_TEMPLATE.md' | LC_ALL=C sort)"
@@ -165,7 +208,7 @@ SESSION_ID="$(result_field "$LOGS/turn1.jsonl" session_id)"
 [ -n "$SESSION_ID" ] && [ "$SESSION_ID" != "null" ] || fail "turn 1 reported no session_id to resume"
 
 step "Turn 2 — resume $SESSION_ID"
-printf '%s\n' "Nếu hạn ba ngày em vừa kể được lùi thành ba tuần thì hướng anh chốt có đổi không?" \
+printf '%s\n' "Nếu hạn ba ngày đó được lùi thành ba tuần thì hướng ông vừa chốt có đổi không?" \
     >"$LOGS/turn2.prompt"
 run_turn "$LOGS/turn2.jsonl" "$LOGS/turn2.prompt" --resume "$SESSION_ID" ||
     note "engine exited non-zero; asserting on the stream"

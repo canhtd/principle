@@ -11,9 +11,18 @@ struct SettingsView: View {
     @State private var settings = AppSettings()
     @State private var availability: EngineAvailability?
     @State private var isChecking = false
+    @State private var isEditingProfile = false
 
     var body: some View {
         Form {
+            Section("Profile") {
+                HStack {
+                    Button("Edit Profile…") { isEditingProfile = true }
+                    Spacer()
+                }
+                caption(ProfileView.caption)
+            }
+
             Section("Model trả lời") {
                 Picker("Model", selection: $settings.responseModel) {
                     ForEach(AppSettings.selectableModels, id: \.self) { alias in
@@ -52,6 +61,11 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 540, height: 620)
+        // Built from the field's current value, so the sheet edits the repo the
+        // path points at right now rather than the one loaded at launch.
+        .sheet(isPresented: $isEditingProfile) {
+            ProfileView(store: ProfileStore(repoURL: settings.repoURL))
+        }
         .task { await check() }
     }
 
