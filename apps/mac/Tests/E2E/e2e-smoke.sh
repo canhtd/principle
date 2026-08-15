@@ -198,6 +198,26 @@ for num in $(printf '%s' "$TEXT" | sed -E "$MODEL_NAMES" |
         printf '  WARNING: the prose mentions %s but the trailer has no card for it.\n' "$num"
 done
 
+# --- vocabulary: the book's own words, not the model's -------------------------
+# A real answer once wrote "hạ nhân" for the lower-level self; the Vietnamese
+# edition says "bạn ở cấp độ thấp hơn" / "bản ngã thấp hơn". A coined term reads
+# exactly like the book to anyone who has not read it, which is why this fails
+# rather than warns. The trailer's prose is checked too — `why` and `apply` are
+# card text, so a coinage there ships to the screen just the same.
+step "Vocabulary"
+case "$SYSTEM_PROMPT" in
+    *"Từ của sách"*) ;;
+    *) fail "the extracted system prompt carries no glossary — check the awk block against $CONSULT_SWIFT" ;;
+esac
+VOICE_TEXT="$TEXT
+$(printf '%s' "$TRAILER" | jq -r '[.diagnosis.kind, .diagnosis.why, (.principles[]?.apply)] | map(select(. != null)) | join(" ")')"
+BANNED='hạ nhân|thượng nhân|bản ngã hạ đẳng|bản ngã thượng đẳng|hạ ngã|thượng ngã'
+HIT="$(printf '%s' "$VOICE_TEXT" | grep -oiE "$BANNED" | LC_ALL=C sort -u | tr '\n' ' ' || true)"
+if [ -n "${HIT// /}" ]; then
+    fail "the answer coined vocabulary the book does not use: $HIT — the edition says \"bạn ở cấp độ thấp hơn\" / \"bản ngã thấp hơn\""
+fi
+note "no coined vocabulary in the answer or the trailer"
+
 # --- the case file the memory protocol asks for --------------------------------
 NEW_CASES="$(find "$WORK/memory/cases" -type f ! -name '_TEMPLATE.md' | LC_ALL=C sort)"
 [ -n "$NEW_CASES" ] || fail "no case file was written under memory/cases/"

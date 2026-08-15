@@ -123,6 +123,64 @@ struct ConsultPromptTests {
         #expect(prompt.contains("không bịa nguyên tắc"))
     }
 
+    /// A real answer coined "hạ nhân" for the lower-level self — a word the
+    /// Vietnamese edition never uses. Every term below was verified by grep
+    /// against `references/corpus.jsonl`; the prompt may only teach words the
+    /// translation actually uses.
+    @Test("System prompt mang theo từ vựng của bản dịch")
+    func systemPromptCarriesTheBooksGlossary() {
+        let prompt = ConsultPrompt.systemPrompt
+
+        #expect(prompt.contains("Từ của sách, dùng nguyên dạng:"))
+        for term in [
+            "hai bạn",
+            "bạn ở cấp độ cao hơn",
+            "bạn ở cấp độ thấp hơn",
+            "bản ngã thấp hơn",
+            "tâm thức",
+            "tiềm thức",
+            "Đau đớn + Suy ngẫm = Tiến bộ",
+            "giá trị kỳ vọng",
+            "người đáng tin cậy",
+            "minh bạch triệt để",
+            "cởi mở triệt để",
+            "siêu thực tế",
+            "Quy trình 5 bước",
+            "nguyên nhân gốc rễ",
+            "hậu quả bậc hai và bậc ba",
+            "cỗ máy",
+            "điểm mù",
+            "trọng số độ tin cậy",
+            "chế độ trọng dụng ý tưởng",
+            "công việc có ý nghĩa",
+            "Bên chịu trách nhiệm",
+            "Nguyên tắc sống",
+            "Nguyên tắc làm việc",
+        ] {
+            #expect(prompt.contains(term), "glossary is missing \(term)")
+        }
+        // The coinage that triggered the glossary, named so the engine can see
+        // the shape of the mistake rather than only the rule against it.
+        #expect(prompt.contains("KHÔNG có \"hạ nhân\""))
+        #expect(prompt.contains("\"thượng nhân\""))
+        // The whole glossary has to survive the awk extraction in
+        // Tests/E2E/e2e-smoke.sh, which reads the literal out of the source.
+        #expect(!prompt.contains("\\("))
+    }
+
+    @Test("System prompt yêu cầu văn xuôi theo nhịp của sách, không phải bảng nhãn")
+    func systemPromptAsksForTheBooksProse() {
+        let prompt = ConsultPrompt.systemPrompt
+
+        #expect(prompt.contains("Văn xuôi liền mạch"))
+        #expect(prompt.contains("Hãy…"))
+        // The four beats of an answer stay readable even without labels.
+        #expect(prompt.contains("chẩn đoán → nguyên tắc áp vào → hướng đi"))
+        #expect(prompt.contains("hai nhãn in đậm"))
+        // Verbatim quoting is allowed only from what the lookup returned.
+        #expect(prompt.contains("Chỉ trích nguyên văn sách từ những gì lần tra corpus"))
+    }
+
     @Test("System prompt huỷ Bước 4: không artifact dưới bất kỳ dạng nào")
     func systemPromptOverridesTheArtifactStep() {
         let prompt = ConsultPrompt.systemPrompt
@@ -174,6 +232,9 @@ struct ConsultPromptTests {
 
         #expect(prompt.hasSuffix("là lỗi, kể cả khi\ncâu trả lời đã đủ ý."))
         #expect(!prompt[order.upperBound...].contains("Một session = một ca"))
+        // The glossary is long; appended after the order block it would take the
+        // recency slot the order block exists to hold.
+        #expect(!prompt[order.upperBound...].contains("Từ của sách"))
     }
 
     @Test("Trailer đi kèm mọi lượt qua --append-system-prompt")
