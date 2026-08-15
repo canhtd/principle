@@ -5,7 +5,11 @@ import SwiftUI
 /// works (R6), and the composer.
 struct ChatView: View {
     @Bindable var model: SessionViewModel
+    /// Shared with the Favorites section: the ♥ on a card writes the same file
+    /// the section reads (R7).
+    let favorites: FavoritesModel
     @FocusState private var composerFocused: Bool
+    @State private var chapterContext: ChapterContext?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -15,6 +19,7 @@ struct ChatView: View {
             Divider()
             composer
         }
+        .sheet(item: $chapterContext) { ChapterContextView(context: $0) }
         .onAppear { composerFocused = true }
     }
 
@@ -42,8 +47,14 @@ struct ChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 20) {
                     ForEach(model.messages) { message in
-                        MessageRow(message: message, principles: model.principles(for: message))
-                            .id(message.id)
+                        MessageRow(
+                            message: message,
+                            principles: model.principles(for: message),
+                            isFavorite: { favorites.isFavorite($0.id) },
+                            toggleFavorite: { favorites.toggle($0.id) },
+                            showChapterContext: { chapterContext = ChapterContext(corpus: model.corpus, record: $0) }
+                        )
+                        .id(message.id)
                     }
                     if model.isShowingActiveTurn, case let streaming = model.visibleStreamingText,
                         !streaming.isEmpty
@@ -123,29 +134,6 @@ struct ChatView: View {
     }
 }
 
-/// One line of the conversation. The speaker is a label rather than a coloured
-/// bubble: the answers are long-form and read better as a document.
-private struct MessageRow: View {
-    let message: ChatMessage
-    /// The principles this message cited, already resolved against the corpus.
-    let principles: [PrincipleRecord]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(message.role == .user ? "Anh Danny" : "Ray")
-                .font(Typography.caption)
-                .foregroundStyle(.secondary)
-            if !message.text.isEmpty {
-                Text(message.text)
-                    .vietnameseBody()
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            PrincipleCardList(principles: principles)
-        }
-    }
-}
-
 /// The progress line, per KTD7. A consultation can run for minutes, so this is
 /// the only thing telling the user the app is still working.
 private struct StatusLine: View {
@@ -184,5 +172,5 @@ private struct ErrorBanner: View {
 }
 
 #Preview {
-    ChatView(model: .live())
+    ChatView(model: .live(), favorites: FavoritesModel(repoURL: RepoLocation.current()))
 }

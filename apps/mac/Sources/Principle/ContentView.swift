@@ -6,14 +6,24 @@ struct ContentView: View {
     /// Built from Settings (KTD4/KTD5): the repo the stores read and the exact
     /// binary to spawn. Read once at launch, which is why Settings says a change
     /// takes effect after reopening the app.
-    @State private var model = SessionViewModel.live(
-        repoURL: AppSettings().repoURL,
-        binaryOverride: AppSettings().engineOverridePath
-    )
+    @State private var model: SessionViewModel
+    /// Same repo, and the corpus the chat already loaded — the file is parsed
+    /// once per launch, not once per section.
+    @State private var favorites: FavoritesModel
     @State private var isCreatingSession = false
     /// Pinned open: the session list is how a consultation is found again (R1),
     /// and AppKit otherwise restores whatever collapsed state it saw last.
     @State private var columns = NavigationSplitViewVisibility.all
+
+    init() {
+        let settings = AppSettings()
+        let model = SessionViewModel.live(
+            repoURL: settings.repoURL,
+            binaryOverride: settings.engineOverridePath
+        )
+        _model = State(initialValue: model)
+        _favorites = State(initialValue: FavoritesModel(repoURL: settings.repoURL, corpus: model.corpus))
+    }
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columns) {
@@ -54,8 +64,12 @@ struct ContentView: View {
         case .favorites:
             List {
                 Section(AppSection.favorites.title) {
-                    Label("Chưa lưu nguyên tắc nào", systemImage: AppSection.favorites.systemImage)
-                        .foregroundStyle(.secondary)
+                    if favorites.isEmpty {
+                        Label(FavoritesModel.emptyTitle, systemImage: AppSection.favorites.systemImage)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Label("\(favorites.ids.count) nguyên tắc đã lưu", systemImage: "heart.fill")
+                    }
                 }
             }
             .listStyle(.sidebar)
@@ -70,7 +84,7 @@ struct ContentView: View {
             if model.isEngineBlocked {
                 EngineStatusView(model: model)
             } else if model.currentSession != nil {
-                ChatView(model: model)
+                ChatView(model: model, favorites: favorites)
             } else {
                 ContentUnavailableView {
                     Label(AppSection.chat.title, systemImage: AppSection.chat.systemImage)
@@ -81,11 +95,8 @@ struct ContentView: View {
                 }
             }
         case .favorites:
-            ContentUnavailableView {
-                Label(AppSection.favorites.title, systemImage: AppSection.favorites.systemImage)
-            } description: {
-                Text("Những nguyên tắc anh đánh dấu sẽ hiện ở đây.")
-            }
+            FavoritesView(favorites: favorites) { section = .chat }
+                .navigationTitle(AppSection.favorites.title)
         }
     }
 }
