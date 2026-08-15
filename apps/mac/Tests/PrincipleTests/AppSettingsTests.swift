@@ -176,6 +176,23 @@ struct AppSettingsTests {
         #expect(RepoLocation.current(defaults: suite.defaults).path != "   ")
     }
 
+    @Test("A folder that is not the Principle repo is flagged with the same words the chat uses")
+    func repoWithoutTheSkillIsFlagged() throws {
+        let suite = TempSuite()
+        let plain = try TempRepo(prefix: "settings-no-skill", skill: false)
+        var settings = suite.settings
+        settings.repoPath = plain.root.path
+
+        #expect(settings.repoPathStatus == .notPrincipleRepo)
+        #expect(settings.repoPathWarning == EngineAvailability.skillMissingGuidance(repoPath: plain.root.path))
+        #expect(settings.repoPathWarning?.contains(PrincipleRepo.skillRelativePath) == true)
+
+        // Adding the skill is exactly what fixes it - no relaunch needed to tell.
+        try TempRepo.makePrincipleRepo(at: plain.root)
+        #expect(settings.repoPathStatus == .valid)
+        #expect(settings.repoPathWarning == nil)
+    }
+
     // MARK: - 3. Binary override (KTD4, R5)
 
     @Test("An override resolves to exactly that executable, never a candidate")

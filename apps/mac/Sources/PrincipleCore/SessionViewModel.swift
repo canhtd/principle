@@ -133,7 +133,9 @@ public final class SessionViewModel {
     public var engineGuidance: String? { availability?.guidance }
 
     public func refreshAvailability() async {
-        availability = await availabilityProvider.currentAvailability()
+        // Gated on the repo too: a perfectly good engine still cannot run the
+        // consultation from a directory that has no `ask-ray` skill in it.
+        availability = await availabilityProvider.currentAvailability().gated(onRepoAt: store.repoURL)
     }
 
     // MARK: - Session list

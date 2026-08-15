@@ -9,6 +9,24 @@ public enum EngineAvailability: Sendable, Equatable {
     /// Binary found but not usable without the user doing something first;
     /// `guidance` is the Vietnamese sentence the UI shows verbatim.
     case loggedOut(guidance: String)
+    /// Engine fine, working directory wrong: `repoPath` has no
+    /// `.claude/skills/ask-ray/SKILL.md`, so the consultation the app asks for
+    /// does not exist there. Carries the path so the message can name it.
+    case skillMissing(repoPath: String)
+}
+
+extension EngineAvailability {
+    /// A usable engine still cannot answer from the wrong working directory: the
+    /// whole consultation is the `ask-ray` skill, which lives in the Principle
+    /// repo and nowhere else. Checked before every spawn, and pure — path in,
+    /// state out — so nothing has to be launched to find out.
+    ///
+    /// The engine's own problems win: they have to be fixed first regardless.
+    public func gated(onRepoAt repoURL: URL, fileManager: FileManager = .default) -> EngineAvailability {
+        guard case .ready = self else { return self }
+        guard !PrincipleRepo.hasAskRaySkill(at: repoURL, fileManager: fileManager) else { return self }
+        return .skillMissing(repoPath: repoURL.path)
+    }
 }
 
 /// Result of a one-shot command. Kept dumb so tests can hand-build one.

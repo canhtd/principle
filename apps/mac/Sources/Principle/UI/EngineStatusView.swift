@@ -11,7 +11,7 @@ struct EngineStatusView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "bolt.horizontal.circle")
+            Image(systemName: icon)
                 .font(.system(size: 42))
                 .foregroundStyle(.secondary)
 
@@ -41,6 +41,13 @@ struct EngineStatusView: View {
 
     private var title: String {
         model.availability?.blockedTitle ?? EngineAvailability.checkingTitle
+    }
+
+    /// A wrong repo is a folder problem, not an engine problem — saying so in the
+    /// icon saves the user reading the paragraph to find that out.
+    private var icon: String {
+        if case .skillMissing = model.availability { return "folder.badge.questionmark" }
+        return "bolt.horizontal.circle"
     }
 }
 

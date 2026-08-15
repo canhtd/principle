@@ -145,5 +145,37 @@ struct EngineAvailabilityTests {
         #expect(EngineAvailabilityChecker.version(from: "2.1.233 (Claude Code)\n") == "2.1.233")
         #expect(EngineAvailabilityChecker.version(from: " 3.0.0 \n") == "3.0.0")
     }
-}
 
+    // MARK: - The repo the turn runs in
+
+    @Test("A ready engine pointed at a folder with no ask-ray skill is still blocked")
+    func readyEngineIsGatedOnTheRepo() throws {
+        let repo = try TempRepo(prefix: "gate")
+        let plain = try TempRepo(prefix: "gate-plain", skill: false)
+        let ready = EngineAvailability.ready(version: "2.1.233")
+
+        #expect(ready.gated(onRepoAt: repo.root) == ready)
+        #expect(ready.gated(onRepoAt: plain.root) == .skillMissing(repoPath: plain.root.path))
+    }
+
+    @Test("An engine problem is not overwritten by a repo problem - it comes first")
+    func engineProblemsWinOverTheRepo() throws {
+        let plain = try TempRepo(prefix: "gate-plain", skill: false)
+        let loggedOut = EngineAvailability.loggedOut(guidance: EngineAvailabilityChecker.loggedOutGuidance)
+
+        #expect(EngineAvailability.notInstalled.gated(onRepoAt: plain.root) == .notInstalled)
+        #expect(loggedOut.gated(onRepoAt: plain.root) == loggedOut)
+    }
+
+    @Test("The wrong-repo message names the folder and the file that is missing")
+    func skillMissingSaysWhatToFix() {
+        let state = EngineAvailability.skillMissing(repoPath: "/tmp/not-the-repo")
+
+        #expect(state.guidance?.contains("/tmp/not-the-repo") == true)
+        #expect(state.guidance?.contains(PrincipleRepo.skillRelativePath) == true)
+        #expect(state.guidance?.contains("Cài đặt") == true)
+        #expect(state.blockedTitle == EngineAvailability.skillMissingTitle)
+        #expect(state.settingsTitle == EngineAvailability.skillMissingTitle)
+        #expect(EngineAvailability.ready(version: "2.1.233").guidance == nil)
+    }
+}

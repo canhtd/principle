@@ -8,6 +8,9 @@ public enum RepoPathStatus: Equatable, Sendable {
     case valid
     case missing
     case notAFolder
+    /// The folder is there but it is not the Principle repo — no
+    /// `.claude/skills/ask-ray/SKILL.md`, so no turn can run from it.
+    case notPrincipleRepo
 }
 
 /// Everything the Settings window owns, stored in one shared defaults domain (KTD5).
@@ -112,12 +115,17 @@ public struct AppSettings: Equatable, Sendable {
     }
 
     public var repoPathStatus: RepoPathStatus {
-        guard configuredRepoPath != nil else { return .unset }
+        // Nothing configured still resolves to a real directory, and a turn runs
+        // there — so it is checked exactly like a configured one.
+        guard configuredRepoPath != nil else {
+            return PrincipleRepo.hasAskRaySkill(at: repoURL) ? .unset : .notPrincipleRepo
+        }
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: repoURL.path, isDirectory: &isDirectory) else {
             return .missing
         }
-        return isDirectory.boolValue ? .valid : .notAFolder
+        guard isDirectory.boolValue else { return .notAFolder }
+        return PrincipleRepo.hasAskRaySkill(at: repoURL) ? .valid : .notPrincipleRepo
     }
 
     public var repoPathWarning: String? {
@@ -128,6 +136,10 @@ public struct AppSettings: Equatable, Sendable {
             "Không tìm thấy thư mục này. Kiểm tra lại đường dẫn — phiên sẽ được ghi vào đây khi anh hỏi câu đầu tiên."
         case .notAFolder:
             "Đường dẫn này là một tệp, không phải thư mục. Chọn thư mục gốc của repo Principle."
+        case .notPrincipleRepo:
+            // Same sentence the blocked chat screen shows, so Settings and the
+            // chat cannot describe one problem two ways.
+            EngineAvailability.skillMissingGuidance(repoPath: repoURL.path)
         }
     }
 

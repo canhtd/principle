@@ -62,7 +62,9 @@ extension SessionViewModel {
     }
 
     /// KTD4: the check runs again right before every turn, not just at launch.
-    /// A blocked engine leaves the reason on screen instead of a dead spawn.
+    /// A blocked engine leaves the reason on screen instead of a dead spawn — and
+    /// that includes a repo with no `ask-ray` skill in it, which the engine would
+    /// otherwise answer with `Unknown command: /ask-ray`.
     private func ensureEngineAvailable() async -> Bool {
         await refreshAvailability()
         guard isEngineBlocked else { return true }

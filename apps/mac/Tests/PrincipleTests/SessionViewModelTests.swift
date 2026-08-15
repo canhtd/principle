@@ -157,6 +157,43 @@ struct SessionViewModelTests {
         #expect(model.messages.isEmpty)
     }
 
+    @Test("Repo không có skill ask-ray thì chặn gửi, không spawn engine nào")
+    func repoWithoutTheSkillBlocksSend() async throws {
+        // Đúng cảnh bản release gặp: engine chạy tốt, nhưng thư mục làm việc
+        // không phải repo Principle nên `/ask-ray` không tồn tại ở đó.
+        let repo = try TempRepo(prefix: "vm-no-skill", skill: false)
+        let engine = MockTurnEngine()
+        let model = try makeViewModel(repo: repo, engine: engine)
+        model.draft = "Câu hỏi không được nuốt mất."
+
+        await model.send("Hỏi thử từ thư mục sai.")
+
+        #expect(engine.calls.isEmpty)
+        #expect(model.availability == .skillMissing(repoPath: repo.root.path))
+        #expect(model.isEngineBlocked)
+        #expect(model.errorMessage == model.engineGuidance)
+        #expect(model.engineGuidance?.contains(PrincipleRepo.skillRelativePath) == true)
+        #expect(model.availability?.blockedTitle == EngineAvailability.skillMissingTitle)
+        #expect(model.phase == .idle)
+        #expect(model.messages.isEmpty)
+        // Câu đang gõ vẫn còn: engine bị chặn thì trả câu hỏi lại cho người dùng.
+        #expect(model.draft == "Câu hỏi không được nuốt mất.")
+    }
+
+    @Test("Repo có skill thì lượt chạy bình thường")
+    func repoWithTheSkillRunsTheTurn() async throws {
+        let repo = try TempRepo(prefix: "vm-skill")
+        let engine = MockTurnEngine(responses: [.script(events: [result("eng-1", text: "Xong.")])])
+        let model = try makeViewModel(repo: repo, engine: engine)
+
+        await model.send("Hỏi từ đúng repo.")
+
+        #expect(engine.calls.count == 1)
+        #expect(model.availability == .ready(version: "2.1.233"))
+        #expect(!model.isEngineBlocked)
+        #expect(model.errorMessage == nil)
+    }
+
     // MARK: - 5. Nút Dừng
 
     @Test("Dừng chỉ bật khi đang stream, huỷ engine và giữ phần đã nhận")

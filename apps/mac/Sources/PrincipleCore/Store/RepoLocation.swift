@@ -9,14 +9,36 @@ public enum RepoLocation {
     public static let defaultsSuite = AppSettings.defaultsSuite
     public static let repoPathKey = AppSettings.Key.repoPath
 
-    public static func current(defaults: UserDefaults? = AppSettings.sharedDefaults()) -> URL {
+    /// Where the repo usually sits on this machine. Tried in order when nothing
+    /// is configured, so a first launch of the shipped app lands on the real repo
+    /// instead of a writable folder with no skill in it.
+    public static let wellKnownCandidates = [
+        "~/Documents/Projects/Principle",
+        "~/Documents/Projects/principle",
+        "~/Projects/Principle",
+    ]
+
+    public static func current(
+        defaults: UserDefaults? = AppSettings.sharedDefaults(),
+        candidates: [String] = wellKnownCandidates,
+        fileManager: FileManager = .default
+    ) -> URL {
         if let configured = AppSettings.repoPath(in: defaults) {
             return AppSettings.expandedURL(configured)
         }
         #if DEBUG
             if let development = developmentRepoURL { return development }
         #endif
+        if let found = firstPrincipleRepo(in: candidates, fileManager: fileManager) { return found }
         return applicationSupportFallback
+    }
+
+    /// First candidate that really is the repo. A candidate that is missing, or
+    /// is some other project, is skipped rather than guessed at.
+    static func firstPrincipleRepo(in candidates: [String], fileManager: FileManager = .default) -> URL? {
+        candidates.lazy
+            .map { AppSettings.expandedURL($0) }
+            .first { PrincipleRepo.isPrincipleRepo(at: $0, fileManager: fileManager) }
     }
 
     #if DEBUG
@@ -40,8 +62,9 @@ public enum RepoLocation {
         }
     #endif
 
-    /// Release build with nothing configured: keep sessions somewhere writable
-    /// instead of guessing at a repo that may not exist.
+    /// Nothing configured and no candidate on disk: keep sessions somewhere
+    /// writable instead of guessing at a repo that may not exist. A turn is then
+    /// blocked by the skill check, which says how to point Settings at the repo.
     static var applicationSupportFallback: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)

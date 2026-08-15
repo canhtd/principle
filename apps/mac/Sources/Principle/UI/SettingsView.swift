@@ -87,7 +87,7 @@ struct SettingsView: View {
     private var statusIcon: String {
         switch availability {
         case .ready: "checkmark.circle.fill"
-        case .notInstalled, .loggedOut: "exclamationmark.triangle.fill"
+        case .notInstalled, .loggedOut, .skillMissing: "exclamationmark.triangle.fill"
         case nil: "clock"
         }
     }
@@ -95,7 +95,7 @@ struct SettingsView: View {
     private var statusTint: Color {
         switch availability {
         case .ready: .green
-        case .notInstalled, .loggedOut: .orange
+        case .notInstalled, .loggedOut, .skillMissing: .orange
         case nil: .secondary
         }
     }
