@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end smoke for the consult loop: one real engine turn against an isolated
-# fixture repo, then one --resume follow-up. Costs exactly two haiku calls.
+# fixture repo, one --resume follow-up, and one fresh turn that has to be routed
+# by the kind of case rather than by keywords. Costs exactly three haiku calls.
 #
 #   apps/mac/Tests/E2E/e2e-smoke.sh          # run it
 #   E2E_KEEP=1 apps/mac/Tests/E2E/e2e-smoke.sh   # keep the temp repo + logs
@@ -159,6 +160,25 @@ assert_result_ok() {
     note "$label result: is_error=false, subtype=$(result_field "$out" subtype)"
 }
 
+# --- no model disclaimer -------------------------------------------------------
+# The ask-ray skill's "Ai trả lời" rule tells a smaller model to open by saying
+# its judgment will be worse than Fable's. In a chat window that is honest; in
+# the app the user picked the model from the picker, so the line is redundant
+# *and* it is a stranger's voice opening an answer that is supposed to be Ray's.
+# Two real haiku runs opened with "Đang chạy Haiku 4.5, không phải Fable 5…"
+# before the system prompt cancelled it, which is why this is asserted on the
+# text the user would actually read rather than only on the prompt.
+MODEL_DISCLAIMER='không phải Fable|kém hơn Fable|thua Fable|Haiku|Sonnet|Opus|Fable'
+
+assert_no_model_disclaimer() {
+    local label="$1" text="$2" hit
+    hit="$(printf '%s' "$text" | grep -oiE "$MODEL_DISCLAIMER" | LC_ALL=C sort -u | tr '\n' ' ' || true)"
+    if [ -n "${hit// /}" ]; then
+        fail "$label: the answer names the model it is running on ($hit). The user chose the model in the app; Ray does not introduce himself as a model"
+    fi
+    note "$label: no model disclaimer"
+}
+
 # --- setup ---------------------------------------------------------------------
 command -v jq >/dev/null || fail "jq is required"
 [ -d "$FIXTURE" ] || fail "fixture repo missing at $FIXTURE"
@@ -272,6 +292,7 @@ if printf '%s' "$TEXT" | grep -qi 'bạn'; then
 else
     printf '  WARNING: the answer never says "bạn" — check the voice rule reached the engine.\n'
 fi
+assert_no_model_disclaimer "turn 1" "$TEXT"
 
 # --- trailer (KTD3) ------------------------------------------------------------
 # Hard assertions: a card is diagnosis + verbatim corpus text + the model's
@@ -406,10 +427,74 @@ case "$TRAILER2" in
     *) printf '  WARNING: turn 2 ended without a PRINCIPLES_JSON trailer; the app files no update for this turn.\n' ;;
 esac
 
+# --- turn 3: routed by the kind of case, not by the words in the story ---------
+# Ray Dalio's own DigitalRay app answered this exact question with three work
+# principles — shiny objects, to-do lists, push through — because "tập trung" and
+# "công việc" appear in the story. The case is habit change, and the answer sent
+# a smoker a productivity checklist.
+#
+# The fixture corpus carries both targets on purpose: `life:4.3d` / `life:4.3e`
+# are the habit chapter, and `work:12.5` is a decoy whose body is stuffed with
+# "tập trung", "công việc" and "danh sách việc". Router rows 15 and 16 make both
+# reachable, so the two assertions below separate a diagnosis from a keyword
+# match: 4.3x present, 12.5 absent.
+#
+# 12.5 stays a hard failure. Naming the trap in the prompt was not enough on its
+# own — one run diagnosed the habit case correctly and still padded the third
+# card with the decoy — so the prompt now runs a drop pass over the picked
+# principles before the trailer is written, and this is the check that proves it.
+step "Turn 3 — routing by kind of case"
+cat >"$LOGS/turn3.prompt" <<'PROMPT'
+/ask-ray Chủ đề: Bỏ thuốc lá
+
+Tình huống:
+Tôi muốn bỏ thuốc lá nhưng chưa vượt qua được cơn thèm. Khi tôi chống lại cảm giác thèm, tôi rất khó tập trung làm việc và bồn chồn. Tôi nên làm gì?
+PROMPT
+
+run_turn "$LOGS/turn3.jsonl" "$LOGS/turn3.prompt" || note "engine exited non-zero; asserting on the stream"
+[ -s "$LOGS/turn3.jsonl" ] || fail "turn 3 produced no stream — $(tail -3 "$LOGS/turn3.jsonl.err" 2>/dev/null)"
+assert_result_ok "$LOGS/turn3.jsonl" "turn 3"
+TEXT3="$(assistant_text "$LOGS/turn3.jsonl")"
+note "answer: $(printf '%s' "$TEXT3" | tr '\n' ' ' | cut -c1-110)…"
+assert_no_model_disclaimer "turn 3" "$TEXT3"
+
+LAST_LINE3="$(result_field "$LOGS/turn3.jsonl" result | grep -v '^[[:space:]]*$' | tail -1)"
+case "$LAST_LINE3" in
+    PRINCIPLES_JSON:*) ;;
+    *) fail "turn 3 ended without a trailer, so there is nothing to route-check. Last line: ${LAST_LINE3:0:110}" ;;
+esac
+TRAILER3="${LAST_LINE3#PRINCIPLES_JSON:}"
+printf '%s' "$TRAILER3" | jq -e . >/dev/null 2>&1 || fail "turn 3 trailer JSON does not parse: ${LAST_LINE3:0:160}"
+
+IDS3="$(printf '%s' "$TRAILER3" | jq -r '.principles[].id')"
+note "turn 3 cited: $(printf '%s' "$IDS3" | tr '\n' ' ')"
+printf '%s\n' "$IDS3" | grep -qE '^life:4\.3[a-z]?$' ||
+    fail "turn 3 cited no principle from the habit chapter (life:4.3x); it answered a habit case out of another chapter: $(printf '%s' "$IDS3" | tr '\n' ' ')"
+note "cited the habit chapter (life:4.3x)"
+if printf '%s\n' "$IDS3" | grep -qxF 'work:12.5'; then
+    fail "turn 3 cited work:12.5, the productivity decoy — its body is the words 'tập trung', 'công việc', 'danh sách việc', which is a keyword match on the story, not a diagnosis of the case"
+fi
+note "did not take the productivity decoy (work:12.5)"
+
+KIND3="$(printf '%s' "$TRAILER3" | jq -r '.diagnosis.kind // ""')"
+[ -n "$KIND3" ] || fail "turn 3 trailer carries no diagnosis.kind: $TRAILER3"
+# Accent-insensitive and hyphen-tolerant: what is being checked is that the case
+# was named as habit change, not how the model spelled it. One real run answered
+# with the kebab form "thay-doi-thoi-quen", which is the same diagnosis.
+printf '%s' "$KIND3" | tr '-' ' ' |
+    grep -qiE 'thói quen|thoi quen|hành vi|hanh vi|nghiện|nghien|bỏ thuốc|bo thuoc|cai thuốc|cai thuoc|bản ngã|ban nga|cấp độ thấp|cap do thap' ||
+    fail "turn 3 named the case \"$KIND3\" — a habit-change case has to be diagnosed as one before the right chapter can be reached"
+note "diagnosis: $KIND3"
+
+# Same contract as the turns above: the app files the case, the engine does not.
+CASES_AFTER_TURN3="$(find "$WORK/memory/cases" -type f ! -name '_TEMPLATE.md' | LC_ALL=C sort)"
+[ "$CASES_AFTER_TURN3" = "$NEW_CASES" ] ||
+    fail "turn 3 wrote under memory/cases/ — the app files the case from the trailer. After: $(printf '%s\n' "$CASES_AFTER_TURN3" | xargs -n1 basename | tr '\n' ' ')"
+
 # --- isolation: the real repo must be untouched --------------------------------
 step "Isolation"
 AFTER="$(real_memory_snapshot)"
 [ "$BEFORE" = "$AFTER" ] || fail "the real repo's memory/ or goals/ changed during the run"
 note "real repo memory/ and goals/ unchanged"
 
-printf '\nPASS — 2 haiku turns, consult loop end to end.\n'
+printf '\nPASS — 3 haiku turns, consult loop end to end.\n'

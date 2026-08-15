@@ -215,6 +215,61 @@ struct ConsultPromptTests {
         #expect(!prompt.contains("\\("))
     }
 
+    /// Ray Dalio's own DigitalRay app answered "I want to quit smoking, fighting
+    /// the cravings wrecks my focus at work" with three work-productivity
+    /// principles — shiny objects, to-do lists, push through. That is a surface
+    /// match on "focus"/"work" in the story instead of a diagnosis: the case is
+    /// habit change (the two yous, life 4.3). The prompt has to name the failure,
+    /// not only ask for a diagnosis.
+    @Test("System prompt định tuyến theo kiểu ca, không theo từ khoá bề mặt")
+    func systemPromptRoutesByKindOfCaseNotSurfaceKeywords() throws {
+        let prompt = ConsultPrompt.systemPrompt
+
+        #expect(prompt.contains("KIỂU CA"))
+        #expect(prompt.contains("router.md"))
+        #expect(prompt.contains("thay đổi thói quen của bản thân"))
+        // The exact words that misled DigitalRay, quoted so the engine can see
+        // the shape of the trap rather than only the rule against it.
+        #expect(prompt.contains("\"tập trung\""))
+        #expect(prompt.contains("\"công việc\""))
+        #expect(prompt.contains("biến ca thành ca năng suất làm việc"))
+        // Not only the first pick: two real haiku runs diagnosed the habit case,
+        // cited the habit chapter, then padded the third card with the
+        // productivity decoy they had matched on "tập trung".
+        #expect(prompt.contains("MỌI nguyên tắc bạn trích phải nằm trong chương"))
+        #expect(prompt.contains("đừng thêm một thẻ từ chương"))
+        // Both runs took the decoy because the story also named a symptom, so the
+        // symptom is named as a consequence rather than as a second case.
+        #expect(prompt.contains("Triệu chứng phụ"))
+        #expect(prompt.contains("KHÔNG phải một ca thứ hai"))
+        // A hybrid case is decided, not dodged — and the choice is shown.
+        #expect(prompt.contains("tầng sâu hơn"))
+        #expect(prompt.contains("nói rõ trong `why`"))
+        // Naming the trap was not enough on its own: a real haiku run diagnosed
+        // the habit case correctly and still shipped the decoy as a third card.
+        // So the picking is followed by a drop pass, phrased as a test each
+        // principle has to pass rather than as one more thing to keep in mind.
+        #expect(prompt.contains("TRƯỚC KHI chốt `principles`"))
+        #expect(prompt.contains("trùng chữ với lời kể"))
+        #expect(prompt.contains("thì BỎ"))
+        // Two ways to earn a card, and "to reach three" is not one of them.
+        #expect(prompt.contains("nằm trong chương của kiểu ca vừa chẩn đoán"))
+        #expect(prompt.contains("giải thích cơ chế của chính kiểu ca đó"))
+        #expect(prompt.contains("\"cho đủ ba"))
+        #expect(prompt.contains("Nhiều nhất 3; phân vân thì lấy ít hơn"))
+        // The drop pass belongs to the same Bước 1 block, ahead of the glossary.
+        let filter = try #require(prompt.range(of: "TRƯỚC KHI chốt `principles`"))
+        #expect(prompt.range(of: "KIỂU CA")!.lowerBound < filter.lowerBound)
+        #expect(filter.lowerBound < prompt.range(of: "Từ vựng —")!.lowerBound)
+        // It is part of Bước 1, so it has to land before the trailer is written
+        // — and still leave the recency slot to the order block.
+        let routing = try #require(prompt.range(of: "KIỂU CA"))
+        let glossary = try #require(prompt.range(of: "Từ vựng —"))
+        let order = try #require(prompt.range(of: ConsultPrompt.orderBlockAnchor))
+        #expect(routing.lowerBound < glossary.lowerBound)
+        #expect(glossary.lowerBound < order.lowerBound)
+    }
+
     @Test("System prompt yêu cầu văn xuôi theo nhịp của sách, không phải bảng nhãn")
     func systemPromptAsksForTheBooksProse() {
         let prompt = ConsultPrompt.systemPrompt
@@ -254,6 +309,25 @@ struct ConsultPromptTests {
         // Restated at the end as an order: recency is why the block sits last.
         #expect(prompt.contains("Thứ tự bắt buộc của một lượt"))
         #expect(prompt.contains("thiếu `case` là lỗi"))
+    }
+
+    /// The skill's "Ai trả lời" rule tells a smaller model to open by saying its
+    /// judgment will be worse than Fable's. In a chat that is honest; in the app
+    /// the user picked the model from the picker, so the line is both redundant
+    /// and a stranger's voice in the middle of Ray's — two real haiku turns
+    /// opened with it. The prompt has to cancel it outright, not soften it.
+    @Test("System prompt cấm nhắc model đang chạy và cấm rào đón kiểu 'kém hơn Fable'")
+    func systemPromptForbidsAnyModelDisclaimer() {
+        let prompt = ConsultPrompt.systemPrompt
+
+        #expect(prompt.contains("TUYỆT ĐỐI không nhắc model nào"))
+        #expect(prompt.contains("không tự so mình với Fable"))
+        #expect(prompt.contains("không mở bài bằng lời"))
+        #expect(prompt.contains("người dùng đã tự chọn model"))
+        // The rule being overridden is named, the way every other override is.
+        #expect(prompt.contains("Ai trả lời"))
+        // And the old instruction to announce it is gone, not merely contradicted.
+        #expect(!prompt.contains("phán đoán sẽ kém hơn Fable"))
     }
 
     /// Composing the case file with `Write` cost ~29 s of a measured turn before

@@ -30,6 +30,8 @@ Một ca thật thường là **lai** — hai kiểu chồng nhau. Khi lai, ch�
 | 12 | **Biết mình yếu chỗ này** | Điểm yếu lặp lại; đã cố sửa mà không lên | Life `2.6` điểm yếu không quan trọng nếu tìm ra giải pháp · `1.10f` nhờ người giỏi chỗ mình yếu · `4.5` đúng người đúng vị trí · `2.7` hiểu bản đồ tinh thần và sự khiêm nhường |
 | 13 | **Việc quá tải** | Quá nhiều việc gấp; không có thời gian cho việc dài hạn | Life `5.7a` "phải làm" phải xong trước "thích làm" · `5.7b` thà không kịp việc nhỏ còn hơn không kịp việc lớn · `5.8` đơn giản hóa · Work `13.8a` đừng đặt phương tiện lên trên chiến lược |
 | 14 | **Người khác khác mình** | "Sao nó nghĩ kiểu đó được"; xung đột phong cách; hiểu lầm lặp lại | Life `4` con người được kết nối rất khác nhau · `4.5` chọn đúng người đúng vị trí · Work `8.2` cách nhìn và suy nghĩ khác nhau hợp việc khác nhau |
+| 15 | **Thay đổi thói quen bản thân** | Muốn bỏ hoặc tập một thói quen; cơn thèm, bồn chồn khi nhịn; quyết tâm rồi lại quay về nếp cũ | Life `4.3` hai bạn — tâm thức đấu tranh với tiềm thức · `4.3d` chọn thói quen của bạn một cách cẩn thận · `4.3e` kiểm soát bản ngã thấp hơn |
+| 16 | **Mất tập trung trong công việc** | Việc dở dang chồng nhau; chạy theo dự án mới nghe kêu hơn; không xếp nổi thứ tự việc phải làm | Work `12.5` đừng để bị phân tâm bởi những thứ hào nhoáng · `12` danh sách việc xếp theo mức đóng góp |
 
 ---
 
