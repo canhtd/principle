@@ -19,10 +19,9 @@ struct MessageRow: View {
                 .font(Typography.caption)
                 .foregroundStyle(.secondary)
             if !message.text.isEmpty {
-                Text(message.text)
-                    .vietnameseBody()
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // The engine answers in Markdown; showing it verbatim leaves
+                // `**bold**` and one wall of text on screen.
+                MarkdownText(text: message.text)
             }
             PrincipleCardList(
                 principles: principles,

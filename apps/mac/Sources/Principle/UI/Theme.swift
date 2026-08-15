@@ -23,8 +23,28 @@ enum Typography {
     /// line-height 1.4 — labels and captions, never tighter.
     static let captionLineSpacing = captionSize * 0.4
 
+    /// Inline code inside an answer — `4.3e`, a file path, a command.
+    static let mono = Font.system(size: bodySize - 1, design: .monospaced)
+
     /// Reading width: past ~70 characters the eye loses the next line.
     static let readingWidth: CGFloat = 640
+}
+
+/// Vertical and horizontal rhythm inside a message. Derived from the type scale
+/// so the spacing keeps its proportions if the body size ever moves.
+enum Spacing {
+    /// Between two blocks of the same answer — wide enough to read as a break,
+    /// tighter than the gap between two messages.
+    static let block = Typography.bodySize * 0.7
+    /// Extra air above a heading that follows other content.
+    static let headingTop = Typography.bodySize * 0.4
+    /// Between two lines of the same list — tighter, so the list reads as one
+    /// thing rather than as loose paragraphs.
+    static let listItem = Typography.bodySize * 0.3
+    /// Gutter a list item is pushed in by.
+    static let listIndent = Typography.bodySize * 0.5
+    /// Between a bullet and its text.
+    static let listMarkerGap = Typography.bodySize * 0.45
 }
 
 extension View {
