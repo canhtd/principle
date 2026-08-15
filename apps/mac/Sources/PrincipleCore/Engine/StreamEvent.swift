@@ -14,6 +14,15 @@ public enum StreamEvent: Sendable, Equatable {
     case toolResult(ToolResult)
     /// An `assistant` `text` block: the answer the user reads.
     case text(String, inSubagent: Bool)
+    /// `stream_event` / `content_block_start` for a `text` block. Carries no text
+    /// of its own: it says the block that follows arrives as `textDelta`s, which
+    /// is how `PartialMessageFilter` knows to drop the whole-message repeat.
+    case textBlockStarted(inSubagent: Bool)
+    /// `stream_event` / `content_block_delta` with a `text_delta` — the answer
+    /// arriving token by token (`--include-partial-messages`).
+    case textDelta(String, inSubagent: Bool)
+    /// `stream_event` / `content_block_delta` with a `thinking_delta`.
+    case thinkingDelta(text: String, inSubagent: Bool)
     /// `system` / `thinking_tokens` — a running estimate, useful only as a heartbeat.
     case thinkingTokens(estimated: Int)
     /// Terminal event. Nothing follows it.
@@ -23,7 +32,10 @@ public enum StreamEvent: Sendable, Equatable {
     /// which the UI shows as "Looking up (subagent)…" rather than as the answer.
     public var isInSubagent: Bool {
         switch self {
-        case .thinking(_, let inSubagent), .text(_, let inSubagent): inSubagent
+        case .thinking(_, let inSubagent), .text(_, let inSubagent),
+            .textDelta(_, let inSubagent), .thinkingDelta(_, let inSubagent),
+            .textBlockStarted(let inSubagent):
+            inSubagent
         case .toolUse(let use): use.isInSubagent
         case .toolResult(let result): result.isInSubagent
         case .sessionStarted, .thinkingTokens, .result: false

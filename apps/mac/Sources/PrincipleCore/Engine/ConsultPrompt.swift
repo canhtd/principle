@@ -47,8 +47,10 @@ public enum ConsultPrompt {
 
         Model đang chạy là model người dùng đã chọn trong app. Tự trả lời theo khung của
         skill: KHÔNG delegate phán đoán sang model khác, không hỏi xin phép để gọi model
-        khác. Model nhỏ thì nói một dòng ở đầu rằng phán đoán sẽ kém hơn Fable, rồi vẫn
-        chạy đủ khung.
+        khác. Bước tra corpus cũng tự làm ngay trong lượt này bằng Grep hoặc Bash, KHÔNG
+        giao cho subagent. App đã tắt tool Task, nên cả hai chỗ skill mời delegate — mục
+        "Ai trả lời" và Bước 2 — không áp dụng ở đây. Model nhỏ thì nói một dòng ở đầu
+        rằng phán đoán sẽ kém hơn Fable, rồi vẫn chạy đủ khung.
 
         Đóng vòng lặp trí nhớ theo CLAUDE.md của repo, không bỏ bước: đọc memory/MEMORY.md
         và goals/GOALS.md trước khi chẩn đoán; sau khi đã chốt hướng, ghi file
@@ -121,30 +123,45 @@ public enum ConsultPrompt {
     /// What to send for this turn. The engine keeps the conversation itself via
     /// `--resume`, so only a turn that starts a fresh engine session needs the
     /// framing — a follow-up is just the question.
-    public static func text(for session: ChatSession, question: String) -> String {
+    ///
+    /// `repoContext` is a closure because only the opening turn spends it: read
+    /// eagerly, a repo's memory would be loaded off disk on every follow-up just
+    /// to be thrown away.
+    public static func text(
+        for session: ChatSession,
+        question: String,
+        repoContext: () -> RepoContext = { .empty }
+    ) -> String {
         switch session.nextTurnStart {
         case .fresh:
-            return firstTurn(topic: session.topic, question: question)
+            return firstTurn(topic: session.topic, question: question, context: repoContext())
         case .resume:
             return question
         case .freshWithSeed:
             // The transcript can hold nothing but the unanswered question — the
             // consult never actually started, so it opens rather than resumes.
             guard session.messages.contains(where: { $0.role == .assistant }) else {
-                return firstTurn(topic: session.topic, question: question)
+                return firstTurn(topic: session.topic, question: question, context: repoContext())
             }
             return TranscriptSeed.prompt(for: session, question: question)
         }
     }
 
     /// Opens the consult by name: the skill carries the whole method, so the app
-    /// only supplies the case.
-    static func firstTurn(topic: String, question: String) -> String {
-        """
-        /ask-ray Chủ đề: \(topic)
+    /// only supplies the case — plus the memory files the engine would otherwise
+    /// open one `Read` at a time (`RepoContext`).
+    ///
+    /// The skill invocation stays on the first line. A slash command is only read
+    /// as one at the very start of the message, so the pre-read context can only
+    /// go after the question.
+    static func firstTurn(topic: String, question: String, context: RepoContext = .empty) -> String {
+        let opening = """
+            /ask-ray Chủ đề: \(topic)
 
-        Tình huống:
-        \(question)
-        """
+            Tình huống:
+            \(question)
+            """
+        let section = context.promptSection
+        return section.isEmpty ? opening : "\(opening)\n\n\(section)"
     }
 }

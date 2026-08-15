@@ -88,7 +88,11 @@ extension SessionViewModel {
         streamingText = ""
 
         let resumeID = session.nextTurnStart.resumeID
-        let outgoing = ConsultPrompt.text(for: session, question: prompt)
+        // Read only if this turn opens an engine session; a `--resume` turn never
+        // asks for it (`ConsultPrompt.text`).
+        let outgoing = ConsultPrompt.text(for: session, question: prompt) {
+            RepoContext.read(at: store.repoURL)
+        }
 
         var outcome = TurnOutcome()
         do {
@@ -133,6 +137,11 @@ extension SessionViewModel {
         case .toolUse(let use):
             phase = .runningTool(ToolProgress.describe(use))
         case .toolResult:
+            break
+        case .textBlockStarted, .textDelta, .thinkingDelta:
+            // `PartialMessageFilter` rewrites these into `.text` / `.thinking`
+            // inside the run, so the view model sees one vocabulary whether or not
+            // partials were asked for. Appending here too would double the answer.
             break
         case .text(let text, _):
             streamingText += text

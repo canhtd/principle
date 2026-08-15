@@ -9,19 +9,32 @@ public final class EngineService: @unchecked Sendable {
     public struct Configuration: Sendable {
         /// Under `acceptEdits` in print mode anything outside this list is refused.
         /// It covers exactly the corpus/memory recipe in CLAUDE.md and the skill.
+        ///
+        /// `Task` is deliberately absent. The ask-ray skill offers to hand the
+        /// judgment to a Fable subagent and to farm the corpus grep out to a cheap
+        /// one; both are right in a chat window and wrong here, because the user
+        /// picked the model in the app's own model picker and a nested run pays
+        /// for a second engine startup before it can answer. See
+        /// `ConsultPrompt.systemPrompt`, which tells the engine the same thing in
+        /// words so it does not waste a turn asking for a tool it cannot have.
         public var allowedTools: [String]
+        /// Belt to the allowlist's braces: named here, `Task` is gone from the
+        /// engine's own manifest, so the model never sees it as an option.
+        public var disallowedTools: [String]
         public var permissionMode: String
         /// KTD1 watchdog: silence longer than this means hung. Shortened in tests.
         public var silenceTimeout: TimeInterval
 
         public init(
             allowedTools: [String] = [
-                "Read", "Grep", "Glob", "Task", "Write", "Edit", "Bash(grep:*)", "Bash(python3:*)",
+                "Read", "Grep", "Glob", "Write", "Edit", "Bash(grep:*)", "Bash(python3:*)",
             ],
+            disallowedTools: [String] = ["Task", "Workflow"],
             permissionMode: String = "acceptEdits",
             silenceTimeout: TimeInterval = 300
         ) {
             self.allowedTools = allowedTools
+            self.disallowedTools = disallowedTools
             self.permissionMode = permissionMode
             self.silenceTimeout = silenceTimeout
         }
@@ -94,6 +107,12 @@ public final class EngineService: @unchecked Sendable {
 
     /// The command shape verified against the CLI. `--allowedTools` goes last
     /// because it is variadic: anything positional after it gets swallowed.
+    ///
+    /// `--include-partial-messages` is what makes the answer readable while it is
+    /// still being written. Without it the CLI emits an `assistant` message only
+    /// once the whole message is finished, and this app's turn ends with a long
+    /// document being composed — measured on a fixture consult, the first word of
+    /// the answer reached the screen 96 s in, at the same instant as the last.
     static func arguments(
         model: String,
         resumeID: String?,
@@ -105,12 +124,16 @@ public final class EngineService: @unchecked Sendable {
             "--model", model,
             "--output-format", "stream-json",
             "--verbose",
+            "--include-partial-messages",
             "--permission-mode", configuration.permissionMode,
         ]
         if let resumeID, !resumeID.isEmpty {
             arguments += ["--resume", resumeID]
         }
         arguments += extraArgs
+        if !configuration.disallowedTools.isEmpty {
+            arguments += ["--disallowedTools", configuration.disallowedTools.joined(separator: " ")]
+        }
         arguments += ["--allowedTools", configuration.allowedTools.joined(separator: " ")]
         return arguments
     }

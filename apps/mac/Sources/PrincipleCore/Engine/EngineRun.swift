@@ -24,6 +24,8 @@ final class EngineRun: @unchecked Sendable {
     private var didFinish = false
     private var watchdog: DispatchSourceTimer?
     private var capturedErrors = Data()
+    /// Touched only by `readLoop`'s thread, which is the only caller of `emit`.
+    private var partials = PartialMessageFilter()
     /// Signalled when stderr has been read to EOF, so a failure message is never
     /// assembled from a half-read pipe.
     private let errorsDrained = DispatchSemaphore(value: 0)
@@ -146,6 +148,8 @@ final class EngineRun: @unchecked Sendable {
     }
 
     /// Decodes one line, yields its events, and reports the terminal one if present.
+    /// The watchdog is fed before the partial filter runs: a line that carried only
+    /// bookkeeping is still the engine talking, not silence.
     private func emit(_ line: Data) -> RunResult? {
         let events = StreamEventDecoder.events(fromLine: String(decoding: line, as: UTF8.self))
         guard !events.isEmpty else { return nil }
@@ -154,6 +158,7 @@ final class EngineRun: @unchecked Sendable {
         lock.unlock()
         var terminal: RunResult?
         for event in events {
+            guard let event = partials.filter(event) else { continue }
             continuation.yield(event)
             if let result = event.runResult { terminal = result }
         }

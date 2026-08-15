@@ -31,6 +31,53 @@ struct ConsultPromptTests {
         #expect(!text.contains(TranscriptSeed.header))
     }
 
+    /// Measured: three `Read` calls and a listing before the engine started
+    /// diagnosing. The app owns the repo, so it hands the files over instead.
+    @Test("Lượt đầu mang sẵn memory và goals để engine khỏi phải Read")
+    func firstTurnCarriesThePreReadMemory() {
+        let context = RepoContext(memory: "Hồ sơ Danny.", goals: "Goal đang chạy.")
+
+        let text = ConsultPrompt.text(for: session(), question: question) { context }
+
+        // The slash command has to stay on the first line to be read as one.
+        #expect(text.hasPrefix("/ask-ray"))
+        #expect(text.contains("Nội dung memory/MEMORY.md hiện tại"))
+        #expect(text.contains("Hồ sơ Danny."))
+        #expect(text.contains("Goal đang chạy."))
+        // The question comes before the dump, not after it.
+        let questionAt = text.range(of: question)?.lowerBound
+        let memoryAt = text.range(of: "Hồ sơ Danny.")?.lowerBound
+        #expect(questionAt != nil && memoryAt != nil && questionAt! < memoryAt!)
+    }
+
+    @Test("Repo không có memory/goals thì lượt đầu y hệt như trước")
+    func anEmptyRepoContextChangesNothing() {
+        let text = ConsultPrompt.text(for: session(), question: question) { .empty }
+
+        #expect(text == ConsultPrompt.firstTurn(topic: "Chọn việc", question: question))
+    }
+
+    /// The engine keeps the text in its own context across `--resume`, so sending
+    /// it again would buy nothing and be paid for on every follow-up.
+    @Test("Lượt --resume không đọc lại repo, không mang memory theo")
+    func resumeTurnsNeitherReadNorCarryTheContext() {
+        let previous = session(
+            claudeSessionID: "eng-1",
+            messages: [
+                ChatMessage(role: .user, text: "Câu hỏi đầu."),
+                ChatMessage(role: .assistant, text: "Trả lời đầu."),
+            ])
+        var reads = 0
+
+        let text = ConsultPrompt.text(for: previous, question: question) {
+            reads += 1
+            return RepoContext(memory: "Hồ sơ Danny.")
+        }
+
+        #expect(text == question)
+        #expect(reads == 0)
+    }
+
     @Test("Lượt sau chỉ là câu hỏi — engine đã giữ ngữ cảnh qua --resume")
     func laterTurnsSendOnlyTheQuestion() {
         let previous = session(
@@ -198,6 +245,11 @@ struct ConsultPromptTests {
         let prompt = ConsultPrompt.systemPrompt
 
         #expect(prompt.contains("KHÔNG delegate"))
+        // The lookup is delegated too in the skill's Bước 2; in the app the Task
+        // tool is switched off, so the engine has to grep in this same turn.
+        #expect(prompt.contains("App đã tắt tool Task"))
+        #expect(prompt.contains("KHÔNG\ngiao cho subagent"))
+        #expect(prompt.contains("Bước 2"))
         #expect(prompt.contains("memory/cases/"))
         #expect(prompt.contains("memory/MEMORY.md"))
         // Restated at the end as an order: a real haiku run read memory/ and

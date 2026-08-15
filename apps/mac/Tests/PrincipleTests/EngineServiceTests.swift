@@ -24,9 +24,49 @@ struct EngineServiceTests {
         #expect(!arguments.contains("--resume"))
         // Variadic flag last so nothing positional can be swallowed.
         #expect(arguments[arguments.count - 2] == "--allowedTools")
-        #expect(arguments.last == "Read Grep Glob Task Write Edit Bash(grep:*) Bash(python3:*)")
+        #expect(arguments.last == "Read Grep Glob Write Edit Bash(grep:*) Bash(python3:*)")
         // The prompt is never an argument; it goes over stdin.
         #expect(!arguments.contains { $0.hasPrefix("Xin chào") })
+    }
+
+    /// Without it the CLI holds each assistant message back until it is finished,
+    /// and this app's answer is the last thing a long turn produces: measured on a
+    /// fixture consult, the first word reached the screen 96 s in, with the last.
+    @Test("Partial messages are asked for, so the answer streams as it is written")
+    func partialMessagesAreRequested() {
+        let arguments = EngineService.arguments(
+            model: "opus", resumeID: nil, extraArgs: [], configuration: .init())
+
+        #expect(arguments.contains("--include-partial-messages"))
+    }
+
+    /// The ask-ray skill offers to delegate the judgment to a Fable subagent and
+    /// the corpus grep to a cheap one. Both spawn a second engine before this turn
+    /// can answer, and the model was already chosen in the app's picker.
+    @Test("No nested runs: Task is neither allowed nor offered")
+    func subagentsAreShutOff() {
+        let arguments = EngineService.arguments(
+            model: "opus", resumeID: nil, extraArgs: [], configuration: .init())
+
+        #expect(consecutive(arguments, "--disallowedTools", "Task Workflow"))
+        #expect(arguments.last?.contains("Task") == false)
+        // Denied before allowed, and neither before the variadic tail.
+        let disallowed = arguments.firstIndex(of: "--disallowedTools") ?? -1
+        let allowed = arguments.firstIndex(of: "--allowedTools") ?? -1
+        #expect(disallowed >= 0)
+        #expect(disallowed < allowed)
+    }
+
+    @Test("An empty deny list leaves the flag out entirely")
+    func emptyDisallowListIsOmitted() {
+        let arguments = EngineService.arguments(
+            model: "opus",
+            resumeID: nil,
+            extraArgs: [],
+            configuration: .init(disallowedTools: [])
+        )
+
+        #expect(!arguments.contains("--disallowedTools"))
     }
 
     @Test("Later turns resume, and extra args land before the variadic flag")
@@ -75,6 +115,31 @@ struct EngineServiceTests {
         #expect(outcome.events.first?.sessionStarted?.skills == ["ask-ray"])
         #expect(outcome.events.last?.runResult?.sessionID == "s-ok")
         #expect(outcome.events.last?.runResult?.text == "xong")
+    }
+
+    /// End to end through a real spawn: partial lines in, one copy of the answer
+    /// out. The filter sits inside the run, so this is the shape every consumer of
+    /// `TurnRunning` sees — the view model never has to know partials exist.
+    @Test("Partial chunks reach the consumer once, not twice")
+    func partialChunksAreNotDoubled() async throws {
+        let engine = try FakeEngine(
+            script: """
+                cat > /dev/null
+                printf '%s\\n' '{"type":"system","subtype":"init","session_id":"s-p","tools":[],"skills":[]}'
+                printf '%s\\n' '{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}},"parent_tool_use_id":null}'
+                printf '%s\\n' '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hãy "}},"parent_tool_use_id":null}'
+                printf '%s\\n' '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"chẩn đoán."}},"parent_tool_use_id":null}'
+                printf '%s\\n' '{"type":"assistant","message":{"content":[{"type":"text","text":"Hãy chẩn đoán."}]},"parent_tool_use_id":null}'
+                printf '%s\\n' '{"type":"stream_event","event":{"type":"content_block_stop","index":0},"parent_tool_use_id":null}'
+                printf '%s\\n' '{"type":"result","subtype":"success","is_error":false,"session_id":"s-p","result":"Hãy chẩn đoán."}'
+                """)
+        defer { engine.cleanUp() }
+
+        let outcome = await engine.collect(prompt: "Xin chào")
+
+        let text = outcome.events.compactMap(\.assistantText)
+        #expect(text == ["Hãy ", "chẩn đoán."])
+        #expect(text.joined() == outcome.events.last?.runResult?.text)
     }
 
     @Test("The prompt reaches the process over stdin")

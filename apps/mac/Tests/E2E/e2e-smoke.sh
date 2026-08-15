@@ -19,6 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 FIXTURE="$SCRIPT_DIR/fixture-repo"
 CONSULT_SWIFT="$REPO_ROOT/apps/mac/Sources/PrincipleCore/Engine/ConsultPrompt.swift"
+CONTEXT_SWIFT="$REPO_ROOT/apps/mac/Sources/PrincipleCore/Engine/RepoContext.swift"
 ALLOWED_TOOLS="Read Grep Glob Write Edit Bash(grep:*)"
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
@@ -36,12 +37,27 @@ resolve_claude() {
 
 # The trailer instruction lives in Swift and is read back out of it — a second
 # hand-typed copy here would drift from what the app actually sends.
-system_prompt() {
-    awk '
-        /public static let systemPrompt = """/ { inside = 1; next }
+swift_literal() {
+    awk -v marker="$2" '
+        index($0, marker) { inside = 1; next }
         inside && /^[[:space:]]*"""[[:space:]]*$/ { exit }
         inside { sub(/^        /, ""); print }
-    ' "$CONSULT_SWIFT"
+    ' "$1"
+}
+
+system_prompt() { swift_literal "$CONSULT_SWIFT" 'public static let systemPrompt = """'; }
+
+# The app pre-reads the memory files and hands them to the engine in the opening
+# prompt (RepoContext), which is what turn 1 below reproduces. Same reason the
+# system prompt is read out of Swift: a second hand-typed copy would drift.
+context_header() { swift_literal "$CONTEXT_SWIFT" 'public static let header = """'; }
+
+# One pre-read file, fenced the way RepoContext.section does it.
+context_section() {
+    [ -s "$2" ] || return 0
+    printf -- '--- %s ---\n' "$1"
+    cat "$2"
+    printf -- '--- hết ---\n'
 }
 
 # Every file under the real repo's personal data, with its hash. A fresh clone
@@ -65,9 +81,13 @@ run_turn() {
     local out="$1" prompt_file="$2"
     shift 2
     local status=0
+    # `--include-partial-messages` is in the app's command shape, so it is in this
+    # one: the assertions below read whole `assistant` messages, which the CLI still
+    # emits, and running with the flag proves it is accepted on a resume turn too.
     (cd "$WORK" && "$CLAUDE_BIN" -p \
         --model haiku \
         --output-format stream-json --verbose \
+        --include-partial-messages \
         --permission-mode acceptEdits \
         --append-system-prompt "$SYSTEM_PROMPT" \
         "$@" \
@@ -127,6 +147,19 @@ Em nhận được hai lời mời. Nơi A trả cao hơn 30% nhưng chỉ ký h
 Nơi B lương thấp hơn, ổn định hơn, và em học được nhiều hơn. Em phải trả lời
 trong ba ngày, và đang nghiêng về A chủ yếu vì tiền.
 PROMPT
+
+# What the app appends: the memory files, already read. The case file still has to
+# be written afterwards — that is what the assertion further down proves.
+CONTEXT_HEADER="$(context_header)"
+[ -n "$CONTEXT_HEADER" ] || fail "could not read the RepoContext header out of $CONTEXT_SWIFT"
+{
+    printf '\n%s\n\n' "$CONTEXT_HEADER"
+    context_section "Nội dung memory/MEMORY.md hiện tại" "$WORK/memory/MEMORY.md"
+    printf '\n'
+    context_section "Nội dung goals/GOALS.md hiện tại" "$WORK/goals/GOALS.md"
+    printf '\n'
+    context_section "Nội dung memory/cases/_TEMPLATE.md" "$WORK/memory/cases/_TEMPLATE.md"
+} >>"$LOGS/turn1.prompt"
 
 step "Turn 1 — consult"
 run_turn "$LOGS/turn1.jsonl" "$LOGS/turn1.prompt" || note "engine exited non-zero; asserting on the stream"

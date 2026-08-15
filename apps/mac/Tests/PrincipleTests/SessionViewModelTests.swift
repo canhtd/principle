@@ -84,6 +84,45 @@ struct SessionViewModelTests {
         #expect(call.extraArgs == ConsultPrompt.systemPromptArguments)
     }
 
+    /// What `--include-partial-messages` buys, seen from the screen's side: the
+    /// answer grows chunk by chunk instead of appearing whole at the end, and the
+    /// trailer stays hidden the whole way through — it is addressed to the app.
+    @Test("Câu trả lời hiện dần theo từng mảnh, trailer không bao giờ lộ ra")
+    func partialTextRendersAsItArrives() async throws {
+        let repo = try TempRepo(prefix: "vm")
+        let engine = MockTurnEngine()
+        let model = try makeViewModel(repo: repo, engine: engine)
+        let chunks = [
+            "Hãy gọi tên mục tiêu trước.",
+            " Rồi mới cân hai lời mời.",
+            "\nPRINCIPLES_JSON: {\"principles\":",
+            "[{\"id\":\"life:2.1\",\"apply\":\"Bạn chưa biết mình muốn gì.\"}]}",
+        ]
+
+        let turn = Task { await model.send("Chọn A hay B?") }
+        #expect(await waitUntil { engine.hasLiveStream })
+
+        var seen: [String] = []
+        for chunk in chunks {
+            engine.emit(.text(chunk, inSubagent: false))
+            #expect(await waitUntil { model.streamingText.hasSuffix(chunk) })
+            seen.append(model.visibleStreamingText)
+        }
+
+        // Growing, never rewritten, and the machine line never flashes up.
+        #expect(seen[0] == "Hãy gọi tên mục tiêu trước.")
+        #expect(seen[1] == "Hãy gọi tên mục tiêu trước. Rồi mới cân hai lời mời.")
+        #expect(seen.allSatisfy { !$0.contains(TrailerParser.marker) })
+        #expect(seen[3] == seen[1])
+
+        engine.emit(result("eng-1", text: chunks.joined()))
+        engine.finish()
+        await turn.value
+
+        #expect(model.messages.last?.text == "Hãy gọi tên mục tiêu trước. Rồi mới cân hai lời mời.")
+        #expect(model.messages.last?.principles.map(\.id) == ["life:2.1"])
+    }
+
     // MARK: - 2. Subagent (R6)
 
     @Test("Event trong subagent hiện trạng thái tra cứu, không đổ vào câu trả lời")

@@ -138,6 +138,116 @@ struct StreamEventDecodingTests {
         }
     }
 
+    // MARK: - Partial messages (--include-partial-messages)
+
+    /// A real capture of the answer block from a fixture consult: the CLI streams
+    /// `text_delta`s, then repeats the finished block as a whole `assistant`
+    /// message. Nothing in it comes from a real session — the case is the invented
+    /// two-job-offers one, cited against the invented `[FIXTURE]` corpus.
+    static let partialFixture: [String] = {
+        let url = Bundle.module.url(forResource: "Fixtures/stream-partial-sample", withExtension: "jsonl")
+        guard let url, let text = try? String(contentsOf: url, encoding: .utf8) else { return [] }
+        return text.split(separator: "\n").map(String.init)
+    }()
+
+    @Test("text_delta chunks decode; the block start is announced separately")
+    func partialTextIsDecoded() throws {
+        let events = Self.partialFixture.flatMap { StreamEventDecoder.events(fromLine: $0) }
+
+        #expect(events.filter { if case .textBlockStarted = $0 { true } else { false } }.count == 1)
+        let deltas = events.compactMap(\.textDeltaText)
+        #expect(deltas.count == 34)
+        // Chunks are whatever the wire gave us — the first one here is one letter.
+        #expect(deltas[0] == "B")
+        #expect(deltas.joined().hasPrefix("Bạn kể đây là"))
+        // `message_delta`, `message_stop`, `content_block_stop`, `signature_delta`
+        // and the tool's `input_json_delta` all decode to nothing.
+        #expect(events.count == 34 + 1 + 1)
+    }
+
+    /// The point of the whole exercise: what the reader sees while the answer is
+    /// being written has to be the same text they are left with.
+    @Test("Filtered deltas rebuild the whole message exactly once")
+    func filteredDeltasMatchTheWholeMessage() throws {
+        var filter = PartialMessageFilter()
+        let text = Self.partialFixture
+            .flatMap { StreamEventDecoder.events(fromLine: $0) }
+            .compactMap { filter.filter($0) }
+            .compactMap(\.assistantText)
+            .joined()
+        let whole = try #require(
+            Self.partialFixture
+                .flatMap { StreamEventDecoder.events(fromLine: $0) }
+                .compactMap(\.assistantText)
+                .first)
+
+        #expect(text == whole)
+        #expect(text.count == 2155)
+    }
+
+    /// The trailer streams in character by character at the very end; machine
+    /// syntax must never flash up in the transcript.
+    @Test("The trailer stays hidden while it streams in")
+    func theTrailerNeverShowsWhileStreaming() throws {
+        var filter = PartialMessageFilter()
+        var streamed = ""
+        var visibleEverContainedTheMarker = false
+        for line in Self.partialFixture {
+            for event in StreamEventDecoder.events(fromLine: line) {
+                guard let event = filter.filter(event), let text = event.assistantText else { continue }
+                streamed += text
+                if TrailerParser.visibleText(streaming: streamed).contains(TrailerParser.marker) {
+                    visibleEverContainedTheMarker = true
+                }
+            }
+        }
+
+        #expect(!visibleEverContainedTheMarker)
+        #expect(TrailerParser.parse(streamed).principleIDs.isEmpty == false)
+    }
+
+    @Test("Empty deltas carry nothing and are dropped")
+    func emptyDeltasAreDropped() {
+        // Opus emits its thinking as empty `thinking_delta`s with a token estimate;
+        // there is no text in them to show.
+        let empty = Self.partialFixture.flatMap { StreamEventDecoder.events(fromLine: $0) }
+            .filter { if case .thinkingDelta = $0 { true } else { false } }
+        #expect(empty.isEmpty)
+    }
+
+    @Test("thinking_delta with text decodes as a thinking chunk")
+    func thinkingDeltaIsDecoded() throws {
+        let line = """
+            {"type":"stream_event","event":{"type":"content_block_delta","index":0,\
+            "delta":{"type":"thinking_delta","thinking":"đang ngẫm"}},\
+            "parent_tool_use_id":null,"session_id":"s1"}
+            """
+        let events = StreamEventDecoder.events(fromLine: line)
+        #expect(events.count == 1)
+        if case .thinkingDelta(let text, let inSubagent) = events[0] {
+            #expect(text == "đang ngẫm")
+            #expect(inSubagent == false)
+        } else {
+            Issue.record("expected a thinking delta, got \(events)")
+        }
+    }
+
+    @Test("A malformed or unknown stream_event yields nothing")
+    func oddPartialLinesAreSkipped() {
+        let lines = [
+            "{\"type\":\"stream_event\"}",
+            "{\"type\":\"stream_event\",\"event\":{}}",
+            "{\"type\":\"stream_event\",\"event\":{\"type\":\"message_start\"}}",
+            "{\"type\":\"stream_event\",\"event\":{\"type\":\"content_block_start\"}}",
+            "{\"type\":\"stream_event\",\"event\":{\"type\":\"content_block_delta\"}}",
+            "{\"type\":\"stream_event\",\"event\":{\"type\":\"content_block_delta\",\"delta\":{\"type\":\"text_delta\"}}}",
+            "{\"type\":\"stream_event\",\"event\":{\"type\":\"future_delta_we_have_never_seen\"}}",
+        ]
+        for line in lines {
+            #expect(StreamEventDecoder.events(fromLine: line).isEmpty, "should skip: \(line)")
+        }
+    }
+
     @Test("tool_result content given as blocks is flattened to text")
     func toolResultBlockContentIsFlattened() throws {
         let line = """
@@ -169,6 +279,11 @@ extension StreamEvent {
 
     var assistantText: String? {
         if case .text(let text, _) = self { return text }
+        return nil
+    }
+
+    var textDeltaText: String? {
+        if case .textDelta(let text, _) = self { return text }
         return nil
     }
 

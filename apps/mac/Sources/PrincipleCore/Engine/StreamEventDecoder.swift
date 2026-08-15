@@ -29,8 +29,40 @@ public enum StreamEventDecoder {
         case "system": return systemEvents(root)
         case "assistant": return assistantEvents(root, inSubagent: inSubagent)
         case "user": return userEvents(root, inSubagent: inSubagent)
+        case "stream_event": return partialEvents(root, inSubagent: inSubagent)
         case "result": return resultEvents(root)
         default: return []
+        }
+    }
+
+    /// `--include-partial-messages` chunks: the raw API events, forwarded one per
+    /// line while a message is still being generated.
+    ///
+    /// Only the three shapes that move the UI are recognised. `message_start`,
+    /// `message_delta`, `content_block_stop`, `signature_delta` and
+    /// `input_json_delta` are all real events this app has nothing to do with —
+    /// the finished `assistant` message says everything they would have.
+    private static func partialEvents(_ root: [String: Any], inSubagent: Bool) -> [StreamEvent] {
+        guard let event = root["event"] as? [String: Any] else { return [] }
+        switch event["type"] as? String {
+        case "content_block_start":
+            let block = event["content_block"] as? [String: Any]
+            guard block?["type"] as? String == "text" else { return [] }
+            return [.textBlockStarted(inSubagent: inSubagent)]
+        case "content_block_delta":
+            guard let delta = event["delta"] as? [String: Any] else { return [] }
+            switch delta["type"] as? String {
+            case "text_delta":
+                guard let text = delta["text"] as? String, !text.isEmpty else { return [] }
+                return [.textDelta(text, inSubagent: inSubagent)]
+            case "thinking_delta":
+                guard let text = delta["thinking"] as? String, !text.isEmpty else { return [] }
+                return [.thinkingDelta(text: text, inSubagent: inSubagent)]
+            default:
+                return []
+            }
+        default:
+            return []
         }
     }
 
