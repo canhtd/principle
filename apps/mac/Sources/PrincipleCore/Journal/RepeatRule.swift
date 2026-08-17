@@ -26,7 +26,18 @@ public enum RepeatRule: Equatable, Sendable {
 
     /// True for anything that comes back by itself — the tasks that live in the
     /// day rather than in the backlog.
-    public var isRepeating: Bool { self != .none }
+    ///
+    /// A weekdays rule with nothing ticked is *not* one of them: it names no day
+    /// to come back on, so the task waits in the backlog where it can be seen,
+    /// instead of belonging to no day and no list at all.
+    public var isRepeating: Bool {
+        switch self {
+        case .none: false
+        case .daily: true
+        case .weekdays(let days): !days.isEmpty
+        case .weekly: true
+        }
+    }
 }
 
 extension RepeatRule: Codable {
@@ -48,10 +59,12 @@ extension RepeatRule: Codable {
         case .weekdays:
             self = .weekdays(Set(try container.decodeIfPresent([Weekday].self, forKey: .days) ?? []))
         case .weekly:
-            // A weekly rule with no day names no day: it repeats on nothing
-            // rather than silently becoming "every day".
+            // A hand-edited line that lost its day names no day at all. It reads
+            // back as a one-off, so the task turns up in the backlog where it
+            // can be seen and fixed, rather than vanishing from every day or
+            // quietly becoming a different kind of repeat.
             guard let day = try container.decodeIfPresent(Weekday.self, forKey: .day) else {
-                self = .weekdays([])
+                self = .none
                 return
             }
             self = .weekly(day)

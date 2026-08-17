@@ -25,7 +25,8 @@ struct JournalFilesTests {
             categoryID: learning.id,
             priority: .must,
             repeatRule: .weekdays([.wednesday, .monday]),
-            note: "Speaking"
+            note: "Speaking",
+            at: TempRepo.noon(august: 10)
         )
         _ = try store.today(TempRepo.noon(august: 17))
 
@@ -35,7 +36,7 @@ struct JournalFilesTests {
 
         let category = try object(try #require(try lines(at: store.categoriesFileURL).first))
         #expect(category["name"] as? String == "Learning")
-        #expect(category["color"] as? String == "blue")
+        #expect(category["color_key"] as? String == "blue")
 
         let task = try object(try #require(try lines(at: store.tasksFileURL).first))
         #expect(task["title"] as? String == "English — 30 min")
@@ -75,5 +76,22 @@ struct JournalFilesTests {
         try Data((written.joined(separator: "\n") + "\n").utf8).write(to: store.tasksFileURL)
 
         #expect(repo.journal.tasks().map(\.id) == [first.id, second.id])
+    }
+
+    @Test("An unrelated edit leaves the category the file remembers alone")
+    func anEditKeepsTheOldCategoryIDInTheFile() throws {
+        let repo = try TempRepo(prefix: "journal")
+        let store = repo.journal
+        let learning = try store.addCategory(name: "Learning", colorKey: "blue")
+        let read = try store.addTask(title: "Read 20 pages", categoryID: learning.id)
+        try store.deleteCategory(id: learning.id)
+
+        try store.setPriority(.must, taskID: read.id)
+
+        // The task shows as untagged — and the file still knows what it used to be.
+        #expect(try #require(repo.journal.task(id: read.id)).categoryID == nil)
+        let latest = try object(try #require(try lines(at: store.tasksFileURL).last))
+        #expect(latest["priority"] as? String == "must")
+        #expect(latest["category_id"] as? String == learning.id.uuidString)
     }
 }

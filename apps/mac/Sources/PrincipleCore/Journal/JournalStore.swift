@@ -76,26 +76,22 @@ public struct JournalStore: Sendable {
         )
     }
 
-    /// The live categories, oldest first — the order they were created in, which
-    /// is the order the backlog headers read in.
+    /// The live categories, oldest first — the order they were created in,
+    /// which is the order the backlog headers read in.
     public func categories() -> [JournalCategory] {
-        var order: [UUID] = []
-        var live: [UUID: JournalCategory] = [:]
-        for record in JournalLog.records(CategoryRecord.self, at: categoriesFileURL) {
-            if record.removed {
-                live[record.id] = nil
-                order.removeAll { $0 == record.id }
-                continue
+        JournalLog.replay(
+            JournalLog.records(CategoryRecord.self, at: categoriesFileURL),
+            id: \.id,
+            isRemoved: \.removed,
+            // A rename or a recolour carries one field: whatever the line leaves
+            // out, the category keeps.
+            merge: { record, previous in
+                JournalCategory(
+                    id: record.id,
+                    name: record.name ?? previous?.name ?? "",
+                    colorKey: record.color ?? previous?.colorKey ?? ""
+                )
             }
-            if live[record.id] == nil {
-                order.append(record.id)
-                live[record.id] = JournalCategory(id: record.id, name: record.name ?? "", colorKey: record.color ?? "")
-            } else {
-                // A rename or a recolour: only the fields the line carries move.
-                if let name = record.name { live[record.id]?.name = name }
-                if let color = record.color { live[record.id]?.colorKey = color }
-            }
-        }
-        return order.compactMap { live[$0] }
+        )
     }
 }

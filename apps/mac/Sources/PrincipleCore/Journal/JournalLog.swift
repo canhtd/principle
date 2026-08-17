@@ -33,6 +33,32 @@ enum JournalLog {
         return result.records
     }
 
+    /// The live values behind a whole file of lines, oldest first.
+    ///
+    /// Every one of these files is the same bargain — lines in file order, the
+    /// last line about an id wins, a `removed` line takes the id out — so the
+    /// replay is written once here and each store only says what one line means.
+    static func replay<Record, Value>(
+        _ records: [Record],
+        id: (Record) -> UUID,
+        isRemoved: (Record) -> Bool,
+        merge: (Record, Value?) -> Value
+    ) -> [Value] {
+        var order: [UUID] = []
+        var live: [UUID: Value] = [:]
+        for record in records {
+            let key = id(record)
+            if isRemoved(record) {
+                live[key] = nil
+                order.removeAll { $0 == key }
+                continue
+            }
+            if live[key] == nil { order.append(key) }
+            live[key] = merge(record, live[key])
+        }
+        return order.compactMap { live[$0] }
+    }
+
     /// One line per record, keys sorted, slashes unescaped: these files sit in
     /// the repo to be read by eye and diffed, not only by the app.
     static let encoder: JSONEncoder = {

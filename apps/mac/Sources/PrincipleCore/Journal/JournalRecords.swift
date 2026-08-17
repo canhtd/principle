@@ -22,7 +22,8 @@ struct CategoryRecord: Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, color, removed
+        case id, name, removed
+        case color = "color_key"
         case updatedAt = "updated_at"
     }
 

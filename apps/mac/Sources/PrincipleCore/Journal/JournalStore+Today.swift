@@ -1,10 +1,5 @@
 import Foundation
 
-/// What went wrong in a way the caller can act on.
-public enum JournalError: Error, Equatable {
-    case taskNotFound(UUID)
-}
-
 /// Planning a day, and reading it back by section.
 extension JournalStore {
     // MARK: - Planning
@@ -12,11 +7,22 @@ extension JournalStore {
     /// Pulls a backlog task into a day (spec #8). Planning is one field, so a
     /// task pulled into the wrong day is moved by planning it again.
     ///
-    /// A repeating task ignores this: its days come from its rule, which is why
-    /// the backlog never offers one.
+    /// A repeating task is refused: its days come from its rule, which is why
+    /// the backlog never offers one — and a planned day written on it would be
+    /// a field that quietly means nothing.
     @discardableResult
     public func plan(taskID: UUID, on date: Date, at now: Date = Date()) throws -> JournalTask {
-        try updateTask(id: taskID, at: now) { $0.plannedDay = JournalDay(date, calendar: calendar) }
+        try updateTask(id: taskID, at: now) { task in
+            guard !task.repeatRule.isRepeating else { throw JournalError.taskRepeats(taskID) }
+            task.plannedDay = JournalDay(date, calendar: calendar)
+        }
+    }
+
+    /// Re-tags a row, or takes its tag off — the third hover control (spec #4),
+    /// and the move a task needs after its category is deleted.
+    @discardableResult
+    public func setCategory(_ categoryID: UUID?, taskID: UUID, at now: Date = Date()) throws -> JournalTask {
+        try updateTask(id: taskID, at: now) { $0.categoryID = categoryID }
     }
 
     /// Sends a task back to the backlog: it stops belonging to any day, and
@@ -44,15 +50,6 @@ extension JournalStore {
             return
         }
         try setOccurrenceDone(done, taskID: taskID, on: JournalDay(date, calendar: calendar), at: now)
-    }
-
-    /// Reads a task, changes it, and writes it back — the shape every one-field
-    /// edit above shares.
-    @discardableResult
-    func updateTask(id: UUID, at now: Date, _ change: (inout JournalTask) -> Void) throws -> JournalTask {
-        guard var task = task(id: id) else { throw JournalError.taskNotFound(id) }
-        change(&task)
-        return try save(task, at: now)
     }
 
     // MARK: - Reading a day

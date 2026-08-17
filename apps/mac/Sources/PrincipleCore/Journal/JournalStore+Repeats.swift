@@ -17,7 +17,14 @@ extension JournalStore {
         guard let weekday = weekday(of: date) else { return 0 }
         let existing = doneByTask(on: day)
         var written = 0
-        for task in tasks() where task.repeatRule.occurs(on: weekday) && existing[task.id] == nil {
+        // A habit added today was owed nothing last week: without the floor,
+        // opening an older date would write rows into a past that never held
+        // them, and the Chart would read a habit Danny never had.
+        for task in tasks()
+        where task.repeatRule.occurs(on: weekday)
+            && JournalDay(task.createdAt, calendar: calendar) <= day
+            && existing[task.id] == nil
+        {
             try JournalLog.append(
                 OccurrenceRecord(taskID: task.id, day: day, done: false, updatedAt: now),
                 to: occurrencesFileURL

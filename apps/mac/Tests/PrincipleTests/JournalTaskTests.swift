@@ -58,4 +58,18 @@ struct JournalTaskTests {
         #expect(repo.journal.task(id: read.id) == nil)
         #expect(repo.journal.task(id: walk.id) != nil)
     }
+
+    @Test("Re-tagging a task is one move, and clearing the tag is the same move")
+    func retaggingATaskIsOneMove() throws {
+        let repo = try TempRepo(prefix: "journal")
+        let learning = try repo.journal.addCategory(name: "Learning", colorKey: "blue")
+        let health = try repo.journal.addCategory(name: "Health", colorKey: "green")
+        let walk = try repo.journal.addTask(title: "Walk", categoryID: learning.id)
+
+        try repo.journal.setCategory(health.id, taskID: walk.id)
+        #expect(try #require(repo.journal.task(id: walk.id)).categoryID == health.id)
+
+        try repo.journal.setCategory(nil, taskID: walk.id)
+        #expect(try #require(repo.journal.task(id: walk.id)).categoryID == nil)
+    }
 }
