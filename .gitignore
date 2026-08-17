@@ -3,10 +3,16 @@
 *.mobi
 .claude/skills/ask-ray/references/corpus.jsonl
 .claude/skills/ask-ray/references/index.md
+# build-corpus.py ghi ra .tmp rồi mới đổi tên; một lần chạy hỏng có thể để lại nó
+.claude/skills/ask-ray/references/*.tmp
 
-# Dữ liệu cá nhân — ca đã hỏi + mục tiêu, không đẩy lên remote công khai
-memory/
-goals/
+# Dữ liệu cá nhân — ca đã hỏi + mục tiêu + nhật ký công việc, không đẩy lên
+# remote công khai.
+# Neo vào gốc repo: không neo thì nuốt luôn repo giả lập của e2e
+# (apps/mac/Tests/E2E/fixture-repo/memory/), và e2e hỏng trên bản clone mới.
+/memory/
+/goals/
+/journal/
 
 # Bản dựng để chia sẻ
 dist/

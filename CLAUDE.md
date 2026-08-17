@@ -44,15 +44,22 @@ chính là bước suy ngẫm của `1.7` (đau + suy ngẫm = tiến bộ).
 **Trường `Kết quả` trong file ca để trống khi tạo** — chỉ điền khi có kết quả
 thật. Không suy diễn kết quả từ việc đã đưa lời khuyên.
 
+**Trong app macOS, bước 1 và 2 do app làm, không phải model.** Model đọc memory
+(app đã cấp sẵn) rồi trả về trường `case` trong dòng trailer; app ghi file ca và
+dòng index từ đó, cùng định dạng trên. Soạn file bằng `Write` từng tốn ~29 giây
+của một lượt trước khi chữ đầu tiên của câu trả lời kịp ra. Bước 3 và 4 vẫn là
+việc của model. Chạy `/ask-ray` trong terminal thì giao thức trên giữ nguyên
+từng chữ — model tự ghi cả bốn bước.
+
 ## Nguồn sự thật
 
-`.claude/skills/ask-ray/references/corpus.jsonl` — 515 nguyên tắc, mỗi dòng một
+`.claude/skills/ask-ray/references/corpus.jsonl` — 513 nguyên tắc, mỗi dòng một
 nguyên tắc trọn vẹn. **Đây là thứ được tra, không phải file sách.** File `.epub`
 chỉ cần khi dựng lại corpus.
 
 ```bash
 C=.claude/skills/ask-ray/references/corpus.jsonl
-grep '"num":"5.6"' "$C"
+grep '"num": "5.6"' "$C"   # JSONL ghi có khoảng trắng sau dấu hai chấm
 grep -i "giá trị kỳ vọng" "$C"
 ```
 
@@ -62,7 +69,7 @@ Dựng lại khi cần: `python3 .claude/skills/ask-ray/build-corpus.py /duong/d
 
 - **Không bịa nguyên tắc.** Không grep ra được thì không có. Model rất giỏi viết
   câu nghe hệt Dalio mà sách không hề có.
-- **248/515 nguyên tắc có `has_body: true`.** Phần còn lại chỉ có tiêu đề — tiêu
+- **492/513 nguyên tắc có `has_body: true`.** Phần còn lại chỉ có tiêu đề — tiêu
   đề chính LÀ nguyên tắc, đừng bịa thân bài để lấp chỗ trống.
 - **Không commit `corpus.jsonl` / `index.md` lên repo công khai.** Bản dịch có
   bản quyền. `.gitignore` đã chặn sẵn — đừng gỡ.
@@ -83,3 +90,13 @@ Dựng lại khi cần: `python3 .claude/skills/ask-ray/build-corpus.py /duong/d
 | memory + goals | dựng 2026-08-14 — 3 ca cũ chưa được ghi lại nội dung |
 | Decision Journal | prototype trong `apps/`, 6 lỗi đã biết ghi ở `CONCEPT.md` |
 | Nối ask-ray ↔ Journal | vòng lặp đã đóng ở mức file (`memory/cases/`); app Journal chưa nối |
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in this repo's GitHub Issues (via `gh`). See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` at the repo root + `docs/adr/`. See `docs/agents/domain.md`.
