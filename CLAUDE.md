@@ -90,3 +90,13 @@ Dựng lại khi cần: `python3 .claude/skills/ask-ray/build-corpus.py /duong/d
 | memory + goals | dựng 2026-08-14 — 3 ca cũ chưa được ghi lại nội dung |
 | Decision Journal | prototype trong `apps/`, 6 lỗi đã biết ghi ở `CONCEPT.md` |
 | Nối ask-ray ↔ Journal | vòng lặp đã đóng ở mức file (`memory/cases/`); app Journal chưa nối |
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in this repo's GitHub Issues (via `gh`). See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` at the repo root + `docs/adr/`. See `docs/agents/domain.md`.
