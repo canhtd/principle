@@ -135,3 +135,44 @@ struct TaskRecord: Codable {
         if removed { try container.encode(true, forKey: .removed) }
     }
 }
+
+/// One line of `journal/occurrences.jsonl`: a repeating task on one day.
+///
+/// This is what "materialised" means — the habit stops being a rule and becomes
+/// a row that day can tick. Written once per task and day; ticking it appends
+/// another line for the same pair, and the last one counts.
+struct OccurrenceRecord: Codable {
+    let taskID: UUID
+    let day: JournalDay
+    let done: Bool
+    let updatedAt: Date
+
+    private enum CodingKeys: String, CodingKey {
+        case day, done
+        case taskID = "task_id"
+        case updatedAt = "updated_at"
+    }
+
+    init(taskID: UUID, day: JournalDay, done: Bool, updatedAt: Date) {
+        self.taskID = taskID
+        self.day = day
+        self.done = done
+        self.updatedAt = updatedAt
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        taskID = try container.decode(UUID.self, forKey: .taskID)
+        day = try container.decode(JournalDay.self, forKey: .day)
+        done = try container.decodeIfPresent(Bool.self, forKey: .done) ?? false
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .distantPast
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(taskID, forKey: .taskID)
+        try container.encode(day, forKey: .day)
+        if done { try container.encode(true, forKey: .done) }
+        try container.encode(updatedAt, forKey: .updatedAt)
+    }
+}

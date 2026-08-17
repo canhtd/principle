@@ -34,10 +34,16 @@ extension JournalStore {
 
     /// Ticks or unticks a row on one day.
     ///
-    /// The day matters: a one-off is done once, and marking it so takes it off
-    /// the backlog for good.
+    /// The day is what tells the two kinds of row apart: a one-off is done once
+    /// and leaves the backlog for good, while a habit is done on that day only —
+    /// ticking Monday's run must leave Tuesday's still waiting.
     public func setDone(_ done: Bool, taskID: UUID, on date: Date, at now: Date = Date()) throws {
-        try updateTask(id: taskID, at: now) { $0.isDone = done }
+        guard let task = task(id: taskID) else { throw JournalError.taskNotFound(taskID) }
+        guard task.repeatRule.isRepeating else {
+            try updateTask(id: taskID, at: now) { $0.isDone = done }
+            return
+        }
+        try setOccurrenceDone(done, taskID: taskID, on: JournalDay(date, calendar: calendar), at: now)
     }
 
     /// Reads a task, changes it, and writes it back — the shape every one-field
@@ -66,24 +72,38 @@ extension JournalStore {
         )
     }
 
-    /// Every row of a day, in task creation order and before the split into
-    /// sections.
+    /// Every row of a day, in the order the tasks were created and before the
+    /// split into sections.
+    ///
+    /// Reading a day is also what writes its repeating rows down, so a habit
+    /// becomes tickable the moment the day is looked at, and stays exactly one
+    /// row however many times that happens.
     public func plannedTasks(on date: Date) throws -> [PlannedTask] {
         let day = JournalDay(date, calendar: calendar)
+        try materialize(on: date)
+        let doneByTask = doneByTask(on: day)
         let categoriesByID = Dictionary(categories().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        return tasks()
-            .filter { !$0.repeatRule.isRepeating && $0.plannedDay == day }
-            .map { task in
-                PlannedTask(
-                    taskID: task.id,
-                    day: day,
-                    title: task.title,
-                    category: task.categoryID.flatMap { categoriesByID[$0] },
-                    priority: task.priority,
-                    note: task.note,
-                    isDone: task.isDone,
-                    isRepeating: false
-                )
+        return tasks().compactMap { task in
+            let isDone: Bool
+            if task.repeatRule.isRepeating {
+                // A habit is on this day only if the day holds a row for it —
+                // which is what keeps a rule changed later out of a past day.
+                guard let done = doneByTask[task.id] else { return nil }
+                isDone = done
+            } else {
+                guard task.plannedDay == day else { return nil }
+                isDone = task.isDone
             }
+            return PlannedTask(
+                taskID: task.id,
+                day: day,
+                title: task.title,
+                category: task.categoryID.flatMap { categoriesByID[$0] },
+                priority: task.priority,
+                note: task.note,
+                isDone: isDone,
+                isRepeating: task.repeatRule.isRepeating
+            )
+        }
     }
 }
