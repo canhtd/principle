@@ -1,0 +1,557 @@
+<!doctype html>
+<!-- PROTOTYPE — throwaway. Principle macOS app: daily loop + Dalio ranked-dot chart. Not production code. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Principle — prototype</title>
+<style>
+:root{
+  --page:#f6f6f6; --canvas:#fafaf8; --sidebar:#f4f3ee; --card:#fff;
+  --field:#f7f7f7; --field-hover:#e8e8e8; --chip:#eff2ee;
+  --text:#272523; --text-2:#55524e; --muted:#77746f; --error:#c0272e;
+  --accent:#09321f; --olive:#39624d; --btn:#224735; --btn-text:#eff2ee;
+  --border:rgba(39,37,35,.10);
+  --r-sm:8px; --r-md:12px; --r-lg:18px;
+  --shadow:0 8px 20px rgba(15,23,42,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;background:var(--page);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+.app{display:flex;width:1100px;min-height:760px;margin:0 auto;background:var(--canvas);border:1px solid var(--border)}
+
+/* sidebar */
+.side{width:200px;flex:0 0 200px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 12px}
+.side .brand{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;padding:4px 8px 16px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:var(--r-sm);font-size:14px;color:var(--text-2)}
+.nav button:hover{background:rgba(39,37,35,.05)}
+.nav button.on{background:var(--chip);color:var(--accent);font-weight:500}
+.nav .div{height:1px;background:var(--border);margin:12px 10px}
+.side .foot{margin-top:auto;padding:8px}
+.gear{font-size:12px;color:var(--muted);padding:6px 8px;border-radius:var(--r-sm)}
+.gear:hover{background:rgba(39,37,35,.05)}
+
+/* canvas */
+.main{flex:1;padding:28px 28px 40px;overflow:auto}
+.h1{font-size:24px;font-weight:600;letter-spacing:-.01em}
+.h2{font-size:16px;font-weight:600}
+.sub{font-size:12px;color:var(--muted)}
+.head{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--shadow)}
+.card .cardhead{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.pad{padding:12px 16px 16px}
+.cols{display:flex;gap:16px;align-items:flex-start}
+.col-a{flex:1 1 auto;min-width:0}
+.col-b{flex:0 0 296px}
+.stack{display:flex;flex-direction:column;gap:20px}
+
+/* buttons + fields */
+.btn{padding:6px 12px;border-radius:var(--r-sm);background:var(--field);border:1px solid var(--border);font-size:13px}
+.btn:hover{background:var(--field-hover)}
+.btn.primary{background:var(--btn);color:var(--btn-text);border-color:transparent;font-weight:500}
+.btn.primary:hover{background:var(--accent)}
+.btn[disabled]{opacity:.45;cursor:default}
+input[type=text],select{padding:7px 10px;border-radius:var(--r-sm);background:var(--field);border:1px solid var(--border);outline:none;width:100%}
+input[type=text]:focus,select:focus{border-color:var(--olive)}
+input[type=text]::placeholder{color:var(--muted)}
+.form{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--border);background:var(--field)}
+.form.top{border-top:none;border-bottom:1px solid var(--border)}
+.form.plain{background:transparent}
+
+/* rows */
+.row{position:relative;display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border)}
+.row:last-child{border-bottom:none}
+.row.dim{opacity:.5}
+.row .title{flex:1;min-width:0;overflow-wrap:anywhere}
+.row .title.tap{cursor:pointer}
+.row .title.done{color:var(--muted);text-decoration:line-through}
+.dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+.cb{width:17px;height:17px;border-radius:5px;border:1.5px solid rgba(39,37,35,.28);flex:0 0 17px;display:flex;align-items:center;justify-content:center}
+.cb.on{background:var(--btn);border-color:var(--btn)}
+.cb.on::after{content:"";width:9px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+.grp{font-size:12px;font-weight:600;color:var(--muted);padding:12px 16px 4px;text-transform:uppercase;letter-spacing:.04em}
+.empty{padding:16px;font-size:13px;color:var(--muted)}
+.warn{padding:8px 16px;font-size:12px;color:var(--muted);background:var(--field);border-top:1px solid var(--border)}
+.ok{font-size:13px;color:var(--olive)}
+.drop{outline:2px dashed var(--olive);outline-offset:-4px}
+
+/* quiet controls: nothing visible until the row is hovered */
+.acts{display:flex;align-items:center;gap:2px;flex:0 0 auto;opacity:0;transition:opacity .12s}
+.row:hover .acts,.acts.open{opacity:1}
+.iconbtn{min-width:24px;height:22px;padding:0 6px;border-radius:6px;color:var(--muted);font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center}
+.iconbtn:hover{background:var(--field-hover);color:var(--text-2)}
+.pop{position:absolute;right:8px;top:calc(100% - 6px);z-index:20;width:190px;padding:6px;background:var(--card);
+  border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px}
+.pop button{text-align:left;padding:6px 8px;border-radius:6px;font-size:13px;color:var(--text-2)}
+.pop button:hover{background:var(--field)}
+.pop .lbl{font-size:11px;color:var(--muted);padding:6px 8px 2px}
+.pop select{font-size:13px;padding:5px 8px}
+
+/* order the day */
+.rank{padding:4px 0}
+.rank .row{cursor:grab}
+.rank .row.over{background:var(--chip)}
+.edge{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:6px 16px}
+
+/* chart */
+.chips{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.fchip{font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--text-2);display:inline-flex;align-items:center;gap:7px}
+.fchip:hover{background:var(--field)}
+.fchip.on{background:var(--chip);border-color:transparent;color:var(--accent);font-weight:500}
+.stats{padding:12px 16px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)}
+.stats b{font-weight:500;color:var(--text-2)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 16px;border-bottom:1px solid var(--border)}
+th{font-size:12px;font-weight:500;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+td.mut{color:var(--muted)}
+
+/* categories */
+.swatches{display:flex;gap:8px}
+.sw{width:22px;height:22px;border-radius:50%;border:2px solid transparent}
+.sw.on{border-color:var(--text)}
+.catblk{border-bottom:1px solid var(--border)}
+.catblk:last-child{border-bottom:none}
+.catblk .row{border-bottom:none}
+.hab{font-size:12px;color:var(--muted);padding:0 16px 9px 32px}
+
+/* task detail */
+.modal{position:fixed;inset:0;background:rgba(39,37,35,.18);display:flex;align-items:flex-start;justify-content:center;padding-top:90px;z-index:50}
+.sheet{width:440px;background:var(--card);border-radius:var(--r-lg);box-shadow:0 14px 32px rgba(15,23,42,.14);overflow:hidden}
+.fld{padding:10px 18px}
+.fld .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.seg span{font-size:12px;padding:4px 10px;color:var(--muted);cursor:pointer}
+.seg span.on{background:var(--chip);color:var(--accent);font-weight:500}
+.days{display:flex;gap:5px;margin-top:8px}
+.days button{width:34px;height:28px;border-radius:var(--r-sm);border:1px solid var(--border);font-size:12px;color:var(--muted)}
+.days button.on{background:var(--chip);border-color:transparent;color:var(--accent);font-weight:500}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">Principle</div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot"><button class="gear" onclick="alert('Settings — not built in this prototype')">Settings</button></div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="overlay"></div>
+
+<script>
+// ---------- constants ----------
+const COLORS = ['#39624d','#6b7d3a','#a35d3d','#4f6b7a','#6a4c7a','#9a7b3a'];
+const TODAY = '2026-08-18';
+const TODAY_LABEL = 'Monday, 18 August';
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WD  = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const noRepeat = () => ({mode:'none', days:[1,1,1,1,1,0,0], weekday:0});
+
+// ---------- state ----------
+let S = {
+  view:'today', menu:null, detail:null, filter:'all', confirm:'', newColor:COLORS[0], logCat:'c1',
+  cats:[
+    {id:'c1', name:'Learning', color:'#39624d'},
+    {id:'c2', name:'Work',     color:'#4f6b7a'},
+    {id:'c3', name:'Health',   color:'#a35d3d'},
+    {id:'c4', name:'Family',   color:'#6a4c7a'},
+  ],
+  backlog:[
+    {id:'b1', title:'Try the new Principle Mac build', cat:'c2', must:true,  repeat:noRepeat(), note:''},
+    {id:'b3', title:'Re-read Dalio chapter 5',         cat:'c1', must:false, repeat:noRepeat(), note:''},
+    {id:'b4', title:'Run 20 min',                      cat:'c3', must:false, repeat:noRepeat(), note:''},
+    {id:'b5', title:'Call the doctor',                 cat:'c3', must:true,  repeat:noRepeat(), note:''},
+    {id:'b6', title:'Review 4 LearnEnglish findings',  cat:'c1', must:false, repeat:noRepeat(), note:''},
+    {id:'b7', title:'Fix tax paperwork',               cat:'c2', must:true,  repeat:noRepeat(), note:''},
+    {id:'b8', title:'Dinner with family',              cat:'c4', must:false, repeat:noRepeat(), note:''},
+  ],
+  today:[
+    {id:'t1', title:'English — 30 min', cat:'c1', must:true, done:true, note:'',
+     repeat:{mode:'daily', days:[1,1,1,1,1,0,0], weekday:0}},
+    {id:'t2', title:'Decide M4 scope for VessaStudio', cat:'c2', must:true, done:false, repeat:noRepeat(), note:''},
+  ],
+  logs:[{id:'g1', title:'Unblocked Ha on the API', cat:'c2', logged:true}],   // done, never planned
+  order:[],           // ids, best -> worst
+  outcomes:{},        // date -> [{title, cat}] ranked best -> worst
+};
+let seq = 100;
+const uid = () => 'x' + (++seq);
+const cat = id => S.cats.find(c => c.id === id) || S.cats[0];
+
+// ---------- seed: 27 days of ranked outcomes ----------
+function dayKey(offset){ const d = new Date(TODAY + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + offset); return d.toISOString().slice(0,10); }
+let _s = 11; const rnd = () => (_s = (_s * 1103515245 + 12345) % 2147483648) / 2147483648;
+const POOL = {
+  c1:['English — 30 min','Read 20 pages','Dalio chapter','Course lesson','Wrote notes','Flashcards'],
+  c2:['Shipped a fix','Team review','Wrote the spec','Cleared inbox','Planning call','Deploy','Interview'],
+  c3:['Ran 5k','Gym session','Walked 8k steps','Slept 8h','Cooked at home'],
+  c4:['Dinner with family','Called parents','Played with the kid','Weekend walk'],
+};
+(function seed(){
+  for (let i = -27; i <= -1; i++){
+    const key = dayKey(i), dow = new Date(key + 'T00:00:00Z').getUTCDay(), t = (i + 27) / 26;
+    const n = 4 + Math.floor(rnd() * 5);                 // 4..8 outcomes a day
+    const picks = ['c1','c2'];                            // learning + work show up daily
+    while (picks.length < n){
+      const r = rnd();
+      picks.push(r < .34 ? 'c2' : r < .6 ? 'c1' : r < .84 ? 'c3' : 'c4');
+    }
+    const day = picks.map(c => {
+      const base = c === 'c1' ? .18 + .62 * t : c === 'c2' ? .5 : c === 'c3' ? .45 : .62;
+      return {cat:c, title:POOL[c][Math.floor(rnd() * POOL[c].length)], q:base + (rnd() - .5) * .38};
+    });
+    if (dow === 0 || dow === 6) day.push({cat:'c4', title:POOL.c4[Math.floor(rnd()*4)], q:.75 + rnd()*.2});
+    day.sort((a,b) => b.q - a.q);
+    S.outcomes[key] = day.map(o => ({title:o.title, cat:o.cat}));
+  }
+})();
+
+// ---------- helpers ----------
+const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const catOptions = sel => S.cats.map(c => `<option value="${c.id}" ${c.id===sel?'selected':''}>${esc(c.name)}</option>`).join('');
+const dmy = k => { const [y,m,d] = k.split('-'); return +d + ' ' + MON[+m - 1]; };
+const anyTask = id => S.today.find(x => x.id === id) || S.backlog.find(x => x.id === id);
+const repeatLabel = r => r.mode === 'none' ? 'None' : r.mode === 'daily' ? 'Every day'
+  : r.mode === 'weekdays' ? 'Weekdays · ' + WD.filter((_,i) => r.days[i]).join(' ')
+  : 'Weekly · ' + WD[r.weekday];
+// today's done work, best -> worst; anything new lands at the bottom
+function ranked(){
+  const pool = [...S.today.filter(t => t.done), ...S.logs];
+  const byId = Object.fromEntries(pool.map(o => [o.id, o]));
+  const kept = S.order.filter(id => byId[id]);
+  pool.forEach(o => { if (!kept.includes(o.id)) kept.push(o.id); });
+  S.order = kept;
+  return kept.map(id => byId[id]);
+}
+
+// ---------- actions ----------
+const A = {
+  go(v){ S.view = v; S.confirm = ''; S.menu = null; render(); },
+  menu(e, id){ e.stopPropagation(); S.menu = S.menu === id ? null : id; render(); },
+  detail(id){ S.detail = id; S.menu = null; render(); },
+  closeDetail(){ S.detail = null; render(); },
+  toTodayById(id){ const i = S.backlog.findIndex(b => b.id === id); if (i < 0) return;
+    S.today.push({...S.backlog.splice(i,1)[0], done:false}); S.menu = null; render(); },
+  toBacklog(id){ const i = S.today.findIndex(x => x.id === id); if (i < 0) return;
+    const it = S.today.splice(i,1)[0]; delete it.done; S.backlog.unshift(it); S.menu = null; render(); },
+  addBacklog(inp, catId){ const t = inp.value.trim(); if (!t) return;
+    S.backlog.unshift({id:uid(), title:t, cat:catId || S.cats[0].id, must:false, repeat:noRepeat(), note:''});
+    inp.value = ''; render(); },
+  toggleDone(id){ const it = S.today.find(x => x.id === id); it.done = !it.done; S.confirm = ''; render(); },
+  setMust(id){ const it = anyTask(id); it.must = !it.must; S.menu = null; render(); },
+  setCat(id, c){ anyTask(id).cat = c; S.menu = null; render(); },
+  setTitle(id, v){ anyTask(id).title = v; },
+  setNote(id, v){ anyTask(id).note = v; },
+  setRepeat(id, mode){ anyTask(id).repeat.mode = mode; render(); },
+  toggleDay(id, i){ const r = anyTask(id).repeat; r.days[i] = r.days[i] ? 0 : 1; render(); },
+  setWeekday(id, i){ anyTask(id).repeat.weekday = +i; render(); },
+  // log an outcome that was never on the list
+  log(inp){ const t = inp.value.trim(); if (!t) return;
+    S.logs.push({id:uid(), title:t, cat:S.logCat, logged:true}); inp.value = ''; S.confirm = ''; render(); },
+  logCat(c){ S.logCat = c; S.menu = null; render(); },
+  // reorder the ranked column
+  move(id, dir){ const i = S.order.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= S.order.length) return;
+    S.order.splice(j, 0, S.order.splice(i,1)[0]); render(); },
+  dropOn(dragId, targetId){ if (dragId === targetId) return;
+    const from = S.order.indexOf(dragId); if (from < 0) return;
+    S.order.splice(from, 1);
+    S.order.splice(S.order.indexOf(targetId), 0, dragId); render(); },
+  closeDay(){ const list = ranked(); if (!list.length) return;
+    S.outcomes[TODAY] = list.map(o => ({title:o.title, cat:o.cat}));
+    S.confirm = `Day closed — ${list.length} dots`; render(); },
+  filter(f){ S.filter = f; render(); },
+  addCat(inp){ const t = inp.value.trim(); if (!t) return;
+    S.cats.push({id:uid(), name:t, color:S.newColor}); inp.value = ''; render(); },
+  pickColor(c){ S.newColor = c; render(); },
+};
+
+// ---------- sidebar ----------
+const NAV = [['today','Today'],['backlog','Backlog'],['chart','Chart'],['cats','Categories'],['div',''],['ray','Ask Ray']];
+function renderNav(){
+  document.getElementById('nav').innerHTML = NAV.map(([k,l]) => k === 'div'
+    ? '<div class="div"></div>'
+    : `<button class="${S.view===k?'on':''}" onclick="A.go('${k}')">${l}</button>`).join('');
+}
+
+// ---------- screen: Today ----------
+// A row is checkbox + title. Everything else hides behind the hover menu.
+function rowMenu(it, kind){
+  const setCat = `A.setCat('${it.id}',this.value)`;
+  const last = kind === 'today'
+    ? `<button onclick="A.toBacklog('${it.id}')">Back to backlog</button>`
+    : `<button onclick="A.toTodayById('${it.id}')">Move to Today</button>`;
+  return `<div class="pop" onclick="event.stopPropagation()">
+    <button onclick="A.setMust('${it.id}')">${it.must ? 'Move to Nice to' : 'Move to Must'}</button>
+    <button onclick="A.detail('${it.id}')">Open details</button>
+    <div class="lbl">Category</div>
+    <select onchange="${setCat}">${catOptions(it.cat)}</select>
+    ${last}
+  </div>`;
+}
+function taskRow(it, kind){
+  const open = S.menu === it.id;
+  const box = kind === 'today'
+    ? `<div class="cb ${it.done?'on':''}" onclick="A.toggleDone('${it.id}')"></div>` : '';
+  return `<div class="row">
+    ${box}
+    <div class="title tap ${it.done?'done':''}" onclick="A.detail('${it.id}')">${esc(it.title)}</div>
+    <span class="acts ${open?'open':''}">
+      ${it.repeat.mode !== 'none' ? `<span class="iconbtn" title="${esc(repeatLabel(it.repeat))}">&#8635;</span>` : ''}
+      ${kind === 'backlog' ? `<button class="iconbtn" onclick="A.toTodayById('${it.id}')">&rarr; Today</button>` : ''}
+      <button class="iconbtn" title="Options" onclick="A.menu(event,'${it.id}')">&#8943;</button>
+    </span>
+    ${open ? rowMenu(it, kind) : ''}
+  </div>`;
+}
+function byCategory(items, rowFn){
+  return S.cats.map(c => {
+    const own = items.filter(i => i.cat === c.id);
+    return own.length ? `<div class="grp">${esc(c.name)}</div>` + own.map(rowFn).join('') : '';
+  }).join('');
+}
+function viewToday(){
+  const section = (label, items) => items.length
+    ? `<div class="grp">${label}</div>${items.map(i => taskRow(i,'today')).join('')}` : '';
+  const body = S.today.length
+    ? section('Must', S.today.filter(i => i.must)) + section('Nice to', S.today.filter(i => !i.must))
+    : '<div class="empty">Nothing here yet. Add from the Backlog on the right.</div>';
+  const cap = S.today.length > 5 ? '<div class="warn">More than 5 tasks — sure?</div>' : '';
+  const logOpen = S.menu === 'logcat';
+
+  const todayCard = `<div class="card" id="todaycard"
+      ondragover="event.preventDefault();this.classList.add('drop')"
+      ondragleave="this.classList.remove('drop')"
+      ondrop="event.preventDefault();this.classList.remove('drop');A.toTodayById(event.dataTransfer.getData('text'))">
+    <div class="cardhead"><span class="h2">Today</span><span style="flex:1"></span>
+      <span class="sub">${S.today.length} tasks</span></div>
+    ${body}${cap}
+    <div class="row" style="border-top:1px solid var(--border)">
+      <input type="text" id="logfield" placeholder="Log an outcome…" style="background:transparent;border-color:transparent;padding-left:3px"
+        onkeydown="if(event.key==='Enter')A.log(this)">
+      <span class="acts ${logOpen?'open':''}"><button class="iconbtn"
+        onclick="A.menu(event,'logcat')">${esc(cat(S.logCat).name)} &#8964;</button></span>
+      ${logOpen ? `<div class="pop" onclick="event.stopPropagation()"><div class="lbl">Category</div>
+        ${S.cats.map(c => `<button onclick="A.logCat('${c.id}')">${esc(c.name)}</button>`).join('')}</div>` : ''}
+    </div></div>`;
+
+  const list = ranked();
+  const rankCard = `<div class="card" style="margin-top:20px">
+    <div class="cardhead"><span class="h2">Order the day</span><span style="flex:1"></span>
+      <span class="sub">drag, or use the arrows</span></div>
+    ${list.length ? `<div class="edge">Best</div><div class="rank">${list.map((o,i) => `
+      <div class="row" draggable="true"
+        ondragstart="event.dataTransfer.setData('text','${o.id}')"
+        ondragover="event.preventDefault();this.classList.add('over')"
+        ondragleave="this.classList.remove('over')"
+        ondrop="event.preventDefault();this.classList.remove('over');A.dropOn(event.dataTransfer.getData('text'),'${o.id}')">
+        <span class="dot" style="background:${cat(o.cat).color}"></span>
+        <div class="title">${esc(o.title)}</div>
+        <span class="acts">
+          <button class="iconbtn" title="Up"   onclick="A.move('${o.id}',-1)">&#8593;</button>
+          <button class="iconbtn" title="Down" onclick="A.move('${o.id}',1)">&#8595;</button>
+        </span>
+      </div>`).join('')}</div><div class="edge">Worst</div>`
+      : '<div class="empty">Tick a task or log an outcome — it shows up here to be ranked.</div>'}
+    <div class="form"><button class="btn primary" onclick="A.closeDay()">Close day</button>
+      ${S.confirm ? `<span class="ok">${esc(S.confirm)}</span>`
+                  : '<span class="sub">Ranked top to bottom, saved as the day&rsquo;s dots.</span>'}</div>
+  </div>`;
+
+  const backlogRow = b => `<div class="row" draggable="true"
+      ondragstart="event.dataTransfer.setData('text','${b.id}')">
+      <div class="title tap" onclick="A.detail('${b.id}')">${esc(b.title)}</div>
+      <span class="acts"><button class="iconbtn" title="Move to Today"
+        onclick="A.toTodayById('${b.id}')">+</button></span>
+    </div>`;
+  const backlogPanel = `<div class="card">
+    <div class="cardhead"><span class="h2">Backlog</span></div>
+    <div class="form top"><input type="text" placeholder="Quick add, then Enter"
+      onkeydown="if(event.key==='Enter')A.addBacklog(this)"></div>
+    ${S.backlog.length ? byCategory(S.backlog, backlogRow) : '<div class="empty">Backlog is empty.</div>'}</div>`;
+
+  return `<div class="head">
+      <div><div class="h1">${TODAY_LABEL}</div>
+        <div class="sub">Do the work, then rank how the day actually went.</div></div>
+    </div>
+    <div class="cols"><div class="col-a">${todayCard}${rankCard}</div><div class="col-b">${backlogPanel}</div></div>`;
+}
+
+// ---------- screen: Backlog ----------
+function viewBacklog(){
+  return `<div class="head"><div><div class="h1">Backlog</div>
+      <div class="sub">Everything waiting. Drag into Today each morning.</div></div></div>
+    <div class="stack">
+      <div class="card">
+        <div class="form top"><input type="text" placeholder="New task — type, then Enter"
+          onkeydown="if(event.key==='Enter')A.addBacklog(this,document.getElementById('bk-cat').value)">
+          <select id="bk-cat" style="width:150px">${catOptions()}</select></div>
+        ${S.backlog.length ? byCategory(S.backlog, b => taskRow(b,'backlog')) : '<div class="empty">Backlog is empty.</div>'}
+      </div>
+      <div class="card">
+        <div class="cardhead"><span class="h2">Later phases</span></div>
+        <div class="row dim"><div class="title">Tasks from GitHub (5 repos) flow into the backlog</div>
+          <button class="btn" disabled>Coming</button></div>
+        <div class="row dim"><div class="title">Decision journal (B)</div>
+          <button class="btn" disabled>Coming</button></div>
+      </div>
+    </div>`;
+}
+
+// ---------- screen: Chart ----------
+// One column per day; a dot per outcome, stacked by its rank that day (top = best).
+const days28 = () => Array.from({length:28}, (_,i) => dayKey(i - 27));
+const posOf = (i, n) => n <= 1 ? .5 : (n - 1 - i) / (n - 1);   // 1 = best of the day, 0 = worst
+function chartSVG(){
+  const W = 900, H = 340, PL = 16, PR = 16, PT = 30, PB = 46;
+  const x = i => PL + i * (W - PL - PR) / 27;
+  const y = p => PT + (1 - p) * (H - PT - PB);
+  const days = days28();
+  let g = `<text x="0" y="14" font-size="10" fill="#77746f" letter-spacing=".05em">BEST</text>
+           <text x="0" y="${H - PB + 22}" font-size="10" fill="#77746f" letter-spacing=".05em">WORST</text>`;
+  days.forEach((d,i) => { if (i % 7 === 0 || i === 27)
+    g += `<text x="${x(i)}" y="${H-4}" font-size="10" fill="#77746f" text-anchor="${i===27?'end':'middle'}">${dmy(d)}</text>`; });
+
+  const avg = [];
+  days.forEach((d,i) => {
+    const day = S.outcomes[d] || [];
+    const mine = [];
+    day.forEach((o,k) => {
+      const p = posOf(k, day.length);
+      if (S.filter !== 'all' && o.cat !== S.filter) return;
+      mine.push(p);
+      const c = cat(o.cat);
+      g += `<circle cx="${x(i)}" cy="${y(p)}" r="8" fill="${c.color}" opacity=".92"/>
+            <text x="${x(i)}" y="${y(p)+3.3}" font-size="9" font-weight="600" fill="#fff" text-anchor="middle">${esc(c.name[0])}</text>`;
+    });
+    if (S.filter !== 'all' && mine.length) avg.push([x(i), y(mine.reduce((a,b)=>a+b,0) / mine.length)]);
+  });
+  if (avg.length > 1)
+    g += `<polyline points="${avg.map(p => p.join(',')).join(' ')}" fill="none" stroke="${cat(S.filter).color}" stroke-width="1.5" opacity=".5"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${g}</svg>`;
+}
+// average normalised rank (0 = worst of its day, 1 = best) over a window
+function rankAvg(catId, from, to){
+  const vals = [];
+  for (let i = from; i <= to; i++){
+    const day = S.outcomes[dayKey(i)] || [];
+    day.forEach((o,k) => { if (o.cat === catId) vals.push(posOf(k, day.length)); });
+  }
+  return vals.length ? vals.reduce((a,b) => a + b, 0) / vals.length : null;
+}
+function statLine(){
+  const word = (a,b) => a === null || b === null ? 'no read yet' : a > b + .04 ? 'improving' : a < b - .04 ? 'worsening' : 'steady';
+  const one = c => { const now = rankAvg(c.id, -6, 0), prev = rankAvg(c.id, -13, -7);
+    return {c, now, prev, w: word(now, prev)}; };
+  if (S.filter !== 'all'){
+    const r = one(cat(S.filter));
+    return `<b>${esc(r.c.name)}:</b> rank position ${r.w} vs last week`;
+  }
+  return S.cats.map(c => { const r = one(c); return `<b>${esc(r.c.name)}</b> ${r.w}`; }).join(' · ');
+}
+function viewChart(){
+  const last7 = Array.from({length:7}, (_,i) => dayKey(i - 6)).reverse();
+  const rows = last7.map(d => {
+    const day = S.outcomes[d] || [];
+    return `<tr><td>${dmy(d)}</td>
+      <td>${day.length ? esc(day[0].title) : '<span class="mut">—</span>'}</td>
+      <td class="mut">${day.length ? esc(day[day.length-1].title) : '—'}</td></tr>`;
+  }).join('');
+
+  return `<div class="head"><div><div class="h1">Chart</div>
+      <div class="sub">Every outcome is a dot, placed by how it ranked that day. Filter to one type to see if it is climbing.</div></div></div>
+    <div class="chips">
+      <button class="fchip ${S.filter==='all'?'on':''}" onclick="A.filter('all')">All</button>
+      ${S.cats.map(c => `<button class="fchip ${S.filter===c.id?'on':''}" onclick="A.filter('${c.id}')">
+        <span class="dot" style="background:${c.color}"></span>${esc(c.name)}</button>`).join('')}
+    </div>
+    <div class="stack">
+      <div class="card"><div class="pad">${chartSVG()}</div><div class="stats">${statLine()}</div></div>
+      <div class="card">
+        <div class="cardhead"><span class="h2">Recent days</span></div>
+        <table><thead><tr><th>Date</th><th>Best</th><th>Worst</th></tr></thead><tbody>${rows}</tbody></table>
+      </div>
+    </div>`;
+}
+
+// ---------- screen: Categories ----------
+function viewCats(){
+  const all = [...S.today, ...S.backlog];
+  const list = S.cats.map(c => {
+    const reps = all.filter(t => t.cat === c.id && t.repeat.mode !== 'none');
+    return `<div class="catblk"><div class="row"><span class="dot" style="background:${c.color}"></span>
+        <div class="title">${esc(c.name)}</div></div>`
+      + reps.map(t => `<div class="hab">Repeats · ${esc(t.title)} · ${esc(repeatLabel(t.repeat))}</div>`).join('')
+      + '</div>';
+  }).join('');
+
+  return `<div class="head"><div><div class="h1">Categories</div>
+      <div class="sub">The types you rank yourself on. Few and clear beats many and messy.</div></div></div>
+    <div class="stack">
+      <div class="card"><div class="cardhead"><span class="h2">All categories</span></div>${list}</div>
+      <div class="card">
+        <div class="cardhead"><span class="h2">Add category</span></div>
+        <div class="form plain">
+          <input type="text" id="ct-n" placeholder="Category name" onkeydown="if(event.key==='Enter')A.addCat(this)">
+          <span class="swatches">${COLORS.map(c => `<button class="sw ${S.newColor===c?'on':''}"
+            style="background:${c}" onclick="A.pickColor('${c}')"></button>`).join('')}</span>
+          <button class="btn primary" onclick="A.addCat(document.getElementById('ct-n'))">Add</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+const viewRay = () => `<div class="head"><div><div class="h1">Ask Ray</div></div></div>
+  <div class="card"><div class="empty">Chat with Ray — existing screen</div></div>`;
+
+// ---------- task detail ----------
+function renderDetail(){
+  const el = document.getElementById('overlay');
+  const it = S.detail && anyTask(S.detail);
+  if (!it){ el.innerHTML = ''; return; }
+  const r = it.repeat;
+  const modes = [['none','None'],['daily','Every day'],['weekdays','Weekdays'],['weekly','Once a week']];
+  el.innerHTML = `<div class="modal" onclick="A.closeDetail()">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="cardhead"><span class="h2">Task</span><span style="flex:1"></span>
+        <button class="iconbtn" onclick="A.closeDetail()">&#10005;</button></div>
+      <div class="fld"><div class="lbl">Title</div>
+        <input type="text" value="${esc(it.title)}" oninput="A.setTitle('${it.id}',this.value)"></div>
+      <div class="fld"><div class="lbl">Category</div>
+        <select onchange="A.setCat('${it.id}',this.value)">${catOptions(it.cat)}</select></div>
+      <div class="fld"><div class="lbl">Priority</div>
+        <span class="seg"><span class="${it.must?'on':''}" onclick="${it.must?'':`A.setMust('${it.id}')`}">Must</span><span class="${it.must?'':'on'}" onclick="${it.must?`A.setMust('${it.id}')`:''}">Nice to</span></span></div>
+      <div class="fld"><div class="lbl">Repeat</div>
+        <select onchange="A.setRepeat('${it.id}',this.value)">
+          ${modes.map(([m,l]) => `<option value="${m}" ${r.mode===m?'selected':''}>${l}</option>`).join('')}</select>
+        ${r.mode === 'weekdays' ? `<div class="days">${WD.map((d,i) =>
+          `<button class="${r.days[i]?'on':''}" onclick="A.toggleDay('${it.id}',${i})">${d[0]}</button>`).join('')}</div>` : ''}
+        ${r.mode === 'weekly' ? `<div class="days">${WD.map((d,i) =>
+          `<button class="${r.weekday===i?'on':''}" onclick="A.setWeekday('${it.id}',${i})">${d[0]}</button>`).join('')}</div>` : ''}
+      </div>
+      <div class="fld" style="padding-bottom:16px"><div class="lbl">Note</div>
+        <input type="text" value="${esc(it.note||'')}" placeholder="Anything worth remembering"
+          oninput="A.setNote('${it.id}',this.value)"></div>
+    </div></div>`;
+}
+
+// ---------- render ----------
+function render(){
+  renderNav();
+  document.getElementById('main').innerHTML =
+    ({today:viewToday, backlog:viewBacklog, chart:viewChart, cats:viewCats, ray:viewRay})[S.view]();
+  renderDetail();
+}
+// open a screen straight from the URL: ?view=chart or #chart
+(function initFromUrl(){
+  const v = new URLSearchParams(location.search).get('view') || location.hash.slice(1);
+  if (['today','backlog','chart','cats','ray'].includes(v)) S.view = v;
+})();
+// clicking anywhere outside a popover closes it
+document.addEventListener('click', () => { if (S.menu){ S.menu = null; render(); } });
+render();
+</script>
+</body>
+</html>
