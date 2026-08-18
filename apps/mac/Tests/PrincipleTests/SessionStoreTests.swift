@@ -3,8 +3,24 @@ import Testing
 
 @testable import PrincipleCore
 
-private func daysAgo(_ days: Int) -> Date {
-    Calendar.current.date(byAdding: .day, value: -days, to: Date())!
+/// Today at noon, and the only "now" this file measures from.
+///
+/// A test that builds "an hour ago" out of the wall clock puts that hour on
+/// *yesterday* when the suite runs at 00:02 — and the grouping assertions then
+/// fail for a reason that has nothing to do with the store. Noon is twelve
+/// hours from either boundary, so every date below lands on the day it names
+/// whatever time the suite is run at.
+private let noonToday: Date = {
+    let now = Date()
+    return Calendar.current.date(bySettingHour: 12, minute: 0, second: 0, of: now) ?? now
+}()
+
+private func hoursBefore(_ hours: Int, _ reference: Date = noonToday) -> Date {
+    Calendar.current.date(byAdding: .hour, value: -hours, to: reference)!
+}
+
+private func daysAgo(_ days: Int, from reference: Date = noonToday) -> Date {
+    Calendar.current.date(byAdding: .day, value: -days, to: reference)!
 }
 
 @Suite("SessionStore")
@@ -66,8 +82,8 @@ struct SessionStoreTests {
         let repo = try TempRepo(prefix: "store")
         let store = repo.sessions
 
-        let older = try store.create(topic: "Hôm nay sớm", model: ModelAlias.fable, createdAt: Date().addingTimeInterval(-3600))
-        let newer = try store.create(topic: "Hôm nay muộn", model: ModelAlias.fable, createdAt: Date())
+        let older = try store.create(topic: "Hôm nay sớm", model: ModelAlias.fable, createdAt: hoursBefore(1))
+        let newer = try store.create(topic: "Hôm nay muộn", model: ModelAlias.fable, createdAt: noonToday)
         let yesterday = try store.create(topic: "Hôm qua", model: ModelAlias.opus, createdAt: daysAgo(1))
 
         let groups = try store.sidebarGroups()
