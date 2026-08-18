@@ -12,6 +12,7 @@ struct TaskDetailPane: View {
 
     @State private var title = ""
     @State private var note = ""
+    @FocusState private var titleFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -19,6 +20,7 @@ struct TaskDetailPane: View {
             if let task = journal.task(id: taskID) {
                 field("Title") {
                     textField("Task title", text: $title) { journal.setTitle(title, taskID: taskID) }
+                        .focused($titleFocused)
                 }
                 field("Category") { categoryPicker(task) }
                 field("Priority") { priorityToggle(task) }
@@ -47,6 +49,12 @@ struct TaskDetailPane: View {
         let task = journal.task(id: taskID)
         title = task?.title ?? ""
         note = task?.note ?? ""
+        // A task the app just made opens ready to be named. Anything else opens
+        // with no caret at all: the pane is being read.
+        if ui.titleFocusTaskID == taskID {
+            ui.titleFocusTaskID = nil
+            titleFocused = true
+        }
     }
 
     private var back: some View {

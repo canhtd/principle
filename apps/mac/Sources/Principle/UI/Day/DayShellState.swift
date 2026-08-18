@@ -38,6 +38,10 @@ final class DayShellState {
     var categoriesExpanded = true
     /// The task open in column 3, or `nil` for the day pane.
     var selectedTaskID: UUID?
+    /// The task whose title should take the caret the moment its pane opens.
+    /// Only ever a task the app has just made — one that was clicked is being
+    /// read, not named.
+    var titleFocusTaskID: UUID?
     /// The category being renamed in place, the way Finder renames a file.
     var renamingCategoryID: UUID?
     /// True while the "New category" field the section header's "+" opens is up.
@@ -87,9 +91,10 @@ final class DayShellState {
 
     /// Opening a task's detail needs column 3, so a chat docked there floats
     /// itself out of the way rather than blocking the pane (decision 8).
-    func select(taskID: UUID?) {
+    func select(taskID: UUID?, focusingTitle: Bool = false) {
         if taskID != nil, isChatDocked { setChatMode(.floating) }
         selectedTaskID = taskID
+        titleFocusTaskID = focusingTitle ? taskID : nil
     }
 
     /// Escape, in the order a macOS window closes things: the innermost first.

@@ -29,15 +29,23 @@ struct DetailPanel: View {
         }
     }
 
+    /// ‹ Today › stays centred on the column whatever sits beside it, so the
+    /// "+" is laid over the row rather than taking a cell in it.
     private var dateNavigation: some View {
-        HStack(spacing: 2) {
-            EdenIconButton(systemImage: "chevron.left", help: "Previous day", size: 26) {
-                journal.shiftDay(by: -1)
+        ZStack {
+            HStack(spacing: 2) {
+                EdenIconButton(systemImage: "chevron.left", help: "Previous day", size: 26) {
+                    journal.shiftDay(by: -1)
+                }
+                Button("Today") { journal.showToday() }
+                    .buttonStyle(EdenGhostButtonStyle())
+                EdenIconButton(systemImage: "chevron.right", help: "Next day", size: 26) {
+                    journal.shiftDay(by: 1)
+                }
             }
-            Button("Today") { journal.showToday() }
-                .buttonStyle(EdenGhostButtonStyle())
-            EdenIconButton(systemImage: "chevron.right", help: "Next day", size: 26) {
-                journal.shiftDay(by: 1)
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                EdenIconButton(systemImage: "plus", help: "New task on this day", size: 26, action: newTask)
             }
         }
         .padding(.horizontal, 10)
@@ -45,6 +53,13 @@ struct DetailPanel: View {
         .padding(.bottom, 9)
         .frame(maxWidth: .infinity)
         .overlay(alignment: .bottom) { EdenColor.black(6).frame(height: 1) }
+    }
+
+    /// The same path the grid's drag takes, minus the time: the task lands in
+    /// the all-day strip and opens here with its title under the caret.
+    private func newTask() {
+        guard let id = journal.createTask() else { return }
+        ui.select(taskID: id, focusingTitle: true)
     }
 }
 

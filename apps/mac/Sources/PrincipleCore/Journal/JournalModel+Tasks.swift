@@ -4,11 +4,16 @@ import Foundation
 extension JournalModel {
     // MARK: - Making one
 
-    /// Dragging on empty grid. Comes back with the new id so the shell can open
-    /// it in column 3 straight away — a block called "New task" is only useful
-    /// if it can be renamed without hunting for it.
+    /// Dragging on empty grid, or the "+" in column 3's header. Comes back with
+    /// the new id so the shell can open it in column 3 straight away — a block
+    /// called "New task" is only useful if it can be renamed without hunting
+    /// for it.
+    ///
+    /// A `nil` schedule is the one the "+" makes: it lands in the all-day strip,
+    /// because a task typed into the day is a decision that it is happening,
+    /// not yet a decision about when.
     @discardableResult
-    public func createTask(at schedule: TaskSchedule, title: String = "New task") -> UUID? {
+    public func createTask(at schedule: TaskSchedule? = nil, title: String = "New task") -> UUID? {
         var created: UUID?
         write { store in
             let task = try store.addTask(title: title, categoryID: self.defaultCategoryID, schedule: schedule)
