@@ -90,6 +90,14 @@ public final class JournalModel {
     /// from the backlog without repeating its headers.
     public var suggestions: [JournalTask] { backlog.flatMap(\.tasks) }
 
+    /// The backlog by priority rather than by category — the two groups column 3
+    /// reads it in, in the order a day is filled: what must happen, then what
+    /// would be nice to. Category order is kept inside each group, so a task
+    /// does not move about between the two views of the same list.
+    public func backlogTasks(priority: Priority) -> [JournalTask] {
+        suggestions.filter { $0.priority == priority }
+    }
+
     public func category(id: UUID?) -> JournalCategory? {
         guard let id else { return nil }
         return categories.first { $0.id == id }

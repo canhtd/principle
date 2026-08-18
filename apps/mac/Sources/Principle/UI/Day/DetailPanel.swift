@@ -63,31 +63,51 @@ struct DetailPanel: View {
     }
 }
 
-/// What the day could still take on. Clicking one pulls it into the all-day
-/// strip — when it runs is a separate decision from whether it is happening.
+/// The backlog: what the day could still take on, in the two groups it is read
+/// in — what must happen, then what would be nice to. Clicking one pulls it into
+/// the all-day strip; when it runs is a separate decision from whether it is
+/// happening.
+///
+/// A group with nothing in it is not drawn at all. An empty heading is a
+/// promise the list is not keeping.
 struct SuggestionsPane: View {
     @Bindable var journal: JournalModel
     @Bindable var ui: DayShellState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text("Suggested from backlog")
+            Text("Backlog")
                 .font(EdenFont.ui(12))
                 .foregroundStyle(EdenColor.hex(0x77746F))
 
             if journal.suggestions.isEmpty {
-                Text("Backlog is empty.")
+                Text("Nothing in the backlog.")
                     .font(EdenFont.ui(12))
                     .foregroundStyle(EdenColor.n400)
                     .padding(.leading, EdenMetric.sidebarInset)
             } else {
-                ForEach(journal.suggestions) { task in
-                    row(task)
-                }
-                .padding(.horizontal, -EdenMetric.sidebarInset)
+                group("Must do", tasks: journal.backlogTasks(priority: .must))
+                group("Like to do", tasks: journal.backlogTasks(priority: .nice))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func group(_ label: String, tasks: [JournalTask]) -> some View {
+        if !tasks.isEmpty {
+            Text(label.uppercased())
+                .font(EdenFont.ui(11))
+                .tracking(11 * 0.05)
+                .foregroundStyle(EdenColor.hex(0x77746F))
+                .padding(.top, 4)
+            VStack(spacing: 0) {
+                ForEach(tasks) { task in
+                    row(task)
+                }
+            }
+            .padding(.horizontal, -EdenMetric.sidebarInset)
+        }
     }
 
     private func row(_ task: JournalTask) -> some View {
@@ -100,8 +120,12 @@ struct SuggestionsPane: View {
     }
 }
 
-/// A backlog row: a dot in its category's colour, the title, and a `+ Today`
-/// that only shows up under the pointer.
+/// A backlog row: its category's tick, the title, and a `+ Today` that only
+/// shows up under the pointer.
+///
+/// The tick is the category list's square rather than a dot, and it is not a
+/// control: nothing in the backlog is done or not done yet, and a box that can
+/// be ticked here would be offering the wrong answer to "what about this one?".
 struct SuggestionRow: View {
     let title: String
     let color: Color
@@ -111,7 +135,9 @@ struct SuggestionRow: View {
 
     var body: some View {
         SidebarRow {
-            Circle().fill(color).frame(width: 7, height: 7)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(color)
+                .frame(width: 9, height: 9)
             Text(title).lineLimit(1)
             Spacer(minLength: 0)
             Text("+ Today")
