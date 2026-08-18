@@ -38,7 +38,8 @@ toolbar with the date title at its left, and ‹ Today › moved to the top of c
 plain ranked column of circles (“Order the day” turns them into draggable rows, then
 “Close day”). The bookmark mode is **Principles**, not a backlog: the
 “Principle of the day” card on top, then the favourited principles grouped under
-“LIFE PRINCIPLES” / “WORK PRINCIPLES”. The card carries a 3px accent stroke inside its
+“Life principles” / “Work principles” — the same section-label style as “Principle of the
+day”, sentence case, no small caps. The card carries a 3px accent stroke inside its
 radius, an uppercase “LIFE PRINCIPLE 5.6” label in place of the id chip, the title, and a
 bookmark toggle. Clicking any card or favourite row opens a short **book excerpt** in a
 **popover beside the thing you clicked** — 360px, Eden card tokens, an arrow on the row's
@@ -78,8 +79,9 @@ the frozen reference the Swift build is measured against.
    opens a native-style context menu: Rename…, Change color ▸ swatches, Show only <name>,
    Delete Category.
 4. **Principles mode** (the bookmark icon) is not an inbox or a backlog: the "Principle of the day"
-   card on top, then the favourited principles grouped under "LIFE PRINCIPLES" / "WORK PRINCIPLES".
-   Backlog appears only as "Suggested from backlog" in column 3.
+   card on top, then the favourited principles grouped under "Life principles" / "Work principles" —
+   one section-label style for all three, sentence case. Backlog appears only as "Suggested from
+   backlog" in column 3.
 5. **Clicking a principle opens a popover beside it**, not a pane on the other side of the screen:
    360px, arrow on the clicked row's centre line, holding the label, title, the excerpt as a quote,
    the source line, a **Favorite** toggle and **Open in Books**. Escape / click-away closes it,
@@ -98,6 +100,8 @@ the frozen reference the Swift build is measured against.
     (column 3 becomes a drawer) and 899px (column 1 too). No fixed-width wrapper anywhere.
 11. **Everything on the grid snaps to 15 minutes** — moving, resizing, creating by drag, and
     dropping an all-day item onto the grid.
+12. **The chat has one vertical rhythm** — 14px between every item (day divider, user bubble,
+    principle card, Ray's prose, paragraphs, composer), identical floating and docked.
 
 **Working interactions:** untick a category to filter it off the day · right-click one
 to rename, recolor, isolate or delete it · dock or float the Ask Ray chat · drag a block

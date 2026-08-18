@@ -235,13 +235,14 @@ button{cursor:pointer;background:none;border:none}
 .rayhead{display:flex;align-items:center;gap:8px;padding:12px 12px 6px}
 .rayhead .ttl{font-size:13.5px;color:var(--text-2)}
 .raybody{flex:1;overflow:auto;padding:2px 14px 14px;display:flex;flex-direction:column}
-.chat{display:flex;flex-direction:column;flex:1}
-.cc-day{text-align:center;font-size:11px;color:#9a8f84;margin:2px 0 14px}
+.chat{display:flex;flex-direction:column;flex:1;gap:14px}
+.cc-day{text-align:center;font-size:11px;color:#9a8f84;margin:2px 0 0}
 .cc-user{margin-left:auto;width:fit-content;max-width:88%;border-radius:18px;background:rgba(70,60,45,.03);
   border:1px solid rgba(70,60,45,.10);padding:10px 15px;font-size:14px;color:#3f342c;
   box-shadow:0 10px 24px rgba(15,23,42,.08)}
-.cc-md{font-size:14px;line-height:1.65;color:#3f342c;margin-top:14px}
+.cc-md{font-size:14px;line-height:1.65;color:#3f342c}
 .cc-md p{margin-bottom:.9rem}
+.cc-md p:last-child{margin-bottom:0}
  /* the principle card: a left stroke inside the radius, the corpus number as an uppercase
    label, the title, and the favourite toggle. Clicking it opens the excerpt in column 3. */
 .pcard{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--panel-border);
@@ -661,7 +662,7 @@ function renderCol1(){
   const favMode =
     '<div class="sechead">Principle of the day</div>' +
     '<div class="pod">' + principleCard(S.pod, 'pod') + '</div>' +
-    group('life', 'LIFE PRINCIPLES') + group('work', 'WORK PRINCIPLES') +
+    group('life', 'Life principles') + group('work', 'Work principles') +
     (S.favs.length ? '' : '<div class="note" style="padding:6px 20px">No favourites yet.</div>');
 
   const el = document.getElementById('col1');
