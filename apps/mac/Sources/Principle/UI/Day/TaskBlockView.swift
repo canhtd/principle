@@ -52,11 +52,16 @@ struct TaskBlockView: View {
                 RoundedRectangle(cornerRadius: EdenRadius.sm, style: .continuous)
                     .strokeBorder(fill.border)
             }
+            // Inside the block, never around it: the ring used to be drawn a
+            // point outside its bounds, and `.clipped()` — which is what keeps a
+            // long title from spilling out of a short block — took the outer
+            // half of it off, corners first. `strokeBorder` insets by half the
+            // line width on its own, so the whole ring lands on canvas that
+            // belongs to the block.
             .overlay {
                 if isSelected {
-                    RoundedRectangle(cornerRadius: EdenRadius.sm + 1, style: .continuous)
+                    RoundedRectangle(cornerRadius: EdenRadius.sm, style: .continuous)
                         .strokeBorder(EdenColor.primary80, lineWidth: 2)
-                        .padding(-1)
                 }
             }
             .opacity(row.isDone ? 0.55 : 1)
