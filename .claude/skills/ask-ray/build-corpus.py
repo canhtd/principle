@@ -195,6 +195,13 @@ def parse_table(blocks, lo, hi, max_gap=8):
 
 # ---------- ghép thân nguyên tắc ----------
 
+# Trần an toàn, KHÔNG phải chỗ cắt cho vừa mắt: thân nguyên tắc phải ra trọn vẹn
+# vì popover trong app macOS là nơi nguyên tắc được ĐỌC, không phải liếc qua.
+# Bản trước cắt cứng ở 1400 ký tự — 72/513 nguyên tắc đứt ngang giữa chữ, không
+# một dấu hiệu nào. Con số dưới đây chỉ để chặn trường hợp neo id hỏng nuốt cả
+# chương vào một dòng; nguyên tắc dài nhất trong sách không chạm tới nó.
+BODY_SANITY_CAP = 20000
+
 
 def is_head(b):
     return bool(HEAD.match(b['text'])) or bool(b['spans'] and NUMONLY.match(b['spans'][0]))
@@ -271,7 +278,7 @@ def attach_bodies(entries, blocks, lo, hi):
             file = blocks[start]['file']
             chunk = [strip_head(blocks[start])]
             chunk += [b['text'] for b in blocks[start + 1:nxt] if b['file'] == file]
-            txt = ' '.join(x for x in chunk if x)[:1400].strip()
+            txt = ' '.join(x for x in chunk if x)[:BODY_SANITY_CAP].strip()
         out.append((kind, num, title, ch, txt))
     return out
 
