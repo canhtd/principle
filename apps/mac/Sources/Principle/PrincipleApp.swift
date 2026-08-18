@@ -32,6 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate()
+        // After the first pass of the run loop: the scene's window does not
+        // exist yet at this point, and macOS restores its own frame after that.
+        DispatchQueue.main.async { LaunchHooks.applyWindowFrame() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

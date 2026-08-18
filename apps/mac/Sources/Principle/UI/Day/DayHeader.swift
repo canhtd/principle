@@ -79,6 +79,9 @@ struct DayHeader: View {
         }
         .padding(2)
         .background(EdenColor.black(5), in: .rect(cornerRadius: EdenRadius.sm, style: .continuous))
+        // The pill is its own selected state; a system focus ring on top of it
+        // reads as a second, contradictory selection.
+        .focusEffectDisabled()
     }
 
     @ViewBuilder

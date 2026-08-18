@@ -117,6 +117,9 @@ struct EdenIconButton: View {
         }
         .buttonStyle(.plain)
         .help(help)
+        // These are chrome, not the screen's controls: whichever one happened
+        // to be first would otherwise open the window wearing a focus ring.
+        .focusEffectDisabled()
         .onHover { isHovering = $0 }
     }
 }

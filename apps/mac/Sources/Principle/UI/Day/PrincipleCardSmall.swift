@@ -36,7 +36,6 @@ struct PrincipleCardSmall: View {
         .padding(.leading, 16)
         .padding(.trailing, 13)
         .background(EdenColor.card)
-        .overlay(alignment: .leading) { DayPalette.now.opacity(0).frame(width: 0) }
         .overlay(alignment: .leading) { EdenColor.primary.frame(width: 3) }
         .clipShape(.rect(cornerRadius: EdenRadius.md, style: .continuous))
         .edenBorder(EdenColor.black(isHovering ? 12 : 6), radius: EdenRadius.md)

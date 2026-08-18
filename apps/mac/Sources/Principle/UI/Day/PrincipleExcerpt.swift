@@ -92,11 +92,15 @@ struct PrincipleExcerptView: View {
         }
     }
 
+    /// The book first, the chapter after it. A chapter title in this book is a
+    /// whole sentence, and leading with it pushed the attribution off the end of
+    /// the line entirely.
     private var source: some View {
-        Text(record.chapter.isEmpty ? "Principles, Ray Dalio" : "\(record.chapter) · Principles, Ray Dalio")
+        Text(record.chapter.isEmpty ? "Principles, Ray Dalio" : "Principles, Ray Dalio · \(record.chapter)")
             .font(EdenFont.ui(11))
             .foregroundStyle(EdenColor.n400)
-            .lineLimit(2)
+            .lineLimit(1)
+            .truncationMode(.tail)
             .padding(.top, 14)
     }
 
@@ -110,6 +114,7 @@ struct PrincipleExcerptView: View {
                       systemImage: isFavorite ? "bookmark.fill" : "bookmark")
             }
             .buttonStyle(EdenPillButtonStyle())
+            .focusEffectDisabled()
 
             if let book = BookLocation.principlesBookURL(override: AppSettings().bookPath) {
                 Button {
@@ -118,6 +123,7 @@ struct PrincipleExcerptView: View {
                     Label("Open in Books", systemImage: "book")
                 }
                 .buttonStyle(EdenPillButtonStyle())
+                .focusEffectDisabled()
                 .help(BookLocation.deepLinkLimitation)
             }
             Spacer(minLength: 0)
