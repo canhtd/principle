@@ -118,11 +118,19 @@ private struct DayDivider: View {
         RayChat.warm(8).frame(height: 1).frame(maxWidth: .infinity)
     }
 
+    /// A fixed pattern in a fixed locale, the way ``JournalModel`` writes the day
+    /// title: the app's copy is English, and a system locale set to Vietnamese
+    /// would otherwise put `Th 7, 15 thg 8` between two English words.
     private var label: String {
         let calendar = Calendar.current
         if calendar.isDateInToday(date) { return "Today" }
         if calendar.isDateInYesterday(date) { return "Yesterday" }
-        return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "EEE d MMM"
+        return formatter.string(from: date)
     }
 }
 
