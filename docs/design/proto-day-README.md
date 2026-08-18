@@ -7,7 +7,8 @@ moved on through Danny's comment rounds and is the frozen reference (see "Decisi
 Open with `open docs/design/proto-day-A.html` (and `-B`); self-contained, no server.
 Screenshots (1440×900): `proto-day-A-v2.png` is A as it stands now, with Ask Ray floating;
 `proto-day-A-v2-chat-sidebar.png` is the same screen with Ask Ray docked into column 3;
-`proto-day-A-v2-chat.png` is a close-up of the chat panel and its principle card;
+`proto-day-A-v2-chat.png` is a close-up of the chat panel, its principle card and the
+hover actions on a turn;
 `proto-day-A-v2-principles.png` is the bookmark mode with the excerpt popover open;
 `proto-day-A-v2-cat-menu.png` is the category context menu; `proto-day-A-1280.png`,
 `-1100.png` and `-960.png` show the responsive shell; `proto-day-A.png` is the v1 it
@@ -51,7 +52,12 @@ and opens the same popover, flipped to the card's left where the window runs out
 chat is docked as a sidebar when something needs column 3, the chat floats itself out of
 the way rather than blocking the pane. Ask Ray is a bubble on the window's right margin (right/bottom 20px) instead
 of a header icon, and the chat it opens has two modes like Notion AI — floating panel, or
-docked as a sidebar in place of column 3. The header's dock icon switches between them
+docked as a sidebar in place of column 3. Inside, the pane is Eden's chat pane to the
+measurement (`eden-dom/board-chat-pane.json`, `chat-message.json`, `chat-cc.css`, side-peek
+variant): 62px header, hairline day divider, right-aligned user bubble, bare assistant prose,
+14×18px per message, hover timestamp and action row, and the rectangular composer pill. Our
+principle card rides inside the assistant turn, before the prose, on Eden's in-message card
+tokens with our left stroke, favourite toggle and a two-line excerpt. The header's dock icon switches between them
 (“Open as sidebar” / “Float”), the X closes, and the mode you last used is the one the
 bubble reopens for the rest of the session.
 
@@ -73,11 +79,10 @@ the frozen reference the Swift build is measured against.
 2. **Column 1** — an Eden floating panel (8px inset, 260px, `#f4f3ee`, r=12, 1px black/6%,
    `shadow-sm`). No app name and no title bar in it. A Calendar / Principles icon pair sits at the
    panel's top right as 36×36 r=12 Eden icon buttons (calendar, bookmark).
-3. **Categories are a filter**, like Apple Calendar's calendar list: each row is a colored tick
-   square + name, ticked by default; unticking hides that category's blocks, all-day chips and
-   dots from the day. Habit sub-rows were removed — a habit is just a task on the grid. Right-click
-   opens a native-style context menu: Rename…, Change color ▸ swatches, Show only <name>,
-   Delete Category.
+3. **Categories are a filter**, like Apple Calendar's calendar list: a colored tick square + name
+   per row, ticked by default; unticking hides that category's blocks, chips and dots. Habit
+   sub-rows were removed — a habit is just a task on the grid. Right-click gives Rename…,
+   Change color ▸ swatches, Show only <name>, Delete Category.
 4. **Principles mode** (the bookmark icon) is not an inbox or a backlog: the "Principle of the day"
    card on top, then the favourited principles grouped under "Life principles" / "Work principles" —
    one section-label style for all three, sentence case. Backlog appears only as "Suggested from
@@ -90,18 +95,20 @@ the frozen reference the Swift build is measured against.
    (spec #5 rev 2: column 3 carries the date navigation).
 7. **The dots column is static** — a plain ranked column of circles. Ranking is a mode you enter:
    "Order the day" turns them into draggable rows, "Close day" ends it.
-8. **Ask Ray is a floating bubble** on the window's right margin, not a header icon. The chat it
-   opens has two modes like Notion AI — a floating panel, or docked as a sidebar in place of
-   column 3 — the header's dock icon switches between them and the last mode is remembered. When
-   something needs column 3, a sidebar-docked chat floats itself out of the way.
+8. **Ask Ray is a floating bubble** on the window's right margin, not a header icon. The chat has
+   two modes like Notion AI — floating panel, or docked as a sidebar in place of column 3 — the
+   header's dock icon switches, the last mode is remembered, and a docked chat floats itself out
+   of the way when something needs column 3.
 9. **Warning copy is short** — one line under the date ("7 tasks — more than usual."), no
    paragraph, no banner.
 10. **The shell is fluid**, with breakpoints at 1199px (short date, subtitle hidden), 1099px
     (column 3 becomes a drawer) and 899px (column 1 too). No fixed-width wrapper anywhere.
 11. **Everything on the grid snaps to 15 minutes** — moving, resizing, creating by drag, and
     dropping an all-day item onto the grid.
-12. **The chat has one vertical rhythm** — 14px between every item (day divider, user bubble,
-    principle card, Ray's prose, paragraphs, composer), identical floating and docked.
+12. **The Ask Ray pane is Eden's chat pane**, rebuilt from the measured dumps rather than by
+    eye — h62 header, hairline day divider, right-aligned user bubble, bare assistant prose,
+    14×18px per message, hover timestamp and actions, rectangular composer pill; see the
+    paragraph above for the numbers. Identical floating and docked.
 
 **Working interactions:** untick a category to filter it off the day · right-click one
 to rename, recolor, isolate or delete it · dock or float the Ask Ray chat · drag a block

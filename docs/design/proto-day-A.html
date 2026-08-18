@@ -230,19 +230,56 @@ button{cursor:pointer;background:none;border:none}
 /* sidebar mode: the chat takes over column 3 - same slot, full height */
 .col3.raycol .c3body{display:none}
 .col3.raycol{padding:0}
-.raycol .rayhead{border-bottom:1px solid var(--panel-border);padding:12px 10px 10px}
-.raycol .raybody{padding:12px 14px 14px}
-.rayhead{display:flex;align-items:center;gap:8px;padding:12px 12px 6px}
-.rayhead .ttl{font-size:13.5px;color:var(--text-2)}
-.raybody{flex:1;overflow:auto;padding:2px 14px 14px;display:flex;flex-direction:column}
-.chat{display:flex;flex-direction:column;flex:1;gap:14px}
-.cc-day{text-align:center;font-size:11px;color:#9a8f84;margin:2px 0 0}
-.cc-user{margin-left:auto;width:fit-content;max-width:88%;border-radius:18px;background:rgba(70,60,45,.03);
-  border:1px solid rgba(70,60,45,.10);padding:10px 15px;font-size:14px;color:#3f342c;
-  box-shadow:0 10px 24px rgba(15,23,42,.08)}
+/* ---------------------------------------------------------------------------
+   Ask Ray IS Eden's chat pane. Every number below is measured, from
+   VessaStudio/docs/design/eden-dom: board-chat-pane.json (pane + header),
+   chat-message.json (message, bubble, actions, composer) and chat-cc.css.
+   Our pane is narrow, like Eden's side peek, so the `.ai-sidepeek-chat`
+   overrides in chat-cc.css are the ones that apply (bubble r=18 / 10px 15px,
+   body text 14/1.65, msg-pad 14px 18px).
+   --------------------------------------------------------------------------- */
+/* header: pane [859,9,572,62] - h62, px-4 pt-5 pb-2.5; title 13.5/20.25 #a3a3a3;
+   right cluster gap-0.5 of 28px circles with 16px glyphs */
+.rayhead{display:flex;align-items:center;gap:8px;flex:0 0 auto;height:62px;padding:20px 16px 10px}
+.rayhead .ttl{font-size:13.5px;line-height:20.25px;color:#a3a3a3}  /* measured, not our n400 */
+.ccbtn{width:28px;height:28px;flex:0 0 28px;border-radius:50%;display:inline-flex;align-items:center;
+  justify-content:center;color:var(--n500);transition:background-color .15s,color .15s}
+.ccbtn:hover{background:rgba(0,0,0,.05);color:var(--n700)}
+.ccbtn svg{width:16px;height:16px}
+/* thread: .cc__scroll + .cc__scroll-content (tail-aligned, pb-8) */
+.raybody{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column}
+.chat{display:flex;flex-direction:column;flex:1 0 auto;justify-content:flex-end;min-height:100%;padding-bottom:8px}
+/* .cc__msg-pad, side-peek value: 14px 18px - that padding IS the rhythm (28px between turns) */
+.ccpad{padding:14px 18px}
+/* .cc__day-divider: 11px muted, gap-12, hairlines both sides */
+.ccday{display:flex;align-items:center;gap:12px;padding:10px 18px 0;font-size:11px;color:#9a8f84}
+.ccday::before,.ccday::after{content:"";flex:1 1 auto;height:1px;background:rgba(70,60,45,.08)}
+.ccday span{flex:0 0 auto}
+/* .cc-msg: user = fit-content pushed right, assistant = full width left */
+.msg{position:relative;display:flex;flex-direction:column;min-width:0;max-width:95%}
+.msg.u{width:fit-content;margin-left:auto}
+.msg.a{margin-right:auto}
+.msg .time{position:absolute;top:-15px;left:0;font-size:11px;line-height:16.5px;color:#9a8f84;
+  opacity:0;pointer-events:none;white-space:nowrap;transition:opacity .14s}
+.msg.u .time{left:auto;right:0}
+.msg:hover .time{opacity:1}
+.msg .parts{display:flex;flex-direction:column;gap:8px;min-width:0}
+.msg.u .parts{background:rgba(70,60,45,.03);border:1px solid rgba(70,60,45,.10);border-radius:18px;
+  padding:10px 15px;box-shadow:0 10px 24px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.05)}
+/* hover actions: 24px r=6 buttons, gap-2, margin 4px -6px 0, opacity 0 -> 1 on the message */
+.msg .acts{display:flex;align-items:center;gap:2px;margin:4px -6px 0;opacity:0;transition:opacity .15s}
+.msg.u .acts{justify-content:flex-end;margin-top:2px}
+.msg:hover .acts{opacity:1}
+.actbtn{width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid transparent;color:rgba(154,143,132,.75);
+  transition:background-color .15s,color .15s,border-color .15s}
+.actbtn:hover{background:rgba(70,60,45,.03);border-color:rgba(70,60,45,.08);color:#9a8f84}
+.actbtn:active{color:#7a6f64;transform:scale(.92)}
+.actbtn svg{width:14px;height:14px}
+/* .cc-md, side-peek: 0.875rem / 1.65, warm near-black; block margin .9rem */
 .cc-md{font-size:14px;line-height:1.65;color:#3f342c}
-.cc-md p{margin-bottom:.9rem}
-.cc-md p:last-child{margin-bottom:0}
+.cc-md p{margin:0 0 .9rem}
+.cc-md > :last-child{margin-bottom:0}
  /* the principle card: a left stroke inside the radius, the corpus number as an uppercase
    label, the title, and the favourite toggle. Clicking it opens the excerpt in column 3. */
 .pcard{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--panel-border);
@@ -286,11 +323,37 @@ button{cursor:pointer;background:none;border:none}
   border-radius:999px;font-size:12px;color:var(--n700);background:rgba(255,255,255,.8);
   border:1px solid rgba(0,0,0,.07);transition:background-color .15s,color .15s,border-color .15s}
 .books:hover{background:#fff;border-color:rgba(0,0,0,.12);color:var(--n900)}
-.cc-composer{margin-top:auto;border-radius:22px;background:rgba(255,255,255,.6);
-  border:1px solid rgba(70,60,45,.22);padding:10px 14px;font-size:13px;color:#9a8f84;
-  display:flex;align-items:center;gap:8px}
-.cc-composer .snd{margin-left:auto;width:24px;height:24px;border-radius:50%;background:rgba(70,60,45,.06);
-  display:flex;align-items:center;justify-content:center;color:#7a6f64;font-size:12px}
+/* the principle card inside an assistant turn: our left stroke and favourite toggle, but
+   on Eden's in-message card tokens (.cc-format-pick: r=12, bg rgba(70,60,45,.019),
+   border rgba(70,60,45,.08), question 15/500) */
+.pcard.cc{background:rgba(70,60,45,.019);border-color:rgba(70,60,45,.08);border-radius:12px;
+  padding:14px 16px 14px 19px;box-shadow:none}
+.pcard.cc:hover{background:rgba(70,60,45,.03);border-color:rgba(70,60,45,.16);box-shadow:none}
+.pcard.cc .lbl{font-size:11px;font-weight:500;letter-spacing:.06em;color:#9a8f84}
+.pcard.cc .ttl{font-size:15px;line-height:22.5px;font-weight:500;color:#3f342c;margin-top:6px}
+.pcard.cc .exq{font-size:14px;line-height:1.65;color:#7a6f64;margin-top:6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pcard.cc .fav{color:#9a8f84}
+.pcard.cc .fav:hover{background:rgba(70,60,45,.06);color:#7a6f64}
+.pcard.cc .fav.on{color:var(--accent)}
+/* composer: .cc__composer width calc(100% - 28px), margin 0 auto 20px, gap-4; pill r=22,
+   white/60, border rgba(70,60,45,.09) -> .22 on focus; row grid 14px 12px 12px */
+.ccform{flex:0 0 auto;width:calc(100% - 28px);margin:0 auto 20px;display:flex;flex-direction:column;gap:4px}
+.ccpill{border:1px solid rgba(70,60,45,.09);background:rgba(255,255,255,.6);border-radius:22px;
+  display:flex;flex-direction:column;cursor:text;transition:border-color .2s}
+.ccpill:hover,.ccpill:focus-within{border-color:rgba(70,60,45,.22)}
+.ccrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  grid-template-areas:"text text text" "left . right";align-items:center;gap:6px 8px;padding:14px 12px 12px}
+.ccrow .txt{grid-area:text;min-height:36px;padding:0 6px;display:flex;align-items:flex-start;
+  font-size:15px;line-height:1.35;color:#9a8f84}
+.ccrow .l{grid-area:left;display:flex;align-items:center;gap:8px}
+.ccrow .r{grid-area:right;display:flex;align-items:center;gap:8px}
+.ccmic{width:22px;height:22px;flex:0 0 22px;border-radius:50%;display:inline-flex;align-items:center;
+  justify-content:center;color:#7a6f64}
+.ccmic svg{width:16px;height:16px}
+.ccsend{width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:rgba(0,0,0,.05);color:var(--n500);
+  display:inline-flex;align-items:center;justify-content:center}
+.ccsend svg{width:16px;height:16px}
 
 /* ============================ responsive ============================
    Under 1100px column 3 slides away behind a toggle; under 900px column 1 does too.
@@ -358,6 +421,18 @@ const ICON_PANEL_L = svg('<rect x="2" y="3" width="12" height="10" rx="2"/><path
 const ICON_PANEL_R = svg('<rect x="2" y="3" width="12" height="10" rx="2"/><path d="M10 3v10"/>');
 const ICON_BOOK = svg('<path d="M2.6 3.2h3.2c1 0 1.9.5 2.2 1.3c.3-.8 1.2-1.3 2.2-1.3h3.2v8.6h-3.2c-1 0-1.9.5-2.2 1.3c-.3-.8-1.2-1.3-2.2-1.3H2.6z"/><path d="M8 4.5v8.4"/>');
 const ICON_CHAT = svg('<path d="M2.6 4.4a1.7 1.7 0 0 1 1.7-1.7h7.4a1.7 1.7 0 0 1 1.7 1.7v4.4a1.7 1.7 0 0 1-1.7 1.7H6.4L3.6 13v-2.5a1.7 1.7 0 0 1-1-1.7z"/>');
+// chat-pane glyphs: Eden's message actions (Copy / Edit / Save as document / Regenerate)
+// and its composer trio (+ / dictation / send)
+const ICON_COPY = svg('<rect x="5.6" y="5.6" width="7.8" height="7.8" rx="1.6"/>' +
+  '<path d="M10.4 3.4a1.6 1.6 0 0 0-1.6-1.6H4.2a1.6 1.6 0 0 0-1.6 1.6v4.6a1.6 1.6 0 0 0 1.6 1.6"/>');
+const ICON_EDIT = svg('<path d="M11.2 2.6a1.5 1.5 0 0 1 2.2 2.1L6.6 11.5l-2.9.8.8-2.9z"/>');
+const ICON_SAVEDOC = svg('<path d="M3.4 2.6h6.2L13 6v7.4H3.4z"/><path d="M5.6 8.4h4.8M5.6 10.8h3.2"/>');
+const ICON_REGEN = svg('<path d="M13 8a5 5 0 1 1-1.6-3.6"/><path d="M13.2 2.4v2.9h-2.9"/>');
+const ICON_PLUS = svg('<path d="M8 3.4v9.2M3.4 8h9.2"/>');
+const ICON_CLOSE = svg('<path d="M4 4l8 8M12 4l-8 8"/>');
+const ICON_MIC = svg('<rect x="6.2" y="2.2" width="3.6" height="7" rx="1.8"/><path d="M4 7.6a4 4 0 0 0 8 0"/>' +
+  '<path d="M8 11.6v2.2"/>');
+const ICON_SEND = svg('<path d="M8 12.8V3.6M4.2 7.2 8 3.4l3.8 3.8"/>');
 // only ids live in this file - every title and excerpt is read from the local corpus at runtime
 const PRINCIPLES = ['life:1.7', 'life:5.3', 'life:5.6', 'work:3.3', 'work:9.2'];
 const CATS = [
@@ -810,18 +885,15 @@ function renderCol2(){
 const raySidebar = () => S.ray && S.rayMode === 'sidebar';
 function rayHead(other, label){
   return '<div class="rayhead"><span class="ttl">Ask Ray</span><span style="flex:1"></span>' +
-    '<button class="iconbtn" title="' + label + '" onclick="A.rayDock(\'' + other + '\')">' +
+    '<button class="ccbtn" title="' + label + '" onclick="A.rayDock(\'' + other + '\')">' +
       (other === 'sidebar' ? ICON_DOCK : ICON_FLOAT) + '</button>' +
-    '<button class="iconbtn" title="Close" onclick="A.toggleRay()">&#10005;</button></div>';
+    '<button class="ccbtn" title="Close" onclick="A.toggleRay()">' + ICON_CLOSE + '</button></div>';
 }
 function rayHtml(){
   if (raySidebar()) return '';                 // the chat lives in column 3 instead
   if (!S.ray)
     return '<button class="rayfab" title="Ask Ray" onclick="A.toggleRay()">' + ICON_CHAT + '</button>';
-  return '<div class="raypanel">' +
-      rayHead('sidebar', 'Open as sidebar') +
-      '<div class="raybody">' + chatPane() + '</div>' +
-    '</div>';
+  return '<div class="raypanel">' + rayHead('sidebar', 'Open as sidebar') + chatPane() + '</div>';
 }
 
 // ============================ column 3 ============================
@@ -913,10 +985,13 @@ const favBtn = id => '<button class="fav' + (isFav(id) ? ' on' : '') + '"' +
   (isFav(id) ? ICON_MARK_ON : ICON_MARK) + '</button>';
 // the card carries label + title + favourite only; the excerpt and the book live in column 3
 function principleCard(id, where){
-  return '<div class="pcard" data-pid="' + id + '" onclick="A.openExcerpt(\'' + id +
-      '\',\'' + (where || 'pod') + '\')">' +
+  const inChat = where === 'ray';
+  return '<div class="pcard' + (inChat ? ' cc' : '') + '" data-pid="' + id +
+      '" onclick="A.openExcerpt(\'' + id + '\',\'' + (where || 'pod') + '\')">' +
       '<div class="top"><span class="lbl">' + esc(PLABEL(id)) + '</span>' + favBtn(id) + '</div>' +
       '<div class="ttl">[principle title loads from the local corpus at runtime]</div>' +
+      (inChat ? '<div class="exq">[the first two lines of the book excerpt are read from the ' +
+        'local corpus at runtime - the translation is copyrighted and is never stored here]</div>' : '') +
     '</div>';
 }
 function principleRow(id){
@@ -941,19 +1016,45 @@ function excerptBody(id){
       '</div>' +
     '</div>';
 }
-function chatPane(){
+// one turn: the timestamp and the action row appear on hover, exactly as Eden does it
+const actBtn = (icon, label) => '<button class="actbtn" title="' + label + '">' + icon + '</button>';
+function ccMsg(kind, time, parts, acts){
+  return '<div class="ccpad"><div class="msg ' + kind + '">' +
+      '<time class="time">' + time + '</time>' +
+      '<div class="parts">' + parts + '</div>' +
+      '<div class="acts">' + acts + '</div>' +
+    '</div></div>';
+}
+function chatThread(){
   return '<div class="chat">' +
-    '<div class="cc-day">Today</div>' +
-    '<div class="cc-user">I have seven things on today and I already know I cannot do them all. ' +
-      'Which one do I drop?</div>' +
-    principleCard('life:5.6', 'ray') +
-    '<div class="cc-md"><p>Drop the one whose expected value is lowest, not the one that feels heaviest. ' +
-      'Tax paperwork costs you an hour today and nothing if it slips a week. The M4 scope decision ' +
-      'blocks two people tomorrow morning.</p>' +
-      '<p>Keep the M4 block where it is. Move the paperwork to Thursday and let the groceries go ' +
-      'to whoever is home first.</p></div>' +
-    '<div class="cc-composer">Ask Ray about today<span class="snd">&#8593;</span></div>' +
+    '<div class="ccday"><span>Today</span></div>' +
+    ccMsg('u', '10:24 AM',
+      '<div class="cc-md"><p>I have seven things on today and I already know I cannot do them all. ' +
+        'Which one do I drop?</p></div>',
+      actBtn(ICON_COPY, 'Copy') + actBtn(ICON_EDIT, 'Edit message')) +
+    ccMsg('a', '10:24 AM',
+      principleCard('life:5.6', 'ray') +
+      '<div class="cc-md"><p>Drop the one whose expected value is lowest, not the one that feels ' +
+        'heaviest. Tax paperwork costs you an hour today and nothing if it slips a week. The M4 ' +
+        'scope decision blocks two people tomorrow morning.</p>' +
+        '<p>Keep the M4 block where it is. Move the paperwork to Thursday and let the groceries go ' +
+        'to whoever is home first.</p></div>',
+      actBtn(ICON_COPY, 'Copy') + actBtn(ICON_SAVEDOC, 'Save as document') +
+      actBtn(ICON_REGEN, 'Regenerate response')) +
     '</div>';
+}
+function ccComposer(){
+  return '<form class="ccform" onsubmit="return false">' +
+    '<div class="ccpill"><div class="ccrow">' +
+      '<div class="txt">Ask Ray about today</div>' +
+      '<div class="l"><button class="ccbtn" title="Add context">' + ICON_PLUS + '</button></div>' +
+      '<div class="r"><span class="ccmic" title="Dictate">' + ICON_MIC + '</span>' +
+        '<button class="ccsend" title="Send">' + ICON_SEND + '</button></div>' +
+    '</div></div></form>';
+}
+// the thread scrolls, the composer does not - they are siblings, as in Eden's pane
+function chatPane(){
+  return '<div class="raybody">' + chatThread() + '</div>' + ccComposer();
 }
 // no header any more: date navigation moved to the column-2 toolbar and Ask Ray
 // floats over the grid, so column 3 is only its content
@@ -965,7 +1066,7 @@ function renderCol3(){
     '<button class="navbtn" onclick="A.today()">Today</button>' +
     '<button class="navbtn" onclick="A.shiftDay(1)" title="Next day">&#8250;</button></div>';
   el.innerHTML = raySidebar()
-    ? rayHead('float', 'Float') + '<div class="raybody">' + chatPane() + '</div>'
+    ? rayHead('float', 'Float') + chatPane()
     : dateNav + '<div class="c3body">' + (S.pane === 'detail' ? detailPane() : dayPane()) + '</div>';
 }
 
@@ -1097,6 +1198,9 @@ function render(){
     const start = folded() ? 0 : Math.max(0, yOf(6 * 60) - 8);
     nw.scrollTop = firstPaint ? start : (keep === null ? 0 : keep);
   }
+  // the chat opens on its newest turn, like every chat pane does
+  const thread = document.querySelector('.raybody');
+  if (thread) thread.scrollTop = thread.scrollHeight;
   firstPaint = false;
 }
 // a panel left open as an overlay must not stay "open" once it is docked again
