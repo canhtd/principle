@@ -19,7 +19,7 @@ private struct PrincipleExcerptModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content.popover(isPresented: isOpen, arrowEdge: .trailing) {
-            PrincipleExcerptView(record: record, favorites: favorites)
+            PrincipleExcerptView(record: record, favorites: favorites, maxHeight: ui.excerptMaxHeight)
         }
     }
 
@@ -41,11 +41,42 @@ private struct PrincipleExcerptModifier: ViewModifier {
 
 /// The excerpt itself: the label, the title, the book's own words, where they
 /// come from, and the two things you can do with them.
+///
+/// The book is quoted in full, however long the passage is (AE2 cuts both ways —
+/// the app must not invent text, and must not swallow it either). A principle's
+/// body runs from a single line to a page and a half, so the reading scrolls
+/// once it passes ``maxHeight`` while the two actions stay pinned under it —
+/// a passage you have to scroll must not put Favorite out of reach.
 struct PrincipleExcerptView: View {
     let record: PrincipleRecord
     let favorites: FavoritesModel
+    /// How tall this may grow before the reading scrolls instead.
+    var maxHeight: CGFloat = 480
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ScrollView {
+                reading
+            }
+            // Sized to the passage, capped at the window's 60 %. `fixedSize`
+            // makes the scroll view take its *content's* height instead of
+            // every point it is offered — otherwise a one-line principle opens
+            // a popover half a screen tall — and the cap then clamps a long one,
+            // at which point it starts scrolling. Measured in one layout pass,
+            // which a popover needs: it sizes its window from the first one.
+            .frame(maxHeight: maxHeight)
+            .fixedSize(horizontal: false, vertical: true)
+            .scrollIndicators(.automatic)
+
+            Divider().padding(.top, 16).padding(.bottom, 12)
+            actions
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(width: 360)
+    }
+
+    private var reading: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(PrincipleLabel.text(for: record))
                 .font(EdenFont.ui(10.5, .semibold))
@@ -62,20 +93,20 @@ struct PrincipleExcerptView: View {
 
             quote
             source
-            Divider().padding(.top, 16).padding(.bottom, 12)
-            actions
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .frame(width: 360)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// The book verbatim, never assembled (AE2). A heading-only record has no
     /// body to quote, and that heading *is* the principle (AE3) — so the
     /// popover says so rather than inventing a passage to fill the space.
+    ///
+    /// `displayBody`, not `quote`: `quote` is the 40-word card cut and ends in
+    /// an `…` by construction. This is the place the passage is *read*, so it is
+    /// the whole passage — the popover scrolls instead of eliding.
     @ViewBuilder
     private var quote: some View {
-        if let quote = record.quote {
+        if let quote = record.displayBody {
             Text(quote)
                 .font(EdenFont.ui(13.5))
                 .italic()
@@ -95,12 +126,14 @@ struct PrincipleExcerptView: View {
     /// The book first, the chapter after it. A chapter title in this book is a
     /// whole sentence, and leading with it pushed the attribution off the end of
     /// the line entirely.
+    ///
+    /// It wraps rather than truncating: with the book's name in front, a second
+    /// line costs nothing, and nothing in this popover should end in an ellipsis.
     private var source: some View {
         Text(record.chapter.isEmpty ? "Principles, Ray Dalio" : "Principles, Ray Dalio · \(record.chapter)")
             .font(EdenFont.ui(11))
             .foregroundStyle(EdenColor.n400)
-            .lineLimit(1)
-            .truncationMode(.tail)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 14)
     }
 

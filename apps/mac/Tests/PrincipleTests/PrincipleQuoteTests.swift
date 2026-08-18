@@ -92,4 +92,34 @@ struct PrincipleQuoteTests {
         #expect(store.quote(for: "life:5.6") == store.principle(id: "life:5.6")?.quote)
         #expect(store.quote(for: "life:999.9") == nil)
     }
+
+    /// The excerpt popover reads `displayBody`, never `quote`. `quote` ends in
+    /// an `…` by construction, and the popover is the one place a principle is
+    /// read in full — so the two must not drift back into each other.
+    @Test("Body dài: quote cắt 40 từ và có …, displayBody giữ trọn vẹn, không có …")
+    func displayBodyKeepsTheWholePassage() throws {
+        let words = (1...120).map { "từ\($0)" }
+        let body = words.joined(separator: " ")
+        let principle = PrincipleRecord(
+            id: "life:0.4",
+            part: "Nguyên tắc sống",
+            chapter: "Chương 0",
+            num: "0.4",
+            title: "[FIXTURE] Tiêu đề",
+            body: body,
+            hasBody: true
+        )
+
+        let full = try #require(principle.displayBody)
+        #expect(full == body)
+        #expect(!full.hasSuffix("…"))
+        #expect(full.contains("từ120"))
+        #expect(full.split(separator: " ").count == 120)
+
+        // …while the card's own cut is unchanged, which is what makes the two
+        // different things rather than two names for one.
+        let card = try #require(principle.quote)
+        #expect(card.hasSuffix("…"))
+        #expect(card.split(separator: " ").count == PrincipleRecord.quoteWordLimit)
+    }
 }

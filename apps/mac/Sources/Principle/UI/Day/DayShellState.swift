@@ -49,6 +49,21 @@ final class DayShellState {
     var isSidebarDrawerOpen = false
     var isDetailDrawerOpen = false
 
+    /// The window's content height, kept here because a popover is its own
+    /// window and cannot measure the one it points at.
+    var windowHeight: CGFloat = 0
+
+    /// How tall the excerpt popover may grow before it starts scrolling.
+    ///
+    /// A principle's body runs from one line to a page and a half, and the
+    /// popover shows all of it — but not by growing past the window it is
+    /// pinned inside. Sixty per cent leaves the row that was clicked visible
+    /// above or below it, which is the point of a popover rather than a sheet.
+    var excerptMaxHeight: CGFloat {
+        let sane = windowHeight > 0 ? windowHeight : 800
+        return max(240, sane * 0.6)
+    }
+
     var isChatOpen: Bool { chatMode != nil }
     var isChatDocked: Bool { chatMode == .docked }
 

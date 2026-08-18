@@ -55,6 +55,9 @@ struct DayShell: View {
                 chatLayer(size: proxy.size, docksDetail: docksDetail)
             }
             .onChange(of: width) { _, new in ui.syncDrawers(width: new) }
+            // The excerpt popover is capped against the window, and a popover
+            // is its own window — so the shell is what has to measure it.
+            .onChange(of: proxy.size.height, initial: true) { _, new in ui.windowHeight = new }
         }
         .background(EdenColor.canvas)
         .onReceive(Self.clock) { tick in
