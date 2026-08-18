@@ -39,7 +39,7 @@ Source: `~/Documents/Projects/design-workflow-proposal.md` (4 phases A–D + "ga
 - Phase A for Principle = spec #5 (rev 2) + CONTEXT.md; no separate product-model file.
 - Phase B = the `design-system` package (done). Add `design-rules.md` derived from it (checkable rules) to this repo before the gauntlet runs.
 - Phase C = HTML prototype in 2 variants, then Swift; Danny tries the real build FIRST and gives 2–3 sentences; his reaction becomes the first line of `refs/interaction-spec.md`.
-- Phase D (gauntlet), only after that: round 1 = first-user agent + interaction agent (drive the real .app via Accessibility/AppleScript + `screencapture`; XCUITest is NOT available — SPM app, no Xcode project — verify the AX approach in the first ticket), visual agent later; a "what to remove" agent after each round; a clean-context agent reconciles; hard cap 3 rounds; Danny looks after round 1 and fixes the *references* before round 2 if still wrong. Fable is also not allowed to judge its own build.
+- Phase D (gauntlet), only after that: round 1 = first-user agent + interaction agent (drive the real .app via XCUITest — Principle is SPM-only, so a harness ticket first adds a thin Xcode app target + UI-test target; AX/AppleScript only as agreed fallback), visual agent later; a "what to remove" agent after each round; a clean-context agent reconciles; hard cap 3 rounds; Danny looks after round 1 and fixes the *references* before round 2 if still wrong. Fable is also not allowed to judge its own build.
 - `refs/`: Apple Calendar screenshots (structure/time navigation), eden.so (chat pane); `refs/interaction-spec.md` drafted by an agent from spec #5, then edited by Danny in a 10-minute grill.
 
 ## Open questions for the next session
