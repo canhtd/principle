@@ -86,27 +86,34 @@ struct SuggestionsPane: View {
                     .foregroundStyle(EdenColor.n400)
                     .padding(.leading, EdenMetric.sidebarInset)
             } else {
-                group("Must do", tasks: journal.backlogTasks(priority: .must))
-                group("Like to do", tasks: journal.backlogTasks(priority: .nice))
+                let must = journal.backlogTasks(priority: .must)
+                group("Must do", tasks: must, isFirst: true)
+                // Whichever group is drawn first sits straight under the header;
+                // only a group with one above it opens a gap.
+                group("Like to do", tasks: journal.backlogTasks(priority: .nice), isFirst: must.isEmpty)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The prototype's `.grph`: 11.5 pt in the faintest neutral, one step
+    /// quieter than the `Backlog` header above it, and in sentence case —
+    /// nothing on this screen shouts in capitals.
     @ViewBuilder
-    private func group(_ label: String, tasks: [JournalTask]) -> some View {
+    private func group(_ label: String, tasks: [JournalTask], isFirst: Bool) -> some View {
         if !tasks.isEmpty {
-            Text(label.uppercased())
-                .font(EdenFont.ui(11))
-                .tracking(11 * 0.05)
-                .foregroundStyle(EdenColor.hex(0x77746F))
-                .padding(.top, 4)
-            VStack(spacing: 0) {
-                ForEach(tasks) { task in
-                    row(task)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(label)
+                    .font(EdenFont.ui(11.5))
+                    .foregroundStyle(EdenColor.n400)
+                VStack(spacing: 0) {
+                    ForEach(tasks) { task in
+                        row(task)
+                    }
                 }
+                .padding(.horizontal, -EdenMetric.sidebarInset)
             }
-            .padding(.horizontal, -EdenMetric.sidebarInset)
+            .padding(.top, isFirst ? 0 : 2)
         }
     }
 
