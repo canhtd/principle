@@ -14,15 +14,22 @@ struct CategoryList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SidebarSectionHeader(title: "Categories", isExpanded: ui.categoriesExpanded) {
-                withAnimation(.easeOut(duration: 0.15)) { ui.categoriesExpanded.toggle() }
-            }
+            SidebarSectionHeader(
+                title: "Categories",
+                isExpanded: ui.categoriesExpanded,
+                toggle: { withAnimation(.easeOut(duration: 0.15)) { ui.categoriesExpanded.toggle() } },
+                add: startAdding,
+                addHelp: "New category"
+            )
             if ui.categoriesExpanded {
                 VStack(spacing: 2) {
                     ForEach(journal.categories) { category in
                         row(category)
                     }
-                    if journal.categories.isEmpty { emptyRow }
+                    // The empty state is the same field the "+" opens, standing
+                    // open: a journal with no categories has nothing else to
+                    // offer, and a colour is what makes a day readable.
+                    if ui.isAddingCategory || journal.categories.isEmpty { newField }
                 }
                 .padding(.horizontal, EdenMetric.sidebarPadding)
             }
@@ -98,18 +105,35 @@ struct CategoryList: View {
         ui.renamingCategoryID = nil
     }
 
-    /// A first run has no categories at all, and a coloured day depends on
-    /// having one — so the empty state is the way to make the first.
-    private var emptyRow: some View {
-        NewCategoryField { journal.addCategory(name: $0) }
+    /// The "+" opens the section it belongs to before it opens the field —
+    /// typing into a list you cannot see is nobody's idea of feedback.
+    private func startAdding() {
+        withAnimation(.easeOut(duration: 0.15)) {
+            ui.categoriesExpanded = true
+            ui.isAddingCategory = true
+        }
+    }
+
+    private var newField: some View {
+        NewCategoryField(autoFocus: ui.isAddingCategory) {
+            journal.addCategory(name: $0)
+        } done: {
+            ui.isAddingCategory = false
+        }
     }
 }
 
 /// Type a name, press Enter. The only way to make a category until the
-/// Categories screen exists (#10).
+/// Categories screen exists (#10) — and what the header's "+" opens.
 struct NewCategoryField: View {
+    /// True when the field was asked for, false when it is the empty state
+    /// standing open: taking the caret on launch would be rude.
+    var autoFocus = false
     let add: (String) -> Void
+    var done: (() -> Void)?
+
     @State private var name = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         SidebarRow {
@@ -120,10 +144,18 @@ struct NewCategoryField: View {
             TextField("New category", text: $name)
                 .textFieldStyle(.plain)
                 .font(EdenFont.ui(14))
+                .focused($isFocused)
                 .onSubmit {
                     add(name)
                     name = ""
+                    done?()
                 }
+        }
+        .onAppear { if autoFocus { isFocused = true } }
+        // Clicking away is how a field like this is abandoned; an empty one
+        // closes rather than sitting there waiting.
+        .onChange(of: isFocused) { _, focused in
+            if !focused, name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { done?() }
         }
     }
 }

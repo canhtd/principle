@@ -40,6 +40,8 @@ final class DayShellState {
     var selectedTaskID: UUID?
     /// The category being renamed in place, the way Finder renames a file.
     var renamingCategoryID: UUID?
+    /// True while the "New category" field the section header's "+" opens is up.
+    var isAddingCategory = false
     /// The principle whose excerpt is open in a popover beside it.
     var openPrincipleID: String?
 
@@ -96,6 +98,7 @@ final class DayShellState {
     @discardableResult
     func dismissTopmost() -> Bool {
         if renamingCategoryID != nil { renamingCategoryID = nil; return true }
+        if isAddingCategory { isAddingCategory = false; return true }
         if openPrincipleID != nil { openPrincipleID = nil; return true }
         if isSidebarDrawerOpen || isDetailDrawerOpen {
             isSidebarDrawerOpen = false

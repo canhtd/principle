@@ -21,42 +21,6 @@ struct EdenPanel<Content: View>: View {
     }
 }
 
-/// Eden's `Chats` row: h26, 13.5 pt neutral-500, with the disclosure chevron
-/// fading in on hover. `toggle` is `nil` for a header that names a group rather
-/// than opening one.
-struct SidebarSectionHeader: View {
-    let title: String
-    var isExpanded = true
-    var toggle: (() -> Void)?
-
-    @State private var isHovering = false
-
-    var body: some View {
-        HStack(spacing: 5) {
-            if toggle != nil {
-                Image(systemName: "chevron.down")
-                    .font(EdenFont.ui(9, .semibold))
-                    .foregroundStyle(EdenColor.n400)
-                    .rotationEffect(.degrees(isExpanded ? 0 : -90))
-                    .opacity(isHovering || !isExpanded ? 1 : 0)
-                    .frame(width: 10)
-            }
-            Text(title)
-                .font(EdenFont.ui(13.5))
-                .foregroundStyle(isHovering && toggle != nil ? EdenColor.n700 : EdenColor.n500)
-            Spacer(minLength: 0)
-        }
-        .padding(.leading, EdenMetric.sidebarInset)
-        .padding(.trailing, 4)
-        .frame(height: EdenMetric.groupHeaderHeight)
-        .padding(.horizontal, EdenMetric.sidebarPadding)
-        .contentShape(.rect)
-        .onHover { isHovering = $0 }
-        .modifier(TapIfPresent(action: toggle))
-        .animation(.easeOut(duration: 0.15), value: isHovering)
-    }
-}
-
 /// Eden's chat/board row: h30, r12, `pl-2 pr-3`, 14 pt neutral-600, lifting to
 /// neutral-900 on a `black/4%` hover.
 struct SidebarRow<Content: View>: View {
@@ -152,19 +116,5 @@ struct TickBox: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(isOn ? "Done" : "Not done")
-    }
-}
-
-/// `onTapGesture` only when there is something to tap — a header with no
-/// disclosure must not swallow clicks.
-private struct TapIfPresent: ViewModifier {
-    let action: (() -> Void)?
-
-    func body(content: Content) -> some View {
-        if let action {
-            content.onTapGesture(perform: action)
-        } else {
-            content
-        }
     }
 }
