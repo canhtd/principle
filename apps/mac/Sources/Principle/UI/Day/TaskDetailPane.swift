@@ -144,10 +144,13 @@ struct TaskDetailPane: View {
 }
 
 extension Priority {
+    /// The two words the whole app uses for a priority — the detail pane's
+    /// toggle and the backlog's groups say the same thing, because they are
+    /// about the same field.
     var title: String {
         switch self {
-        case .must: "Must"
-        case .nice: "Nice to"
+        case .must: "Must do"
+        case .nice: "Like to do"
         }
     }
 }
