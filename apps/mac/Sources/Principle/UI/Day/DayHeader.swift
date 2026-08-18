@@ -16,19 +16,26 @@ struct DayHeader: View {
     static let trafficLightWidth: CGFloat = 72
 
     var body: some View {
-        // A three-cell grid rather than spacers: the axis has to be centred on
-        // the column, not on whatever is left after the title.
-        HStack(spacing: EdenMetric.sidebarPadding) {
-            title.frame(maxWidth: .infinity, alignment: .leading)
+        // The axis is laid over the row rather than sitting in it (decision 1):
+        // in a three-cell stack the date title sets its own width first and
+        // pushes the control off to the right, and "centred" has to mean centred
+        // on the column — including when a traffic-light inset has moved the
+        // title in, which is why the overlay goes outside that padding.
+        ZStack {
+            HStack(spacing: EdenMetric.sidebarPadding) {
+                title
+                Spacer(minLength: EdenMetric.sidebarPadding)
+                trailing
+            }
+            .padding(.horizontal, isNarrow ? 14 : 16)
+            // The window has no title bar, so the traffic lights sit on whatever
+            // is at the top left. With column 1 docked that is its own empty
+            // corner; once it becomes a drawer it is this header, and the toggle
+            // has to clear them rather than hide under them.
+            .padding(.leading, showsSidebarToggle ? Self.trafficLightWidth : 0)
+
             axis
-            trailing.frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, isNarrow ? 14 : 16)
-        // The window has no title bar, so the traffic lights sit on whatever is
-        // at the top left. With column 1 docked that is its own empty corner;
-        // once it becomes a drawer it is this header, and the toggle has to
-        // clear them rather than hide under them.
-        .padding(.leading, showsSidebarToggle ? Self.trafficLightWidth : 0)
         .padding(.top, isNarrow ? 12 : 14)
         .padding(.bottom, isNarrow ? 9 : 10)
     }
