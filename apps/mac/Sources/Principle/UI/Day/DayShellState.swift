@@ -2,11 +2,14 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Which axis column 2 is showing. Only Day is built (ticket #7); the other
-/// three are drawn as empty states rather than hidden, because the control is
-/// how Danny is told the app has a time axis at all (#9).
+/// Which axis column 2 is showing. Only Day is built (ticket #7); the other two
+/// are drawn as empty states rather than hidden, because the control is how
+/// Danny is told the app has a time axis at all (#9).
+///
+/// There is no Year: a year of days is a chart, not a grid, and the control
+/// should not promise a view the app is not going to grow.
 enum TimeAxis: String, CaseIterable, Identifiable {
-    case day, week, month, year
+    case day, week, month
 
     var id: String { rawValue }
     var title: String { rawValue.capitalized }

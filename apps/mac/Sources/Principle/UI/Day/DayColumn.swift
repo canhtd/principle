@@ -31,9 +31,9 @@ struct DayColumn: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Week, Month and Year are #9. The control is still shown, because it is
-    /// how the app says it has a time axis at all — but it says plainly that
-    /// there is nothing behind it yet rather than opening an empty grid.
+    /// Week and Month are #9. The control is still shown, because it is how the
+    /// app says it has a time axis at all — but it says plainly that there is
+    /// nothing behind it yet rather than opening an empty grid.
     private var comingLater: some View {
         VStack(spacing: 6) {
             Text("\(ui.axis.title) view")

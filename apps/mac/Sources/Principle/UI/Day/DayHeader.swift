@@ -65,8 +65,8 @@ struct DayHeader: View {
         }
     }
 
-    /// Day / Week / Month / Year — one segmented control, not a sidebar item and
-    /// not a menu.
+    /// Day / Week / Month — one segmented control, not a sidebar item and not a
+    /// menu.
     private var axis: some View {
         HStack(spacing: 0) {
             ForEach(TimeAxis.allCases) { option in
