@@ -69,40 +69,24 @@ struct DayShell: View {
             }
         }
         .onExitCommand { ui.dismissTopmost() }
+        // Delete on a selected block, from wherever the key lands in the window
+        // — the grid has no first responder of its own to hang it off.
+        .onDeleteCommand(perform: deleteSelection)
         .onAppear(perform: applyLaunchState)
     }
 
-    /// Opens on a named state when a script asked for one (see ``LaunchHooks``);
-    /// does nothing at all in a normal launch.
-    private func applyLaunchState() {
-        // Here rather than at `applicationDidFinishLaunching`: the scene has no
-        // window yet at that point, and macOS restores its own saved frame
-        // after it — so the size is asked for once now and once more after the
-        // restore has had its turn.
-        LaunchHooks.applyWindowFrame()
-
-        switch LaunchHooks.state {
-        case .principles:
-            ui.sidebarMode = .principles
-        case .principlesPopover:
-            ui.sidebarMode = .principles
-            // A popover is its own window, and AppKit has nothing to hang one
-            // off until the row it points at is in a window itself. Asked for
-            // during this pass it is silently dropped; one turn later it opens.
-            let id = PrincipleOfTheDay.principle(
-                on: JournalDay(journal.day, calendar: .current),
-                in: favorites.corpus
-            )?.id
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { ui.openPrincipleID = id }
-        case .taskDetail:
-            ui.select(taskID: journal.timed.first?.taskID)
-        case .chatFloating:
-            ui.setChatMode(.floating)
-        case .chatDocked:
-            ui.setChatMode(.docked)
-        case nil:
-            break
-        }
+    /// What the Delete key does to the block that is selected: the same thing
+    /// the detail pane's `Delete task` does, which asks nothing first — the
+    /// journal is an append-only log, so the row is still in `tasks.jsonl`.
+    ///
+    /// A field being typed into swallows the key long before this sees it; the
+    /// two states that only *look* like text — a category being renamed, a new
+    /// one being named — are checked, because losing a task to a stray Backspace
+    /// while naming something else would be unforgivable.
+    private func deleteSelection() {
+        guard ui.renamingCategoryID == nil, !ui.isAddingCategory, let id = ui.selectedTaskID else { return }
+        journal.deleteTask(id: id)
+        ui.select(taskID: nil)
     }
 
     /// Once a minute: the red line only ever moves by a pixel, and a second-by
