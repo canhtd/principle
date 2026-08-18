@@ -55,12 +55,20 @@ button{cursor:pointer;background:none;border:none}
 .sechead{display:flex;align-items:center;height:26px;margin:12px 12px 4px;padding:0 4px 0 8px;
   border-radius:var(--r-md);font-size:13.5px;line-height:20.25px;color:var(--n500)}
 .sechead .n{margin-left:auto;font-size:12px;color:var(--n400)}
-.sechead.disc{gap:5px;cursor:default;transition:color .15s}
+.sechead.disc{gap:2px;cursor:default;transition:color .15s}
 .sechead.disc:hover{color:var(--n700)}
-.sechead .chev{width:10px;font-size:9px;color:var(--n400);opacity:0;
-  transition:opacity .15s,transform .15s;display:inline-flex;justify-content:center}
-.sechead.disc:hover .chev{opacity:1}
-.sechead .chev.shut{transform:rotate(-90deg);opacity:.55}
+.sechead .sp{flex:1}
+/* the section's two controls sit at the panel's right edge - "+" first, the disclosure
+   chevron on the very edge. Expanded, they fade in on hover; collapsed, they stay up so
+   the section can be reopened without hunting for it, as Finder and Calendar do. */
+.sechead .ctl{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  width:18px;height:18px;border-radius:5px;color:var(--n400);opacity:0;
+  transition:opacity .15s,background-color .15s,color .15s,transform .15s}
+.sechead .ctl:hover{background:var(--row-hover);color:var(--n700)}
+.sechead .plus{font-size:15px;line-height:1;padding-bottom:1px}
+.sechead .chev{font-size:9px}
+.sechead .chev.shut{transform:rotate(-90deg)}
+.sechead.disc:hover .ctl,.sechead.shut .ctl{opacity:1}
 /* list rows: Eden's chat/board row - h30, r=12, pl-2 pr-3, gap-8, 14px, groups gap-0.5 */
 .sblist{display:flex;flex-direction:column;gap:2px;padding:0 12px}
 .catrow{display:flex;align-items:center;gap:8px;height:30px;padding:0 12px 0 8px;
@@ -95,14 +103,20 @@ button{cursor:pointer;background:none;border:none}
 .mhead .sp{flex:1}
 .mnav{width:22px;height:22px;border-radius:6px;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px}
 .mnav:hover{background:rgba(39,37,35,.06)}
-.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
-.mgrid .wd{font-size:10px;color:var(--faint);text-align:center;padding-bottom:3px}
-.mgrid .d{font-size:11px;text-align:center;padding:4px 0;border-radius:6px;color:var(--text-2);cursor:pointer}
+/* Apple Calendar's mini month: 12px numerals, 10px weekday letters, today a filled red
+   circle with a white numeral, any other selected day a filled neutral one. 26px circles
+   on the panel's 234px content width. */
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px 0;justify-items:center}
+.mgrid .wd{font-size:10px;color:var(--faint);text-align:center;padding-bottom:4px}
+.mgrid .d{width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  font-size:12px;border-radius:50%;color:var(--text-2);cursor:pointer;
+  font-variant-numeric:tabular-nums;transition:background-color .12s,color .12s}
 .mgrid .d:hover{background:rgba(39,37,35,.07)}
-.mgrid .d.out{color:#c9c6c2}
-.mgrid .d.today{font-weight:600;color:var(--accent)}
 .mgrid .d.out{color:var(--n300)}
-.mgrid .d.sel{background:var(--btn);color:#fff}
+.mgrid .d.sel{background:var(--n600);color:#fff}
+.mgrid .d.sel:hover{background:var(--n700)}
+.mgrid .d.today{background:var(--now);color:#fff;font-weight:600}
+.mgrid .d.today:hover{background:#b23724}
 
 /* ---------- column 2: day ---------- */
 .col2{flex:1;min-width:0;display:flex;flex-direction:column;background:transparent;position:relative}
@@ -120,8 +134,12 @@ button{cursor:pointer;background:none;border:none}
 .dayhead .warn{font-size:12px;color:var(--muted);margin-top:2px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* date navigation lives at the top of column 3 (spec #5 rev 2) */
-.c3head{display:flex;align-items:center;justify-content:center;gap:2px;flex:0 0 auto;
+/* the 1fr side cells keep < Today > dead centre whatever sits beside it; "+" takes the
+   right cell and opens a new task in the detail pane */
+.c3head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;flex:0 0 auto;
   padding:10px 10px 9px;border-bottom:1px solid var(--panel-border)}
+.c3head .nav{grid-column:2;display:flex;align-items:center;justify-content:center;gap:2px}
+.c3head .add{grid-column:3;justify-self:end;width:26px;padding:0}
 .navbtn{min-width:26px;height:26px;padding:0 9px;border-radius:var(--r-sm);color:var(--n600);
   display:flex;align-items:center;justify-content:center;font-size:13px;
   transition:background-color .15s,color .15s}
@@ -154,7 +172,9 @@ button{cursor:pointer;background:none;border:none}
 .blk .tm{font-size:11px;opacity:.72;margin-left:19px}
 .blk.done .t{text-decoration:line-through}
 .blk.done{opacity:.55}
-.blk.sel{outline:2px solid var(--btn);outline-offset:1px}
+/* the selection ring is drawn INSIDE the block's own radius, never as an outline outside
+   it, so a block against a column edge can't read as clipped or broken */
+.blk.sel{box-shadow:inset 0 0 0 2px var(--btn)}
 .blk .rz{position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize}
 .ghost{position:absolute;border-radius:8px;background:rgba(34,71,53,.14);border:1px dashed var(--btn);
   z-index:7;pointer-events:none;display:none}
@@ -163,10 +183,6 @@ button{cursor:pointer;background:none;border:none}
 .cb.on{opacity:1;background:currentColor}
 .cb.on::after{content:"";width:7px;height:3.5px;border-left:2px solid var(--canvas);border-bottom:2px solid var(--canvas);
   transform:rotate(-45deg) translate(1px,-1px)}
-.logbar{display:flex;align-items:center;gap:8px;padding:8px 20px;border-top:1px solid var(--border)}
-.logbar input{flex:1;background:none;border:none;outline:none;font-size:13px}
-.logbar input::placeholder{color:var(--faint)}
-.logbar select{background:none;border:none;font-size:12px;color:var(--muted);outline:none}
 .emptyview{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
 
 /* ---------- column 3 ---------- */
@@ -197,10 +213,16 @@ button{cursor:pointer;background:none;border:none}
   border-radius:var(--r-md);font-size:14px;color:var(--n600);cursor:pointer;
   transition:background-color .15s,color .15s}
 .sugrow:hover{background:var(--row-hover);color:var(--n900)}
-.sugrow .dot{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+/* the same colored tick square the Categories rows carry, so a backlog row says which
+   category it belongs to without a legend */
+.sugrow .tick{width:15px;height:15px;flex:0 0 15px;border-radius:4px}
 .sugrow .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sugrow .add{margin-left:auto;font-size:12px;color:var(--n400);opacity:0}
 .sugrow:hover .add{opacity:1}
+/* "Must do" / "Like to do" inside the Backlog section - one step quieter than the
+   section header above them */
+.grph{font-size:11.5px;color:var(--faint);padding:0 8px;margin:9px 0 3px}
+.sec .h + .grph{margin-top:0}
 .btn{padding:6px 12px;border-radius:var(--r-sm);background:var(--field);border:1px solid var(--border);font-size:13px}
 .btn:hover{background:var(--field-hover)}
 .btn.primary{background:var(--btn);color:var(--btn-text);border-color:transparent;font-weight:500}
@@ -445,7 +467,7 @@ const CATS = [
 // ============================ sample state ============================
 let S = {
   axis:'day', date:TODAY, month:'2026-08',
-  pane:'day', sel:null, expanded:false, logCat:'c2', toast:'',
+  pane:'day', sel:null, expanded:false, toast:'',
   col1:'calendar',        // 'calendar' = categories + mini month, 'principles' = favourites
   favs:['life:5.3', 'life:5.6', 'work:3.3'],   // favourited principles, newest kept in order
   pod:'life:5.3',         // the principle of the day
@@ -482,11 +504,12 @@ let S = {
     {id:'b3', title:'Try the new Principle build', cat:'c2', must:true,  done:false, start:null, dur:60, repeat:noRepeat(), note:''},
     {id:'b4', title:'Weekend walk with family',    cat:'c4', must:false, done:false, start:null, dur:90, repeat:noRepeat(), note:''},
   ],
-  // outcomes logged by hand - they were never on the list
+  // an outcome that was never on the list - seeded, now that the log bar is gone
   logs:[{id:'g1', title:'Unblocked Ha on the API', cat:'c2'}],
   order:['t3','g1'],   // dot ids, best -> worst
 };
 let seq = 100;
+let focusTitle = false;   // the next render puts the cursor in the title field
 const uid = () => 'x' + (++seq);
 
 // ============================ helpers ============================
@@ -599,11 +622,27 @@ const A = {
   rayDock(mode){ S.rayMode = mode; S.ray = true; render(); },
   open(id){ A.freeCol3(); S.sel = id; S.pane = 'detail'; render(); },
   back(){ S.pane = 'day'; S.sel = null; render(); },
+  // Delete / Backspace on a selected block: the task goes and column 3 falls back to the day
+  remove(id){
+    S.tasks = S.tasks.filter(t => t.id !== id);
+    S.backlog = S.backlog.filter(t => t.id !== id);
+    S.order = S.order.filter(x => x !== id);
+    if (S.sel === id){ S.sel = null; S.pane = 'day'; }
+    render();
+  },
   toggleDone(id){ const t = task(id); if (t) { t.done = !t.done; S.toast = ''; } render(); },
   create(start, dur){
     const t = {id:uid(), title:'New task', cat:'c2', must:false, done:false, start, dur,
                repeat:noRepeat(), note:''};
     S.tasks.push(t); A.open(t.id);
+  },
+  // "+" in column 3's header: the detail pane opens on a task that has nothing in it yet -
+  // empty title with the cursor already in it, all-day until a time is picked. Only the
+  // seeded day carries data in this prototype, so the new task lands there.
+  newTask(){
+    const t = {id:uid(), title:'', cat:'c2', must:false, done:false, start:null, dur:60,
+               repeat:noRepeat(), note:''};
+    S.tasks.push(t); S.date = TODAY; focusTitle = true; A.open(t.id);
   },
   // clicking a suggestion pulls it into today's all-day strip
   pull(id){
@@ -621,13 +660,15 @@ const A = {
   toggleDay(id, i){ const r = task(id).repeat; r.days[i] = r.days[i] ? 0 : 1; render(); },
   setWeekday(id, i){ task(id).repeat.weekday = +i; render(); },
   toggleFold(){ S.expanded = !S.expanded; render(); },
-  log(inp){
-    const t = inp.value.trim(); if (!t) return;
-    S.logs.push({id:uid(), title:t, cat:S.logCat}); inp.value = ''; S.toast = ''; render();
-  },
-  logCat(v){ S.logCat = v; },
   toggleCat(id){ S.off = catOn(id) ? S.off.concat(id) : S.off.filter(x => x !== id); render(); },
   toggleCats(){ S.catsOpen = !S.catsOpen; render(); },
+  // "+" on the Categories header: the new category lands at the end of the list already in
+  // its rename box, the way a new calendar does in Calendar.app
+  addCat(){
+    const id = uid();
+    CATS.push({id:id, name:'New category', color:SWATCHES[CATS.length % SWATCHES.length]});
+    S.catsOpen = true; S.menu = null; S.rename = id; render();
+  },
   togglePane(which){ if (which === 1) S.c1Open = !S.c1Open; else S.c3Open = !S.c3Open; render(); },
   // ---- macOS-style context menu on a category ----
   catMenu(e, id){ e.preventDefault(); S.menu = {id, x:e.clientX, y:e.clientY, sub:false}; render(); },
@@ -649,7 +690,6 @@ const A = {
     S.backlog = S.backlog.filter(t => t.cat !== id);
     S.logs = S.logs.filter(l => l.cat !== id);
     S.off = S.off.filter(x => x !== id);
-    if (S.logCat === id) S.logCat = CATS[0].id;
     S.menu = null; render();
   },
   startOrder(){ S.ordering = true; S.toast = ''; render(); },
@@ -720,14 +760,18 @@ function renderCol1(){
     '</div>';
 
   const calendarMode =
-    '<div class="sechead disc" onclick="A.toggleCats()">' +
-      '<span class="chev' + (S.catsOpen ? '' : ' shut') + '">&#9660;</span>Categories</div>' +
+    '<div class="sechead disc' + (S.catsOpen ? '' : ' shut') + '" onclick="A.toggleCats()">' +
+      'Categories<span class="sp"></span>' +
+      '<button class="ctl plus" title="New category"' +
+        ' onclick="event.stopPropagation();A.addCat()">+</button>' +
+      '<span class="ctl chev' + (S.catsOpen ? '' : ' shut') + '" title="' +
+        (S.catsOpen ? 'Hide' : 'Show') + '">&#9660;</span></div>' +
     (S.catsOpen ? '<div class="sblist">' + CATS.map(catBlock).join('') + '</div>' : '') +
     miniMonth();
 
   // the principle of the day rides at the top of the Inbox list
   // the bookmark mode: the principle of the day, then the favourites by kind.
-  // No backlog here - the backlog is column 3's "Suggested from backlog" only.
+  // No backlog here - the backlog is column 3's "Backlog" section only.
   const group = (kind, label) => {
     const rows = S.favs.filter(id => id.split(':')[0] === kind);
     if (!rows.length) return '';
@@ -796,14 +840,19 @@ function blockHtml(t, pos){
   const c = cat(t.cat);
   const top = yOf(t.start), h = Math.max(16, yOf(t.start + t.dur) - top - 2);
   const w = 100 / pos.n, left = pos.col * w;
-  const style = t.must
-    ? 'background:' + c.color + ';color:#fff;'
-    : 'background:' + rgba(c.color, .18) + ';color:var(--text);box-shadow:inset 0 0 0 1px ' + rgba(c.color, .34) + ';';
-  return '<div class="blk ' + (t.done ? 'done ' : '') + (S.sel === t.id && S.pane === 'detail' ? 'sel' : '') +
+  const sel = S.sel === t.id && S.pane === 'detail';
+  // both rings are inset, so neither can be clipped: the selection stroke rides on top of
+  // the tint outline a "nice to" block already carries
+  const rings = [sel ? 'inset 0 0 0 2px var(--btn)' : '',
+                 t.must ? '' : 'inset 0 0 0 1px ' + rgba(c.color, .34)].filter(Boolean);
+  const style = (t.must ? 'background:' + c.color + ';color:#fff;'
+                        : 'background:' + rgba(c.color, .18) + ';color:var(--text);') +
+    (rings.length ? 'box-shadow:' + rings.join(',') + ';' : '');
+  return '<div class="blk ' + (t.done ? 'done ' : '') + (sel ? 'sel' : '') +
     '" data-id="' + t.id + '" style="top:' + top + 'px;height:' + h + 'px;left:calc(' + left + '% + 4px);' +
       'width:calc(' + w + '% - 8px);' + style + '">' +
     '<div class="r1"><span class="cb ' + (t.done ? 'on' : '') + '" data-tid="' + t.id + '"></span>' +
-      '<span class="t">' + esc(t.title) + '</span></div>' +
+      '<span class="t">' + esc(t.title || 'New task') + '</span></div>' +
     (h >= 34 ? '<div class="tm">' + fmt(t.start) + ' - ' + fmt(t.start + t.dur) + '</div>' : '') +
     '<div class="rz"></div></div>';
 }
@@ -831,7 +880,7 @@ function alldayHtml(){
       : 'background:' + rgba(c.color, .18) + ';color:var(--text);box-shadow:inset 0 0 0 1px ' + rgba(c.color, .34) + ';';
     return '<span class="adit ' + (t.done ? 'done' : '') + '" data-id="' + t.id + '" style="' + style + '">' +
       '<span class="cb ' + (t.done ? 'on' : '') + '" data-tid="' + t.id + '"></span>' +
-      '<span class="t">' + esc(t.title) + '</span></span>';
+      '<span class="t">' + esc(t.title || 'New task') + '</span></span>';
   }).join('');
 }
 function renderCol2(){
@@ -843,7 +892,7 @@ function renderCol2(){
     : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getUTCDay()] +
       ', ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()];
   // toolbar: date title left, time axis centred, date navigation right
-  const axis = '<div class="axis">' + ['day','week','month','year'].map(k =>
+  const axis = '<div class="axis">' + ['day','week','month'].map(k =>
     '<button class="' + (S.axis === k ? 'on' : '') + '" onclick="A.axis(\'' + k + '\')">' +
     k[0].toUpperCase() + k.slice(1) + '</button>').join('') + '</div>';
   // the date navigation sits on top of column 3; this cell keeps the axis centred and,
@@ -870,14 +919,6 @@ function renderCol2(){
       axis + nav + '</div>' +
     '<div class="allday"><div class="gut">all-day</div><div class="items">' + alldayHtml() + '</div></div>' +
     '<div class="gridwrap" id="gridwrap">' + gridHtml() + '</div>' +
-    '<div class="logbar">' +
-      '<input type="text" id="loginp" placeholder="Log an outcome that was never on the list"' +
-        ' onkeydown="if(event.key===\'Enter\')A.log(this)">' +
-      '<select onchange="A.logCat(this.value)">' + CATS.map(c =>
-        '<option value="' + c.id + '"' + (S.logCat === c.id ? ' selected' : '') + '>' + esc(c.name) +
-        '</option>').join('') + '</select>' +
-      '<button class="btn" onclick="A.log(document.getElementById(\'loginp\'))">Log</button>' +
-    '</div>' +
     rayHtml();
 }
 // Ask Ray has two modes, like Notion AI: a panel floating over the grid, or the chat
@@ -920,11 +961,16 @@ function dayPane(){
       (S.toast ? '<div class="note" style="margin-top:8px;color:var(--olive)">' + esc(S.toast) + '</div>' : '') +
       '</div>';
   }
-  out += '<div class="sec"><div class="h">Suggested from backlog</div>' +
+  // the backlog reads in two groups, must first; an empty group is left out entirely
+  const bRow = b => '<div class="sugrow" onclick="A.pull(\'' + b.id + '\')">' +
+    '<span class="tick" style="background:' + cat(b.cat).color + '"></span>' +
+    '<span class="t">' + esc(b.title) + '</span><span class="add">+ Today</span></div>';
+  const bGroup = (label, list) => list.length
+    ? '<div class="grph">' + label + '</div>' + list.map(bRow).join('') : '';
+  out += '<div class="sec"><div class="h">Backlog</div>' +
     (S.backlog.length
-      ? S.backlog.map(b => '<div class="sugrow" onclick="A.pull(\'' + b.id + '\')">' +
-          '<span class="dot" style="background:' + cat(b.cat).color + '"></span>' +
-          '<span class="t">' + esc(b.title) + '</span><span class="add">+ Today</span></div>').join('')
+      ? bGroup('Must do', S.backlog.filter(b => b.must)) +
+        bGroup('Like to do', S.backlog.filter(b => !b.must))
       : '<div class="note">Backlog is empty.</div>') +
     '</div>';
   if (!ranked.length)
@@ -941,7 +987,8 @@ function detailPane(){
   return '<button class="iconbtn" style="align-self:flex-start;margin:-2px 0 6px -4px;padding:0 6px"' +
       ' onclick="A.back()">&#8249; Back</button>' +
     '<div class="fld"><div class="lbl">Title</div>' +
-      '<input type="text" value="' + esc(t.title) + '" oninput="A.setTitle(\'' + t.id + '\',this.value)"></div>' +
+      '<input type="text" id="titlefld" placeholder="New task" value="' + esc(t.title) +
+      '" oninput="A.setTitle(\'' + t.id + '\',this.value)"></div>' +
     '<div class="fld"><div class="lbl">Category</div>' +
       '<select onchange="A.setCat(\'' + t.id + '\',this.value)">' + CATS.map(c =>
         '<option value="' + c.id + '"' + (t.cat === c.id ? ' selected' : '') + '>' + esc(c.name) +
@@ -1062,9 +1109,11 @@ function renderCol3(){
   const el = document.getElementById('col3');
   el.className = 'col3' + (raySidebar() ? ' raycol' : '');
   const dateNav = '<div class="c3head">' +
-    '<button class="navbtn" onclick="A.shiftDay(-1)" title="Previous day">&#8249;</button>' +
-    '<button class="navbtn" onclick="A.today()">Today</button>' +
-    '<button class="navbtn" onclick="A.shiftDay(1)" title="Next day">&#8250;</button></div>';
+    '<div class="nav">' +
+      '<button class="navbtn" onclick="A.shiftDay(-1)" title="Previous day">&#8249;</button>' +
+      '<button class="navbtn" onclick="A.today()">Today</button>' +
+      '<button class="navbtn" onclick="A.shiftDay(1)" title="Next day">&#8250;</button></div>' +
+    '<button class="navbtn add" title="New task" onclick="A.newTask()">' + ICON_PLUS + '</button></div>';
   el.innerHTML = raySidebar()
     ? rayHead('float', 'Float') + chatPane()
     : dateNav + '<div class="c3body">' + (S.pane === 'detail' ? detailPane() : dayPane()) + '</div>';
@@ -1178,6 +1227,15 @@ document.addEventListener('mouseup', () => {
 });
 
 document.addEventListener('keydown', e => {
+  // Delete / Backspace removes the selected block, as it does in Calendar.app - but never
+  // while a field has the cursor, where the same key is only editing text
+  if (e.key === 'Delete' || e.key === 'Backspace'){
+    const f = document.activeElement;
+    const typing = f && (f.tagName === 'INPUT' || f.tagName === 'TEXTAREA' || f.isContentEditable);
+    if (typing || S.menu || S.rename !== null || S.exc) return;
+    if (S.sel && task(S.sel)){ e.preventDefault(); A.remove(S.sel); }
+    return;
+  }
   if (e.key !== 'Escape') return;
   if (S.menu || S.rename !== null){ A.closeMenu(); return; }
   if (S.exc){ A.closeExcerpt(); return; }
@@ -1201,6 +1259,12 @@ function render(){
   // the chat opens on its newest turn, like every chat pane does
   const thread = document.querySelector('.raybody');
   if (thread) thread.scrollTop = thread.scrollHeight;
+  // a task made with "+" opens with the cursor already in its title
+  if (focusTitle){
+    const f = document.getElementById('titlefld');
+    if (f){ f.focus(); f.select(); }
+    focusTitle = false;
+  }
   firstPaint = false;
 }
 // a panel left open as an overlay must not stay "open" once it is docked again

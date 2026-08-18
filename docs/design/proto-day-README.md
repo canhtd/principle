@@ -5,7 +5,8 @@ interactions — as first drafted they differed only in **density of the time gr
 moved on through Danny's comment rounds and is the frozen reference (see "Decisions" below).
 
 Open with `open docs/design/proto-day-A.html` (and `-B`); self-contained, no server.
-Screenshots (1440×900): `proto-day-A-v2.png` is A as it stands now, with Ask Ray floating;
+Screenshots (1440×900): `proto-day-A-v3.png` is A as it stands now, with Ask Ray floating;
+`proto-day-A-v2.png` is the round-2 shot it replaced;
 `proto-day-A-v2-chat-sidebar.png` is the same screen with Ask Ray docked into column 3;
 `proto-day-A-v2-chat.png` is a close-up of the chat panel, its principle card and the
 hover actions on a turn;
@@ -27,14 +28,18 @@ panels at an 8px inset: 260px wide (content 234), `#f4f3ee`, r=12, 1px black/6%,
 `shadow-sm` — every number from `VessaStudio/docs/design/eden-components.md` §1 and
 `eden-tokens.md`. Column 2 is the bare canvas. Column 1 holds the Eden sidebar rhythm:
 Calendar/Principles as 36×36 r=12 icon buttons (calendar + bookmark) at the panel's right, a “Categories” section
-header at h26/13.5px neutral-500 (mt-3 mb-1, pl-2 pr-1) whose disclosure chevron fades in
-on hover and collapses the list, and rows at h30 / r=12 / pl-2 pr-3 / gap-8 / 14px
+header at h26/13.5px neutral-500 (mt-3 mb-1, pl-2 pr-1) carrying a “+” and its disclosure
+chevron at the panel’s right edge — hover-only while the section is open, always up while it
+is collapsed — and rows at h30 / r=12 / pl-2 pr-3 / gap-8 / 14px
 neutral-600 in a gap-0.5 group, hover `black/4%` + neutral-900. Each row is a colored tick
 square + name that filters the day (blocks, all-day chips and dots all follow); right-click
 gives Rename…, Change color ▸ swatches, Show only <name>, Delete Category, dismissed by
-Escape or a click outside. The mini month sits at the bottom of the same panel. The habit
-sub-rows are gone. Day/Week/Month/Year sits at the centre of the column-2
-toolbar with the date title at its left, and ‹ Today › moved to the top of column 3
+Escape or a click outside. The mini month sits at the bottom of the same panel, drawn like Apple Calendar’s:
+12px numerals and 10px weekday letters on 26px circles, today filled red with a white
+numeral, any other selected day filled neutral. The habit
+sub-rows are gone. Day/Week/Month sits at the centre of the column-2
+toolbar with the date title at its left, and ‹ Today › moved to the top of column 3 — with
+a “+” at that row’s right edge that opens an empty task in the detail pane
 (spec #5 rev 2: column 3 carries the date navigation); the dots are a
 plain ranked column of circles (“Order the day” turns them into draggable rows, then
 “Close day”). The bookmark mode is **Principles**, not a backlog: the
@@ -74,7 +79,7 @@ window (`min(380px, 100vw-40)` × `min(520px, 100vh-40)`, 420px tall on short wi
 Every change Danny asked for across the review rounds, and how A v2 stands today. This list is
 the frozen reference the Swift build is measured against.
 
-1. **View switch** — Day / Week / Month / Year is one segmented control centred in column 2's
+1. **View switch** — Day / Week / Month is one segmented control centred in column 2's
    toolbar, with the date title at its left. It is not a sidebar item and not a menu.
 2. **Column 1** — an Eden floating panel (8px inset, 260px, `#f4f3ee`, r=12, 1px black/6%,
    `shadow-sm`). No app name and no title bar in it. A Calendar / Principles icon pair sits at the
@@ -85,8 +90,8 @@ the frozen reference the Swift build is measured against.
    Change color ▸ swatches, Show only <name>, Delete Category.
 4. **Principles mode** (the bookmark icon) is not an inbox or a backlog: the "Principle of the day"
    card on top, then the favourited principles grouped under "Life principles" / "Work principles" —
-   one section-label style for all three, sentence case. Backlog appears only as "Suggested from
-   backlog" in column 3.
+   one section-label style for all three, sentence case. The backlog appears only as column 3's
+   "Backlog" section.
 5. **Clicking a principle opens a popover beside it**, not a pane on the other side of the screen:
    360px, arrow on the clicked row's centre line, holding the label, title, the excerpt as a quote,
    the source line, a **Favorite** toggle and **Open in Books**. Escape / click-away closes it,
@@ -110,13 +115,44 @@ the frozen reference the Swift build is measured against.
     14×18px per message, hover timestamp and actions, rectangular composer pill; see the
     paragraph above for the numbers. Identical floating and docked.
 
+### Round 3 (comments 13–21)
+
+13. **The log bar is gone.** The strip under the grid that logged an outcome that was never on
+    the list is removed, along with the space it reserved: column 2 is now the header, the
+    all-day strip and the grid, nothing else. Hand-logged dots stay in the sample data — they
+    simply have no input on this screen any more.
+14. **The Categories header carries its controls at the right edge.** "Categories" on the left,
+    then a "+" (new category) and, on the very edge, the disclosure chevron. Expanded, both fade
+    in only on hover; collapsed, both stay visible so the section can be reopened without
+    hunting for it — how Finder and Calendar handle their sidebar sections. "+" appends a
+    category already sitting in its rename box.
+15. **Column 3's header has a "+"** at its right, with ‹ Today › still dead centre (a
+    `1fr auto 1fr` grid keeps it there). It opens the task detail in a new-task state: empty
+    title with the cursor already in it, all-day until a time is picked.
+16. **The mini month is Apple Calendar's.** 12px numerals, 10px weekday letters, 26px circles
+    on the panel's 234px content width; today is a filled red circle with a white numeral, and
+    any other selected day a filled neutral one.
+18. **Delete / Backspace removes the selected block** and drops column 3 back to the day pane.
+    Ignored while a text field has the cursor, and while a menu, a rename or the excerpt
+    popover is open.
+19. **The selection ring is inset** — `inset 0 0 0 2px` inside the block's own radius instead of
+    an `outline` outside it, so it can never read as clipped or broken against a column edge or
+    the edge of the lane. A "nice to" block keeps its tint ring underneath.
+20. **Year is gone** from the segmented control: Day / Week / Month.
+21. **Column 3's "Suggested from backlog" is now "Backlog"**, in two groups — "Must do" first,
+    then "Like to do" — of category-tick + title rows, the tick being the same colored square
+    the Categories rows carry. An empty group is left out entirely; clicking a row still pulls
+    it into today.
+
 **Working interactions:** untick a category to filter it off the day · right-click one
-to rename, recolor, isolate or delete it · dock or float the Ask Ray chat · drag a block
-to move · drag its bottom edge to resize · drag on empty grid to create (all snapped to
-15 min) · drag an all-day item onto the grid to give it a time · click a block → task
-detail in column 3 · tick a checkbox → done · click a suggestion → lands in the all-day
-strip · drag the dots to rank best→worst · Close day · mini calendar picks a day ·
-Day/Week/Month/Year switch.
+to rename, recolor, isolate or delete it · “+” on the Categories header adds one, already in
+its rename box · collapse the section with its chevron · dock or float the Ask Ray chat ·
+drag a block to move · drag its bottom edge to resize · drag on empty grid to create (all
+snapped to 15 min) · drag an all-day item onto the grid to give it a time · click a block
+→ task detail in column 3 · Delete or Backspace → the selected block goes · tick a
+checkbox → done · “+” in column 3's header → a new task with its title focused · click a
+backlog row → lands in the all-day strip · drag the dots to rank best→worst · Close day ·
+mini calendar picks a day · Day/Week/Month switch.
 
 ## Commenting
 
@@ -132,7 +168,7 @@ before `</body>`: `<script src="./proto-comments.js"></script>`. `?selftest` see
 demo pins in memory without touching your saved ones — see `proto-day-A-comments.png`.
 
 **Faked:** principle titles and excerpts are placeholders; only 17 Aug 2026 has data, every other day is deliberately empty; "now" is
-pinned to 10:24; nothing persists (reload = reset); Week/Month/Year are empty states; the
+pinned to 10:24; nothing persists (reload = reset); Week/Month are empty states; the
 Ask Ray exchange is a fixed sample. **No principle text is stored in these files** — the
 "Principle of the day" card and the Ask Ray card carry only a corpus id (`life:5.3`,
 `life:5.6`) plus placeholder copy; the real text is read from the local corpus at runtime,
