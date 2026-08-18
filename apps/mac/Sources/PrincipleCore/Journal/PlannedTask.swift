@@ -15,6 +15,8 @@ public struct PlannedTask: Identifiable, Equatable, Sendable {
     public let category: JournalCategory?
     public let priority: Priority
     public let note: String
+    /// Where the row sits on the grid, or `nil` for a row in the all-day strip.
+    public let schedule: TaskSchedule?
     public let isDone: Bool
     /// True for a row that arrived by a repeat rule rather than by being pulled in.
     public let isRepeating: Bool
@@ -29,6 +31,7 @@ public struct PlannedTask: Identifiable, Equatable, Sendable {
         category: JournalCategory?,
         priority: Priority,
         note: String,
+        schedule: TaskSchedule? = nil,
         isDone: Bool,
         isRepeating: Bool
     ) {
@@ -38,6 +41,7 @@ public struct PlannedTask: Identifiable, Equatable, Sendable {
         self.category = category
         self.priority = priority
         self.note = note
+        self.schedule = schedule
         self.isDone = isDone
         self.isRepeating = isRepeating
     }
@@ -57,4 +61,15 @@ public struct DaySections: Equatable, Sendable {
 
     /// Both sections in the order they are drawn.
     public var all: [PlannedTask] { must + nice }
+
+    /// The rows the hour grid draws, earliest first — the order overlap
+    /// resolution needs, and the order a human reads a day in.
+    public var timed: [PlannedTask] {
+        all.compactMap { row in row.schedule.map { (row: row, at: $0) } }
+            .sorted { ($0.at.startMinute, $0.at.durationMinutes) < ($1.at.startMinute, $1.at.durationMinutes) }
+            .map(\.row)
+    }
+
+    /// The rows the all-day strip draws, in the order they were created.
+    public var untimed: [PlannedTask] { all.filter { $0.schedule == nil } }
 }

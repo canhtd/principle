@@ -23,6 +23,10 @@ public struct JournalTask: Identifiable, Equatable, Sendable {
     public var priority: Priority
     public var repeatRule: RepeatRule
     public var note: String
+    /// Where the task sits on the day's grid, or `nil` for a task with no time
+    /// yet — the all-day strip. A repeating task keeps one schedule for all of
+    /// its days: a habit at 07:00 is at 07:00 every day it comes back.
+    public var schedule: TaskSchedule?
     public var plannedDay: JournalDay?
     public var isDone: Bool
     public let createdAt: Date
@@ -34,6 +38,7 @@ public struct JournalTask: Identifiable, Equatable, Sendable {
         priority: Priority = .nice,
         repeatRule: RepeatRule = .none,
         note: String = "",
+        schedule: TaskSchedule? = nil,
         plannedDay: JournalDay? = nil,
         isDone: Bool = false,
         createdAt: Date = Date()
@@ -44,6 +49,7 @@ public struct JournalTask: Identifiable, Equatable, Sendable {
         self.priority = priority
         self.repeatRule = repeatRule
         self.note = note
+        self.schedule = schedule
         self.plannedDay = plannedDay
         self.isDone = isDone
         self.createdAt = createdAt

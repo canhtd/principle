@@ -98,6 +98,7 @@ extension JournalStore {
                 category: task.categoryID.flatMap { categoriesByID[$0] },
                 priority: task.priority,
                 note: task.note,
+                schedule: task.schedule,
                 isDone: isDone,
                 isRepeating: task.repeatRule.isRepeating
             )
