@@ -43,7 +43,10 @@ struct ChatView: View {
     private var transcript: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 20) {
+                // One rhythm for the whole transcript (prototype decision 12):
+                // the same 14 pt between a question, the cards it pulled and the
+                // answer, floating or docked.
+                LazyVStack(alignment: .leading, spacing: Self.itemRhythm) {
                     ForEach(model.messages) { message in
                         MessageRow(
                             message: message,
@@ -81,6 +84,9 @@ struct ChatView: View {
             .onChange(of: model.phase) { _, _ in scroll(proxy, to: Self.statusAnchor) }
         }
     }
+
+    /// The gap between every item in the chat.
+    static let itemRhythm: CGFloat = 14
 
     private static let streamingAnchor = "streaming"
     private static let statusAnchor = "status"

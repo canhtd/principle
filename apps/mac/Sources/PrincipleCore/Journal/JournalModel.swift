@@ -176,3 +176,11 @@ public final class JournalModel {
         errorMessage = "That change could not be saved. Check the repo path in Settings."
     }
 }
+
+extension JournalModel {
+    /// True when the day on screen is behind `date` — what an app left open
+    /// overnight looks like in the morning.
+    public func selectionIsStale(before date: Date) -> Bool {
+        JournalDay(day, calendar: calendar) < JournalDay(date, calendar: calendar)
+    }
+}

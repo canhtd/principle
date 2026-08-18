@@ -26,6 +26,7 @@ public struct AppSettings: Equatable, Sendable {
         public static let responseModel = "responseModel"
         public static let repoPath = "repoPath"
         public static let claudeBinaryOverride = "claudeBinaryOverride"
+        public static let bookPath = "bookPath"
     }
 
     /// KTD8: the app maps a display name to a CLI alias for the answering model
@@ -57,12 +58,20 @@ public struct AppSettings: Equatable, Sendable {
         didSet { write(claudeBinaryOverride, forKey: Key.claudeBinaryOverride) }
     }
 
+    /// The epub "Open in Books" opens. Empty means the search
+    /// ``BookLocation`` does — the book is usually already in Books' own
+    /// library, and a path typed here is for the copy that is not.
+    public var bookPath: String {
+        didSet { write(bookPath, forKey: Key.bookPath) }
+    }
+
     public init(suiteName: String = defaultsSuite) {
         let defaults = Self.defaults(suiteName: suiteName)
         self.suiteName = suiteName
         responseModel = Self.responseModel(in: defaults)
         repoPath = Self.repoPath(in: defaults) ?? ""
         claudeBinaryOverride = Self.claudeBinaryOverride(in: defaults) ?? ""
+        bookPath = Self.bookPath(in: defaults) ?? ""
     }
 
     // MARK: - Reads used by the library
@@ -86,6 +95,10 @@ public struct AppSettings: Equatable, Sendable {
 
     public static func repoPath(in defaults: UserDefaults?) -> String? {
         trimmed(defaults?.string(forKey: Key.repoPath))
+    }
+
+    public static func bookPath(in defaults: UserDefaults?) -> String? {
+        trimmed(defaults?.string(forKey: Key.bookPath))
     }
 
     public static func claudeBinaryOverride(in defaults: UserDefaults?) -> String? {
