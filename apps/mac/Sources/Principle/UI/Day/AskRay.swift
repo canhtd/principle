@@ -26,10 +26,12 @@ struct AskRayBubble: View {
 }
 
 /// The chat itself, in whichever of its two homes it is in: a panel floating
-/// over the grid, or docked in place of column 3.
+/// over the grid, or docked in place of column 3. Identical in both.
 ///
-/// The engine is the one the app already had — this is a frame around
-/// ``ChatView``, not a second chat.
+/// The engine is the one the app already had — this is Eden's chat pane built
+/// around ``SessionViewModel``, not a second chat. The pane is three pieces that
+/// do not scroll together: a header, a thread that scrolls, and a composer
+/// pinned under it.
 struct AskRayPanel: View {
     @Bindable var session: SessionViewModel
     let favorites: FavoritesModel
@@ -39,46 +41,73 @@ struct AskRayPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider()
-            body(for: session)
+            content
         }
         .background(EdenColor.canvas)
-        .clipShape(.rect(cornerRadius: isDocked ? EdenRadius.md : EdenRadius.lg, style: .continuous))
-        .edenBorder(EdenColor.black(isDocked ? 6 : 10), radius: isDocked ? EdenRadius.md : EdenRadius.lg)
+        .clipShape(.rect(cornerRadius: radius, style: .continuous))
+        .edenBorder(EdenColor.black(isDocked ? 6 : 10), radius: radius)
         .modifier(FloatingShadow(isFloating: !isDocked))
     }
 
+    private var radius: CGFloat { isDocked ? EdenRadius.md : EdenRadius.lg }
+
+    /// h62, and no rule under it: the thread's own day divider is the first line
+    /// on the pane, and two horizontals that close together read as a toolbar.
     private var header: some View {
-        HStack(spacing: EdenMetric.sidebarInset) {
+        HStack(spacing: RayChat.partGap) {
             Text("Ask Ray")
                 .font(EdenFont.ui(13.5))
-                .foregroundStyle(EdenColor.hex(0x55524E))
+                .foregroundStyle(RayChat.title)
             Spacer(minLength: 0)
-            EdenIconButton(
+            RayIconButton(
                 systemImage: isDocked ? "rectangle.inset.bottomright.filled" : "sidebar.right",
-                help: isDocked ? "Float" : "Open as sidebar",
-                size: 26
+                help: isDocked ? "Float" : "Open as sidebar"
             ) {
                 ui.setChatMode(isDocked ? .floating : .docked)
             }
-            EdenIconButton(systemImage: "xmark", help: "Close", size: 26) { ui.closeChat() }
+            RayIconButton(systemImage: "xmark", help: "Close") { ui.closeChat() }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
+        .padding(.top, RayChat.headerPaddingTop)
+        .padding(.horizontal, RayChat.headerPaddingH)
+        .padding(.bottom, RayChat.headerPaddingBottom)
+        .frame(height: RayChat.headerHeight)
     }
 
-    /// A chat with nothing in it yet is one question away from having something,
-    /// so the empty state is the question rather than a description of one.
+    /// A chat with nothing in it yet is the same pane with an empty thread — no
+    /// headline and no button to press first. The first question is what opens
+    /// the consultation, so there is nothing to name in advance.
     @ViewBuilder
-    private func body(for session: SessionViewModel) -> some View {
+    private var content: some View {
         if session.isEngineBlocked {
             EngineStatusView(model: session)
-        } else if session.currentSession != nil {
-            ChatView(model: session, favorites: favorites)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            StartConsultation(session: session)
+            AskRayThread(model: session, favorites: favorites, ui: ui)
+            AskRayComposer(model: session, send: send, canSend: canSend)
         }
+    }
+
+    /// Not ``SessionViewModel/canSend``: that one wants a session already open,
+    /// and here the first question is what opens it.
+    private var canSend: Bool {
+        !session.canStop && !session.isEngineBlocked
+            && !session.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// The first question names the consultation and is then asked, which is
+    /// what the old "What is going on?" screen did in two steps.
+    private func send() {
+        let question = session.draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !question.isEmpty, !session.canStop else { return }
+        if session.currentSession == nil {
+            var draft = AppSettings().newSessionDraft()
+            draft.topic = question
+            session.createSession(from: draft)
+            // A session that could not be written leaves the question in the
+            // composer rather than swallowing it.
+            guard session.currentSession != nil else { return }
+        }
+        Task { await session.send(question) }
     }
 }
 
@@ -92,47 +121,5 @@ private struct FloatingShadow: ViewModifier {
         } else {
             content.edenPanelShadow()
         }
-    }
-}
-
-/// Names the consultation and opens it, without the sheet the old window used —
-/// a modal over a 380 pt panel would cover the thing it belongs to.
-struct StartConsultation: View {
-    @Bindable var session: SessionViewModel
-
-    @State private var topic = ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: EdenMetric.sidebarPadding) {
-            Spacer(minLength: 0)
-            Text("What is going on?")
-                .font(EdenFont.ui(16, .medium))
-                .foregroundStyle(EdenColor.textPrimary)
-            Text("Name the situation, and Ray takes it from the book — not from memory.")
-                .font(EdenFont.ui(13))
-                .foregroundStyle(EdenColor.n500)
-                .fixedSize(horizontal: false, vertical: true)
-            TextField("For example: seven things on today, and I can't do them all", text: $topic)
-                .textFieldStyle(.plain)
-                .font(EdenFont.ui(13))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(EdenColor.card, in: .rect(cornerRadius: EdenRadius.sm, style: .continuous))
-                .edenBorder(EdenColor.black(10), radius: EdenRadius.sm)
-                .onSubmit(start)
-            Button("Start", action: start)
-                .buttonStyle(EdenPrimaryButtonStyle())
-                .disabled(topic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            Spacer(minLength: 0)
-        }
-        .padding(EdenMetric.libraryPaddingTop)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func start() {
-        var draft = AppSettings().newSessionDraft()
-        draft.topic = topic
-        session.createSession(from: draft)
-        topic = ""
     }
 }
