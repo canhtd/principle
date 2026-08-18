@@ -18,8 +18,8 @@ extension JournalModel {
         return created
     }
 
-    /// The bottom bar: something that happened but was never on the list. It
-    /// lands on today as a finished, untimed row — which is what makes it a dot
+    /// Something that happened but was never on the list. It lands on today as
+    /// a finished, untimed row — which is what makes it a dot
     /// (spec #13) without inventing a second kind of record.
     @discardableResult
     public func logOutcome(title: String, categoryID: UUID?) -> UUID? {

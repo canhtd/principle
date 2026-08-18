@@ -2,8 +2,8 @@ import DesignSystem
 import PrincipleCore
 import SwiftUI
 
-/// Column 2 — the bare canvas, not a panel. The day itself: what has a time,
-/// what does not, and the one line at the bottom for what was never on the list.
+/// Column 2 — the bare canvas, not a panel. The day itself: what has a time and
+/// what does not.
 struct DayColumn: View {
     @Bindable var journal: JournalModel
     @Bindable var ui: DayShellState
@@ -24,7 +24,6 @@ struct DayColumn: View {
             if ui.axis == .day {
                 AllDayStrip(journal: journal, ui: ui)
                 HourGrid(journal: journal, ui: ui, now: now)
-                LogOutcomeBar(journal: journal, clearsAskRay: showsDetailToggle)
             } else {
                 comingLater
             }
