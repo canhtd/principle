@@ -7,11 +7,21 @@ import SwiftUI
 ///
 /// Monday-first and English, like every other date on this screen — the app's
 /// copy does not follow the Mac's region.
+///
+/// Apple Calendar is the reference, measured off the real thing at 2x rather
+/// than guessed at: an 18 pt circle on a 24 pt row, numerals at a cap height of
+/// 8 pt (an 11.3 pt SF), weekday letters a step down and grey. Ours runs a
+/// point larger on both counts — this panel is 260 pt wide where Calendar's
+/// sidebar is 215, and the same numerals in a wider column read as smaller.
 struct MiniMonth: View {
     @Bindable var journal: JournalModel
 
     private static let columns = Array(repeating: GridItem(.flexible(), spacing: 1), count: 7)
     private static let weekdayInitials = ["M", "T", "W", "T", "F", "S", "S"]
+    /// The circle today and the selected day are drawn in, and the row it sits
+    /// on — Calendar's 18/24 at this panel's scale.
+    private static let circle: CGFloat = 20
+    private static let cellHeight: CGFloat = 24
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,6 +60,8 @@ struct MiniMonth: View {
         .padding(.bottom, 6)
     }
 
+    /// A circle, never a rounded square: Calendar's, and the one shape a date
+    /// wears everywhere on the Mac.
     @ViewBuilder
     private func dayCell(_ date: Date) -> some View {
         let calendar = Calendar.current
@@ -61,23 +73,28 @@ struct MiniMonth: View {
             journal.show(day: date)
         } label: {
             Text("\(calendar.component(.day, from: date))")
-                .font(EdenFont.ui(11, isToday ? .semibold : .regular))
+                .font(EdenFont.ui(12, isToday || isSelected ? .semibold : .regular))
                 .foregroundStyle(foreground(isSelected: isSelected, isToday: isToday, isOutside: isOutside))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
-                .background(
-                    isSelected ? EdenColor.primary80 : .clear,
-                    in: .rect(cornerRadius: 6, style: .continuous)
-                )
+                .frame(width: Self.circle, height: Self.circle)
+                .background(fill(isSelected: isSelected, isToday: isToday), in: .circle)
+                .frame(maxWidth: .infinity, minHeight: Self.cellHeight)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
     }
 
+    /// Today keeps its red whether or not it is the day on screen — that is what
+    /// makes the grid readable at a glance — and a selected other day takes the
+    /// neutral circle Calendar gives it.
+    private func fill(isSelected: Bool, isToday: Bool) -> Color {
+        if isToday { return DayPalette.now }
+        if isSelected { return EdenColor.hex(0x77746F) }
+        return .clear
+    }
+
     private func foreground(isSelected: Bool, isToday: Bool, isOutside: Bool) -> Color {
-        if isSelected { return .white }
+        if isToday || isSelected { return .white }
         if isOutside { return EdenColor.n300 }
-        if isToday { return EdenColor.primary }
         return EdenColor.hex(0x55524E)
     }
 
