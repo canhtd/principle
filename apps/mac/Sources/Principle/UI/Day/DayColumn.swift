@@ -24,7 +24,7 @@ struct DayColumn: View {
             if ui.axis == .day {
                 AllDayStrip(journal: journal, ui: ui)
                 HourGrid(journal: journal, ui: ui, now: now)
-                LogOutcomeBar(journal: journal)
+                LogOutcomeBar(journal: journal, clearsAskRay: showsDetailToggle)
             } else {
                 comingLater
             }

@@ -10,6 +10,11 @@ import SwiftUI
 /// step with the first.
 struct LogOutcomeBar: View {
     @Bindable var journal: JournalModel
+    /// True once column 3 has become a drawer: the day then runs to the window's
+    /// right edge, and Ask Ray's bubble comes down on top of the Log button. The
+    /// prototype has the same collision at 960 pt — a button you cannot click is
+    /// worth a deviation, so the bar leaves the bubble its corner.
+    var clearsAskRay = false
 
     @State private var title = ""
     @State private var categoryID: UUID?
@@ -37,7 +42,8 @@ struct LogOutcomeBar: View {
                 .buttonStyle(EdenPillButtonStyle())
                 .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
-        .padding(.horizontal, 20)
+        .padding(.leading, 20)
+        .padding(.trailing, clearsAskRay ? DayMetric.bubbleSize + DayMetric.chatMargin : 20)
         .padding(.vertical, 8)
         .overlay(alignment: .top) { EdenColor.black(10).frame(height: 1) }
         .onAppear { categoryID = categoryID ?? journal.categories.first?.id }

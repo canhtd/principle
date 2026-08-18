@@ -15,6 +15,8 @@ struct HourGrid: View {
     /// The drag in progress, if any. Held here rather than per block, because a
     /// drag that starts on a block and ends on empty canvas is still one drag.
     @State private var draft: GridDraft?
+    /// The grid opens on the morning once, not every time it re-appears.
+    @State private var hasOpenedOnMorning = false
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -39,12 +41,26 @@ struct HourGrid: View {
                 .padding(.top, DayMetric.topInset)
             }
             .scrollIndicators(.automatic)
-            .onAppear {
-                // Opens on the morning, the way Calendar does, rather than on a
-                // midnight nothing happens at.
-                proxy.scrollTo(HourAnchor.id(hour: Int(DayMetric.firstVisibleHour)), anchor: .top)
-            }
+            .onAppear { openOnMorning(proxy) }
         }
+    }
+
+    /// Opens on the morning, the way Calendar does, rather than on a midnight
+    /// nothing happens at.
+    ///
+    /// Asked for twice on purpose. During the first layout pass the scroll view
+    /// does not yet know how tall it or its content is, and the scroll comes up
+    /// short of the hour asked for — the grid opened on 02:00 about as often as
+    /// on 06:00. One turn of the run loop later the geometry is settled and the
+    /// same ask lands. The flag keeps a later re-appearance (a drawer closing,
+    /// the sidebar docking again) from yanking the grid back to the morning
+    /// after Danny has scrolled it somewhere else.
+    private func openOnMorning(_ proxy: ScrollViewProxy) {
+        guard !hasOpenedOnMorning else { return }
+        hasOpenedOnMorning = true
+        let anchor = HourAnchor.id(hour: Int(DayMetric.firstVisibleHour))
+        proxy.scrollTo(anchor, anchor: .top)
+        DispatchQueue.main.async { proxy.scrollTo(anchor, anchor: .top) }
     }
 
     /// One hour: the line it starts on and the number in the gutter.
