@@ -5,8 +5,11 @@ interactions — as first drafted they differed only in **density of the time gr
 moved on through Danny's comment rounds and is the frozen reference (see "Decisions" below).
 
 Open with `open docs/design/proto-day-A.html` (and `-B`); self-contained, no server.
-Screenshots (1440×900): `proto-day-A-v3.png` is A as it stands now, with Ask Ray floating;
-`proto-day-A-v2.png` is the round-2 shot it replaced;
+Screenshots (1440×900): `proto-day-A-v4.png` is A as it stands now, with Ask Ray floating;
+`proto-day-A-v4-detail.png` is a task made with column 3's “+” — the draft block on the grid,
+the All-day switch, Starts / Ends and the Priority control; `proto-day-A-v4-catmenu.png` is a
+category row's “…” menu with the Change color flyout open;
+`proto-day-A-v3.png` and `proto-day-A-v2.png` are the shots they replaced;
 `proto-day-A-v2-chat-sidebar.png` is the same screen with Ask Ray docked into column 3;
 `proto-day-A-v2-chat.png` is a close-up of the chat panel, its principle card and the
 hover actions on a turn;
@@ -32,14 +35,16 @@ header at h26/13.5px neutral-500 (mt-3 mb-1, pl-2 pr-1) carrying a “+” and i
 chevron at the panel’s right edge — hover-only while the section is open, always up while it
 is collapsed — and rows at h30 / r=12 / pl-2 pr-3 / gap-8 / 14px
 neutral-600 in a gap-0.5 group, hover `black/4%` + neutral-900. Each row is a colored tick
-square + name that filters the day (blocks, all-day chips and dots all follow); right-click
-gives Rename…, Change color ▸ swatches, Show only <name>, Delete Category, dismissed by
-Escape or a click outside. The mini month sits at the bottom of the same panel, drawn like Apple Calendar’s:
+square + name that filters the day (blocks, all-day chips and dots all follow); a “…” button
+appears at the row's right edge on hover and opens the row's menu, as right-clicking does:
+Rename…, Change color ▸ swatches (a flyout that opens on hover), Show only <name>, Delete
+Category, dismissed by Escape or a click outside. The mini month sits at the bottom of the same panel, drawn like Apple Calendar’s:
 12px numerals and 10px weekday letters on 26px circles, today filled red with a white
 numeral, any other selected day filled neutral. The habit
 sub-rows are gone. Day/Week/Month sits at the centre of the column-2
 toolbar with the date title at its left, and ‹ Today › moved to the top of column 3 — with
-a “+” at that row’s right edge that opens an empty task in the detail pane
+a “+” at that row’s right edge that drops a new task onto the grid as a draft and opens it in
+the detail pane
 (spec #5 rev 2: column 3 carries the date navigation); the dots are a
 plain ranked column of circles (“Order the day” turns them into draggable rows, then
 “Close day”). The bookmark mode is **Principles**, not a backlog: the
@@ -86,8 +91,9 @@ the frozen reference the Swift build is measured against.
    panel's top right as 36×36 r=12 Eden icon buttons (calendar, bookmark).
 3. **Categories are a filter**, like Apple Calendar's calendar list: a colored tick square + name
    per row, ticked by default; unticking hides that category's blocks, chips and dots. Habit
-   sub-rows were removed — a habit is just a task on the grid. Right-click gives Rename…,
-   Change color ▸ swatches, Show only <name>, Delete Category.
+   sub-rows were removed — a habit is just a task on the grid. Right-click, or the “…” button
+   that appears on hover, gives Rename…, Change color ▸ swatches, Show only <name>,
+   Delete Category.
 4. **Principles mode** (the bookmark icon) is not an inbox or a backlog: the "Principle of the day"
    card on top, then the favourited principles grouped under "Life principles" / "Work principles" —
    one section-label style for all three, sentence case. The backlog appears only as column 3's
@@ -128,7 +134,8 @@ the frozen reference the Swift build is measured against.
     category already sitting in its rename box.
 15. **Column 3's header has a "+"** at its right, with ‹ Today › still dead centre (a
     `1fr auto 1fr` grid keeps it there). It opens the task detail in a new-task state: empty
-    title with the cursor already in it, all-day until a time is picked.
+    title with the cursor already in it. (Round 4 made what it creates a draft block on the
+    grid rather than an all-day item — see 22.)
 16. **The mini month is Apple Calendar's.** 12px numerals, 10px weekday letters, 26px circles
     on the panel's 234px content width; today is a filled red circle with a white numeral, and
     any other selected day a filled neutral one.
@@ -144,14 +151,42 @@ the frozen reference the Swift build is measured against.
     the Categories rows carry. An empty group is left out entirely; clicking a row still pulls
     it into today.
 
+### Round 4 (comments 22–26)
+
+22. **Column 3's "+" makes a draft block on the grid**, the way Apple Calendar drops a new
+    event into the window you are looking at: the new task lands at the whole hour nearest the
+    vertical centre of the *visible* grid, one hour long, on the 15-minute snap — not in the
+    all-day strip. The detail pane opens with the title focused, and while the task is still a
+    draft the pane's top row is **Cancel / Add** instead of ‹ Back. **Cancel**, **Escape**, and
+    an empty title all discard it — the block disappears and nothing is kept — and so does
+    walking away to another task or another day while it is still unnamed. Only a draft with a
+    name survives.
+23. **A "…" button on every category row.** It fades in on the row's right edge on hover, stays
+    up while its menu is open, and opens exactly the menu right-click gives — which still works.
+    The menu is anchored under the button rather than at the pointer.
+24. **Fixed: "Change color ▸" showed no colors.** The swatches were there, but only a *click*
+    on the row revealed them, so hovering the ▸ appeared to do nothing. They are now a real
+    flyout that opens on hover, positioned to the right of the row (and flipped to its left near
+    the window edge). Because the flyout is a child of the row, moving the pointer into it keeps
+    the row hovered, so it does not close on the way. Clicking still works too.
+25. **The time field is Calendar's inspector.** **All-day** is a toggle switch; with it off, two
+    rows — **Starts** and **Ends** — each carry a time picker on the 15-minute grid, and Ends
+    sets the duration. With it on, both rows are hidden and the task moves to the all-day strip;
+    switching back off restores the time it had.
+26. **The Priority control is the same segmented control as Day / Week / Month** — a filled
+    white pill with a soft shadow riding on the grey track, dark text — instead of the faint
+    tinted state it had. Its labels now match the backlog's: **Must do** / **Like to do**.
+
 **Working interactions:** untick a category to filter it off the day · right-click one
-to rename, recolor, isolate or delete it · “+” on the Categories header adds one, already in
-its rename box · collapse the section with its chevron · dock or float the Ask Ray chat ·
+to rename, recolor, isolate or delete it, or reach the same menu from the “…” on the row ·
+hover “Change color ▸” for the swatch flyout · “+” on the Categories header adds one, already
+in its rename box · collapse the section with its chevron · dock or float the Ask Ray chat ·
 drag a block to move · drag its bottom edge to resize · drag on empty grid to create (all
 snapped to 15 min) · drag an all-day item onto the grid to give it a time · click a block
 → task detail in column 3 · Delete or Backspace → the selected block goes · tick a
-checkbox → done · “+” in column 3's header → a new task with its title focused · click a
-backlog row → lands in the all-day strip · drag the dots to rank best→worst · Close day ·
+checkbox → done · “+” in column 3's header → a draft block at the middle of the visible grid,
+title focused, Cancel/Escape/no name discards it · All-day switch → the task leaves the grid
+for the all-day strip and back · click a backlog row → lands in the all-day strip · drag the dots to rank best→worst · Close day ·
 mini calendar picks a day · Day/Week/Month switch.
 
 ## Commenting

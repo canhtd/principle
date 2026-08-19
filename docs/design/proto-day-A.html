@@ -76,6 +76,14 @@ button{cursor:pointer;background:none;border:none}
   transition:background-color .15s,color .15s}
 .catrow:hover{background:var(--row-hover);color:var(--n900)}
 .catrow.off{color:var(--n400)}
+/* the same menu the right-click gives, reachable with the pointer alone: a "..." button
+   that fades in on hover and stays up while its menu is open */
+.catrow .more{margin-left:auto;flex:0 0 auto;width:20px;height:20px;margin-right:-6px;
+  border-radius:5px;color:var(--n400);display:inline-flex;align-items:center;
+  justify-content:center;font-size:13px;line-height:1;opacity:0;
+  transition:opacity .15s,background-color .15s,color .15s}
+.catrow .more:hover{background:var(--row-hover);color:var(--n700)}
+.catrow:hover .more,.catrow.menuon .more{opacity:1}
 .catrow input{flex:1;min-width:0;font-size:14px;color:var(--n900);background:#fff;
   border:1.5px solid var(--btn);border-radius:6px;padding:1px 5px}
 /* a plain div dressed as a macOS menu - dismissed by Esc or a click outside */
@@ -85,15 +93,24 @@ button{cursor:pointer;background:none;border:none}
 .menu{position:fixed;z-index:60;min-width:196px;padding:5px;font-size:13px;border-radius:var(--r-md);
   background:var(--card);border:1px solid var(--panel-border);
   box-shadow:0 8px 20px rgba(15,23,42,.10),0 1px 3px rgba(0,0,0,.06)}
-.menu .it{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border-radius:8px;
-  color:var(--n700);cursor:default;white-space:nowrap;transition:background-color .15s,color .15s}
+.menu .it{position:relative;display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;
+  border-radius:8px;color:var(--n700);cursor:default;white-space:nowrap;
+  transition:background-color .15s,color .15s}
 .menu .it:hover{background:var(--row-hover);color:var(--n900)}
 .menu .it .arw{margin-left:auto;font-size:10px;color:var(--n400)}
 .menu .sep{height:1px;background:var(--n200);margin:5px 7px}
-.menu .sw{display:flex;gap:7px;padding:7px 8px}
+/* "Change color >" is a real flyout, opened by HOVERING the row the way a macOS submenu is
+   - it used to need a click, which is why hovering the arrow appeared to do nothing. The
+   flyout is a CHILD of the row, so the pointer travelling into it keeps the row hovered. */
+.menu .sw{position:absolute;top:-5px;left:100%;margin-left:4px;z-index:61;display:none;
+  gap:7px;padding:7px 8px;border-radius:var(--r-md);background:var(--card);
+  border:1px solid var(--panel-border);
+  box-shadow:0 8px 20px rgba(15,23,42,.10),0 1px 3px rgba(0,0,0,.06)}
+.menu .sw.flip{left:auto;right:100%;margin:0 4px 0 0}
+.menu .it.colors:hover .sw,.menu .it.colors.open .sw{display:flex}
 .menu .sw span{width:17px;height:17px;border-radius:50%;cursor:default;
   box-shadow:0 0 0 1px rgba(0,0,0,.10)}
-.menu .sw span.on{box-shadow:0 0 0 2px var(--canvas),0 0 0 3.5px var(--btn)}
+.menu .sw span.on{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--btn)}
 /* the principle card now opens the Inbox list */
 .pod{margin:0 12px 4px;cursor:pointer}
 
@@ -233,10 +250,29 @@ button{cursor:pointer;background:none;border:none}
 .fld input[type=text],.fld select{width:100%;padding:6px 9px;border-radius:var(--r-sm);background:var(--field);
   border:1px solid var(--border);outline:none;font-size:13px}
 .fld input[type=text]:focus,.fld select:focus{border-color:var(--olive)}
+/* a labelled row in the detail pane: label on the left, the control on the right, the way
+   Calendar's inspector lays out All-day / Starts / Ends */
+.fld .row{display:flex;align-items:center;gap:10px}
+.fld .row .lbl{flex:1;min-width:0;margin:0}
+.fld .row select{width:auto;min-width:104px;flex:0 0 auto}
+/* the All-day switch */
+.sw2{position:relative;flex:0 0 auto;width:38px;height:22px;border-radius:999px;
+  background:var(--n300);cursor:pointer;transition:background-color .18s}
+.sw2.on{background:var(--btn)}
+.sw2::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.22);transition:transform .18s}
+.sw2.on::after{transform:translateX(16px)}
+/* Cancel / Add while a new task is still a draft */
+.dtop{display:flex;gap:8px;margin:-2px 0 8px}
+.dtop .btn{flex:1;text-align:center}
 .two{display:flex;gap:8px}
-.seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
-.seg span{font-size:12px;padding:4px 12px;color:var(--muted);cursor:pointer}
-.seg span.on{background:var(--chip);color:var(--accent);font-weight:500}
+/* the same segmented control as Day / Week / Month in the toolbar: a filled white pill
+   riding on a grey track, so the chosen segment is unmistakable */
+.seg{display:inline-flex;background:rgba(39,37,35,.05);border-radius:var(--r-sm);padding:2px}
+.seg span{font-size:12px;padding:5px 12px;border-radius:6px;color:var(--muted);cursor:pointer;
+  transition:background-color .15s,color .15s}
+.seg span:hover{color:var(--text-2)}
+.seg span.on{background:#fff;color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .days{display:flex;gap:4px;margin-top:8px}
 .days button{width:30px;height:26px;border-radius:var(--r-sm);border:1px solid var(--border);font-size:12px;color:var(--muted)}
 .days button.on{background:var(--chip);border-color:transparent;color:var(--accent);font-weight:500}
@@ -475,6 +511,7 @@ let S = {
   ray:false,              // is the Ask Ray chat open
   rayMode:'float',        // 'float' = panel over the grid, 'sidebar' = chat takes column 3;
                           // whichever was used last is what the bubble reopens
+  draft:null,             // id of a task made with "+" that has not been named yet
   ordering:false,         // dots are draggable while ordering the day
   off:[],                 // categories unticked in column 1 - their tasks are filtered out
   catsOpen:true,          // the Categories section can be collapsed like a macOS sidebar group
@@ -595,9 +632,10 @@ function layout(list){
 // ============================ actions ============================
 const A = {
   axis(k){ S.axis = k; render(); },
-  pickDate(d){ S.date = d; S.pane = 'day'; S.sel = null; render(); },
+  pickDate(d){ A.dropEmptyDraft(); S.date = d; S.pane = 'day'; S.sel = null; render(); },
   today(){ S.date = TODAY; S.month = TODAY.slice(0,7); S.pane = 'day'; render(); },
   shiftDay(n){
+    A.dropEmptyDraft();
     const d = new Date(S.date + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
     S.date = d.toISOString().slice(0,10); S.month = S.date.slice(0,7); S.pane = 'day'; S.sel = null; render();
   },
@@ -620,13 +658,17 @@ const A = {
   },
   toggleRay(){ S.ray = !S.ray; render(); },
   rayDock(mode){ S.rayMode = mode; S.ray = true; render(); },
-  open(id){ A.freeCol3(); S.sel = id; S.pane = 'detail'; render(); },
-  back(){ S.pane = 'day'; S.sel = null; render(); },
+  open(id){
+    if (S.draft !== id) A.dropEmptyDraft();
+    A.freeCol3(); S.sel = id; S.pane = 'detail'; render();
+  },
+  back(){ if (S.draft){ A.commitDraft(); return; } S.pane = 'day'; S.sel = null; render(); },
   // Delete / Backspace on a selected block: the task goes and column 3 falls back to the day
   remove(id){
     S.tasks = S.tasks.filter(t => t.id !== id);
     S.backlog = S.backlog.filter(t => t.id !== id);
     S.order = S.order.filter(x => x !== id);
+    if (S.draft === id) S.draft = null;
     if (S.sel === id){ S.sel = null; S.pane = 'day'; }
     render();
   },
@@ -640,9 +682,30 @@ const A = {
   // empty title with the cursor already in it, all-day until a time is picked. Only the
   // seeded day carries data in this prototype, so the new task lands there.
   newTask(){
-    const t = {id:uid(), title:'', cat:'c2', must:false, done:false, start:null, dur:60,
+    A.dropEmptyDraft();
+    // Calendar drops a new event into the window you are looking at, not at the top of the
+    // day: take the middle of the visible grid and round it to the nearest whole hour
+    const w = document.getElementById('gridwrap');
+    const mid = w ? mOf(w.scrollTop + w.clientHeight / 2) : 9 * 60;
+    const start = clampStart(snapM(Math.round(mid / 60) * 60), 60);
+    const t = {id:uid(), title:'', cat:'c2', must:false, done:false, start:start, dur:60,
                repeat:noRepeat(), note:''};
-    S.tasks.push(t); S.date = TODAY; focusTitle = true; A.open(t.id);
+    S.tasks.push(t); S.date = TODAY; S.draft = t.id; focusTitle = true; A.open(t.id);
+  },
+  // a draft only becomes a task once it has a name: Cancel, Escape and an empty title all
+  // throw it away, and so does walking off to another task or another day
+  discardDraft(){ if (!S.draft) return; const id = S.draft; S.draft = null; A.remove(id); },
+  commitDraft(){
+    const t = S.draft && task(S.draft);
+    if (!t || !t.title.trim()){ A.discardDraft(); return; }
+    S.draft = null; S.pane = 'day'; S.sel = null; render();
+  },
+  dropEmptyDraft(){
+    if (!S.draft) return false;
+    const t = task(S.draft), id = S.draft;
+    S.draft = null;
+    if (!t || !t.title.trim()){ A.remove(id); return true; }
+    return false;
   },
   // clicking a suggestion pulls it into today's all-day strip
   pull(id){
@@ -654,8 +717,19 @@ const A = {
   setNote(id, v){ task(id).note = v; },
   setCat(id, v){ task(id).cat = v; render(); },
   setMust(id, v){ task(id).must = v; render(); },
-  setStart(id, v){ task(id).start = v === '' ? null : +v; render(); },
-  setDur(id, v){ task(id).dur = +v; render(); },
+  setStart(id, v){
+    const t = task(id); t.start = Math.min(+v, 1440 - SNAP);
+    if (t.start + t.dur > 1440) t.dur = 1440 - t.start;
+    render();
+  },
+  setEnd(id, v){ const t = task(id); t.dur = Math.max(SNAP, +v - t.start); render(); },
+  // All-day on parks the time and takes the task off the grid; off puts it back where it was
+  setAllDay(id, on){
+    const t = task(id);
+    if (on){ if (t.start !== null) t.kept = t.start; t.start = null; }
+    else { t.start = clampStart(t.kept != null ? t.kept : 9 * 60, t.dur); }
+    render();
+  },
   setRepeat(id, v){ task(id).repeat.mode = v; render(); },
   toggleDay(id, i){ const r = task(id).repeat; r.days[i] = r.days[i] ? 0 : 1; render(); },
   setWeekday(id, i){ task(id).repeat.weekday = +i; render(); },
@@ -672,6 +746,13 @@ const A = {
   togglePane(which){ if (which === 1) S.c1Open = !S.c1Open; else S.c3Open = !S.c3Open; render(); },
   // ---- macOS-style context menu on a category ----
   catMenu(e, id){ e.preventDefault(); S.menu = {id, x:e.clientX, y:e.clientY, sub:false}; render(); },
+  // the "..." button opens the same menu, anchored under the button rather than the pointer
+  catMenuBtn(e, id){
+    e.preventDefault(); e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    S.menu = {id:id, x:Math.round(r.right - 12), y:Math.round(r.bottom + 4), sub:false};
+    render();
+  },
   closeMenu(){ if (S.menu || S.rename !== null){ S.menu = null; S.rename = null; render(); } },
   menuColors(){ S.menu.sub = true; render(); },
   catOnly(id){ S.off = CATS.filter(c => c.id !== id).map(c => c.id); S.menu = null; render(); },
@@ -745,10 +826,13 @@ function renderCol1(){
         ' onblur="A.catRenamed(\'' + c.id + '\',this.value)"' +
         ' onkeydown="if(event.key===\'Enter\')this.blur();' +
                    'if(event.key===\'Escape\'){A.closeMenu();}"></div>';
-    return '<div class="catrow' + (catOn(c.id) ? '' : ' off') + '"' +
+    return '<div class="catrow' + (catOn(c.id) ? '' : ' off') +
+      (S.menu && S.menu.id === c.id ? ' menuon' : '') + '"' +
       ' onclick="A.toggleCat(\'' + c.id + '\')" oncontextmenu="A.catMenu(event,\'' + c.id + '\')"' +
       ' title="' + (catOn(c.id) ? 'Hide' : 'Show') + ' ' + esc(c.name) + '">' + box +
-      esc(c.name) + '</div>';
+      esc(c.name) +
+      '<button class="more" title="More" onclick="A.catMenuBtn(event,\'' + c.id + '\')">' +
+        '&#8943;</button></div>';
   };
 
   const modes =
@@ -821,13 +905,17 @@ function renderMenu(){
   const c = cat(S.menu.id), id = S.menu.id;
   const x = Math.min(S.menu.x, window.innerWidth - 210), y = Math.min(S.menu.y, window.innerHeight - 190);
   const only = '<div class="it" onclick="A.catOnly(\'' + id + '\')">Show only ' + esc(c.name) + '</div>';
+  // the flyout goes to the left when the menu is close enough to the window's right edge
+  const flip = x + 206 + 185 > window.innerWidth;
+  const swatches = '<div class="sw' + (flip ? ' flip' : '') + '">' + SWATCHES.map(w =>
+    '<span class="' + (w === c.color ? 'on' : '') + '" style="background:' + w + '"' +
+    ' title="' + w + '" onclick="event.stopPropagation();A.catColor(\'' + id + '\',\'' + w + '\')">' +
+    '</span>').join('') + '</div>';
   const main =
     '<div class="menu" style="left:' + x + 'px;top:' + y + 'px">' +
       '<div class="it" onclick="A.catRename(\'' + id + '\')">Rename&#8230;</div>' +
-      '<div class="it" onclick="A.menuColors()">Change color<span class="arw">&#9654;</span></div>' +
-      (S.menu.sub ? '<div class="sw">' + SWATCHES.map(w =>
-        '<span class="' + (w === c.color ? 'on' : '') + '" style="background:' + w + '"' +
-        ' onclick="A.catColor(\'' + id + '\',\'' + w + '\')"></span>').join('') + '</div>' : '') +
+      '<div class="it colors' + (S.menu.sub ? ' open' : '') + '" onclick="A.menuColors()">' +
+        'Change color<span class="arw">&#9654;</span>' + swatches + '</div>' +
       '<div class="sep"></div>' + only +
       '<div class="sep"></div>' +
       '<div class="it" onclick="A.catDelete(\'' + id + '\')">Delete Category</div>' +
@@ -983,9 +1071,18 @@ function detailPane(){
   const modes = [['none','None'],['daily','Every day'],['weekdays','Weekdays'],['weekly','Once a week']];
   const starts = [];
   for (let m = 0; m < 1440; m += SNAP) starts.push(m);
-  const durs = [15,30,45,60,90,120,180];
-  return '<button class="iconbtn" style="align-self:flex-start;margin:-2px 0 6px -4px;padding:0 6px"' +
-      ' onclick="A.back()">&#8249; Back</button>' +
+  const ends = [];
+  if (t.start !== null) for (let m = t.start + SNAP; m <= 1440; m += SNAP) ends.push(m);
+  const opts = (list, cur) => list.map(m => '<option value="' + m + '"' +
+    (m === cur ? ' selected' : '') + '>' + fmt(m) + '</option>').join('');
+  // a task made with "+" is still a draft: Cancel throws it away, Add keeps it
+  const drafting = S.draft === t.id;
+  const top = drafting
+    ? '<div class="dtop"><button class="btn" onclick="A.discardDraft()">Cancel</button>' +
+      '<button class="btn primary" onclick="A.commitDraft()">Add</button></div>'
+    : '<button class="iconbtn" style="align-self:flex-start;margin:-2px 0 6px -4px;padding:0 6px"' +
+      ' onclick="A.back()">&#8249; Back</button>';
+  return top +
     '<div class="fld"><div class="lbl">Title</div>' +
       '<input type="text" id="titlefld" placeholder="New task" value="' + esc(t.title) +
       '" oninput="A.setTitle(\'' + t.id + '\',this.value)"></div>' +
@@ -994,18 +1091,21 @@ function detailPane(){
         '<option value="' + c.id + '"' + (t.cat === c.id ? ' selected' : '') + '>' + esc(c.name) +
         '</option>').join('') + '</select></div>' +
     '<div class="fld"><div class="lbl">Priority</div><span class="seg">' +
-      '<span class="' + (t.must ? 'on' : '') + '" onclick="A.setMust(\'' + t.id + '\',true)">Must</span>' +
-      '<span class="' + (t.must ? '' : 'on') + '" onclick="A.setMust(\'' + t.id + '\',false)">Nice to</span>' +
+      '<span class="' + (t.must ? 'on' : '') + '" onclick="A.setMust(\'' + t.id + '\',true)">Must do</span>' +
+      '<span class="' + (t.must ? '' : 'on') + '" onclick="A.setMust(\'' + t.id + '\',false)">Like to do</span>' +
       '</span></div>' +
-    '<div class="fld"><div class="lbl">Time</div><div class="two">' +
-      '<select onchange="A.setStart(\'' + t.id + '\',this.value)">' +
-        '<option value=""' + (t.start === null ? ' selected' : '') + '>All-day</option>' +
-        starts.map(m => '<option value="' + m + '"' + (t.start === m ? ' selected' : '') + '>' + fmt(m) +
-          '</option>').join('') + '</select>' +
-      '<select onchange="A.setDur(\'' + t.id + '\',this.value)"' + (t.start === null ? ' disabled' : '') + '>' +
-        durs.map(d => '<option value="' + d + '"' + (t.dur === d ? ' selected' : '') + '>' +
-          (d < 60 ? d + ' min' : (d/60) + ' h') + '</option>').join('') + '</select>' +
-      '</div></div>' +
+    // Calendar's inspector: All-day is a switch, and the two time rows only exist while it is off
+    '<div class="fld"><div class="row"><div class="lbl">All-day</div>' +
+      '<span class="sw2' + (t.start === null ? ' on' : '') + '" role="switch"' +
+      ' aria-checked="' + (t.start === null) + '" title="All-day"' +
+      ' onclick="A.setAllDay(\'' + t.id + '\',' + (t.start !== null) + ')"></span></div></div>' +
+    (t.start === null ? '' :
+      '<div class="fld"><div class="row"><div class="lbl">Starts</div>' +
+        '<select onchange="A.setStart(\'' + t.id + '\',this.value)">' + opts(starts, t.start) +
+        '</select></div></div>' +
+      '<div class="fld"><div class="row"><div class="lbl">Ends</div>' +
+        '<select onchange="A.setEnd(\'' + t.id + '\',this.value)">' + opts(ends, t.start + t.dur) +
+        '</select></div></div>') +
     '<div class="fld"><div class="lbl">Repeat</div>' +
       '<select onchange="A.setRepeat(\'' + t.id + '\',this.value)">' + modes.map(([m,l]) =>
         '<option value="' + m + '"' + (t.repeat.mode === m ? ' selected' : '') + '>' + l +
@@ -1239,6 +1339,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (S.menu || S.rename !== null){ A.closeMenu(); return; }
   if (S.exc){ A.closeExcerpt(); return; }
+  if (S.draft){ A.discardDraft(); return; }        // Escape cancels a new task outright
   if (S.c3Open || S.c1Open){ S.c3Open = S.c1Open = false; render(); }
 });
 
