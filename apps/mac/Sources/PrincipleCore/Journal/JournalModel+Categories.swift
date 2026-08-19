@@ -15,6 +15,23 @@ extension JournalModel {
         }
     }
 
+    /// Whether a task that is not on any day yet survives the filter — the same
+    /// question ``isVisible(_:)-(PlannedTask)`` asks about a row on the grid.
+    ///
+    /// An untagged task is always shown: no tick in column 1 stands for it, so a
+    /// filter that hid it would leave work nothing can bring back.
+    public func isVisible(_ task: JournalTask) -> Bool {
+        guard let id = task.categoryID else { return true }
+        return !hiddenCategoryIDs.contains(id)
+    }
+
+    /// The backlog with the unticked categories taken out.
+    ///
+    /// Column 1's ticks are one filter over the whole screen, not a filter over
+    /// the grid alone (decision 3). A backlog that kept offering "Health" while
+    /// Health was hidden would be arguing with the tick that was just cleared.
+    public var visibleSuggestions: [JournalTask] { suggestions.filter { isVisible($0) } }
+
     /// "Show only Learning" — every other category off in one go, which is the
     /// move that takes three clicks otherwise.
     public func showOnly(categoryID: UUID) {
