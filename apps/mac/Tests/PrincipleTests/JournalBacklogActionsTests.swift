@@ -112,6 +112,23 @@ struct JournalBacklogActionsTests {
         #expect(model.task(id: reading.id)?.categoryID == health.id)
     }
 
+    @Test("A task sent back off the day rejoins its group, time and all")
+    func sendingATaskBackPutsItInTheBacklog() throws {
+        let repo = try TempRepo(prefix: "backlog-send-back")
+        let task = try repo.journal.addTask(title: "Fix the tax paperwork", priority: .must)
+        let model = JournalModel(store: repo.journal, day: Self.noon)
+        model.schedule(taskID: task.id, startingAt: 10 * 60)
+        #expect(model.timed.count == 1)
+
+        model.sendBackToBacklog(taskID: task.id)
+
+        #expect(model.visibleTasks.isEmpty)
+        #expect(model.backlogTasks(priority: .must).map(\.title) == ["Fix the tax paperwork"])
+        // What time it would run at is not the same question as whether it is
+        // happening, so the schedule survives the trip.
+        #expect(model.task(id: task.id)?.schedule?.startMinute == 10 * 60)
+    }
+
     @Test("Deleting a backlog row takes it off the list and leaves nothing to report")
     func deletingABacklogRowIsClean() throws {
         let repo = try TempRepo(prefix: "backlog-delete-task")
