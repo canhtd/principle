@@ -130,10 +130,25 @@ extension JournalModel {
         write { try $0.setSchedule(schedule, taskID: taskID) }
     }
 
-    /// What an all-day chip gets when it is dropped on the grid: the time it was
-    /// dropped at, and an hour, which is the length most things turn out to be.
+    /// What anything dropped on the grid gets: the time it was dropped at, and
+    /// an hour, which is the length most things turn out to be.
+    ///
+    /// Two things can be dropped there, and the difference is one write. An
+    /// all-day chip is already on this day and only wants a time. A backlog row
+    /// is not on any day yet, and dropping it at 14:00 says both things at once
+    /// — that it is happening today, and that it happens at two — so it joins
+    /// the day in the same change. A repeating task is never planned: its days
+    /// come from its rule, and only its time is up for grabs.
     public func schedule(taskID: UUID, startingAt minute: Int) {
-        setSchedule(TaskSchedule(startMinute: minute), taskID: taskID)
+        let joinsTheDay = task(id: taskID).map {
+            !$0.repeatRule.isRepeating && $0.plannedDay != JournalDay(day, calendar: calendar)
+        } ?? false
+        let schedule = TaskSchedule(startMinute: minute)
+        guard joinsTheDay || schedule != task(id: taskID)?.schedule else { return }
+        write { store in
+            if joinsTheDay { try store.plan(taskID: taskID, on: self.day) }
+            try store.setSchedule(schedule, taskID: taskID)
+        }
     }
 
     /// The category a new row starts with: the first one, so that a block

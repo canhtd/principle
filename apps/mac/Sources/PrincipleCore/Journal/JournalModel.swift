@@ -87,6 +87,14 @@ public final class JournalModel {
         return !hiddenCategoryIDs.contains(id)
     }
 
+    /// The same question about a task that is not on any day yet. An untagged
+    /// task is always shown: no tick in column 1 stands for it, so a filter that
+    /// hid it would leave work nothing can bring back.
+    public func isVisible(_ task: JournalTask) -> Bool {
+        guard let id = task.categoryID else { return true }
+        return !hiddenCategoryIDs.contains(id)
+    }
+
     public func isShown(_ category: JournalCategory) -> Bool {
         !hiddenCategoryIDs.contains(category.id)
     }
@@ -98,12 +106,19 @@ public final class JournalModel {
     /// from the backlog without repeating its headers.
     public var suggestions: [JournalTask] { backlog.flatMap(\.tasks) }
 
+    /// The backlog with the unticked categories taken out.
+    ///
+    /// Column 1's ticks are one filter over the whole screen, not a filter over
+    /// the grid alone (decision 3). A backlog that kept offering "Health" while
+    /// Health was hidden would be arguing with the tick that was just cleared.
+    public var visibleSuggestions: [JournalTask] { suggestions.filter { isVisible($0) } }
+
     /// The backlog by priority rather than by category — the two groups column 3
     /// reads it in, in the order a day is filled: what must happen, then what
     /// would be nice to. Category order is kept inside each group, so a task
     /// does not move about between the two views of the same list.
     public func backlogTasks(priority: Priority) -> [JournalTask] {
-        suggestions.filter { $0.priority == priority }
+        visibleSuggestions.filter { $0.priority == priority }
     }
 
     public func category(id: UUID?) -> JournalCategory? {
