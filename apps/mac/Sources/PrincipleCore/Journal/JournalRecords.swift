@@ -60,6 +60,7 @@ struct TaskRecord: Codable {
     let priority: Priority
     let repeatRule: RepeatRule
     let note: String
+    let schedule: TaskSchedule?
     let plannedDay: JournalDay?
     let done: Bool
     let createdAt: Date
@@ -73,6 +74,7 @@ struct TaskRecord: Codable {
         priority = task.priority
         repeatRule = task.repeatRule
         note = task.note
+        schedule = task.schedule
         plannedDay = task.plannedDay
         done = task.isDone
         createdAt = task.createdAt
@@ -88,6 +90,7 @@ struct TaskRecord: Codable {
             priority: priority,
             repeatRule: repeatRule,
             note: note,
+            schedule: schedule,
             plannedDay: plannedDay,
             isDone: done,
             createdAt: createdAt
@@ -98,6 +101,8 @@ struct TaskRecord: Codable {
         case id, title, priority, note, done, removed
         case categoryID = "category_id"
         case repeatRule = "repeat"
+        case startMinute = "start_minute"
+        case durationMinutes = "duration_minutes"
         case plannedDay = "planned_day"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
@@ -113,6 +118,15 @@ struct TaskRecord: Codable {
         priority = try container.decodeIfPresent(Priority.self, forKey: .priority) ?? .nice
         repeatRule = try container.decodeIfPresent(RepeatRule.self, forKey: .repeatRule) ?? .none
         note = try container.decodeIfPresent(String.self, forKey: .note) ?? ""
+        // The two time fields are written flat rather than as a nested object,
+        // so a line stays one readable row in `tasks.jsonl`; a line with no
+        // start is an untimed task, whatever it says about a duration.
+        if let start = try container.decodeIfPresent(Int.self, forKey: .startMinute) {
+            let length = try container.decodeIfPresent(Int.self, forKey: .durationMinutes)
+            schedule = TaskSchedule(startMinute: start, durationMinutes: length ?? TaskSchedule.defaultDuration)
+        } else {
+            schedule = nil
+        }
         plannedDay = try container.decodeIfPresent(JournalDay.self, forKey: .plannedDay)
         done = try container.decodeIfPresent(Bool.self, forKey: .done) ?? false
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .distantPast
@@ -129,6 +143,10 @@ struct TaskRecord: Codable {
         try container.encode(repeatRule, forKey: .repeatRule)
         // Absent rather than empty: a task with no note writes no note.
         if !note.isEmpty { try container.encode(note, forKey: .note) }
+        if let schedule {
+            try container.encode(schedule.startMinute, forKey: .startMinute)
+            try container.encode(schedule.durationMinutes, forKey: .durationMinutes)
+        }
         try container.encodeIfPresent(plannedDay, forKey: .plannedDay)
         if done { try container.encode(true, forKey: .done) }
         try container.encode(createdAt, forKey: .createdAt)

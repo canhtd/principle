@@ -1,3 +1,4 @@
+import DesignSystem
 import PrincipleCore
 import SwiftUI
 
@@ -10,6 +11,37 @@ import SwiftUI
 /// identity.
 struct MarkdownText: View {
     let text: String
+    /// How the prose is set. Defaults to the reading window's own type; the Ask
+    /// Ray pane is narrower and warmer, and passes its own.
+    var style: ProseStyle = .reading
+
+    /// The type a body of prose is set in. Two of them, because the same answer
+    /// is read in two places: a wide window and a 380 pt pane.
+    struct ProseStyle {
+        let font: Font
+        let lineSpacing: CGFloat
+        let color: Color?
+        /// Between two paragraphs. It has to beat `lineSpacing` by enough to
+        /// read as a break rather than as one more line.
+        let blockSpacing: CGFloat
+
+        /// The consultation window: 15 pt on a 1.7 line, for long Vietnamese.
+        static let reading = ProseStyle(
+            font: Typography.body,
+            lineSpacing: Typography.bodyLineSpacing,
+            color: nil,
+            blockSpacing: Spacing.block
+        )
+
+        /// Eden's side-peek chat: 14 pt on a 1.65 line, in the pane's warm ink,
+        /// with `.cc-md p`'s 0.9 rem between paragraphs.
+        static let askRay = ProseStyle(
+            font: EdenFont.ui(RayChat.bodySize),
+            lineSpacing: RayChat.bodySize * (RayChat.bodyLineHeight - 1),
+            color: RayChat.ink,
+            blockSpacing: 14.4
+        )
+    }
 
     var body: some View {
         let blocks = MessageBlocks.parse(text)
@@ -36,7 +68,8 @@ struct MarkdownText: View {
         case .listItem(let marker):
             HStack(alignment: .firstTextBaseline, spacing: Spacing.listMarkerGap) {
                 Text(marker)
-                    .vietnameseBody()
+                    .font(style.font)
+                    .lineSpacing(style.lineSpacing)
                     .foregroundStyle(.secondary)
                 paragraph(block.text)
             }
@@ -46,7 +79,9 @@ struct MarkdownText: View {
 
     private func paragraph(_ source: String) -> some View {
         Text(styled(source))
-            .vietnameseBody()
+            .font(style.font)
+            .lineSpacing(style.lineSpacing)
+            .foregroundStyle(style.color ?? Color.primary)
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -59,8 +94,8 @@ struct MarkdownText: View {
         if case .listItem = block.kind, case .listItem = previous.kind, !block.afterBlankLine {
             return Spacing.listItem
         }
-        if case .heading = block.kind { return Spacing.block + Spacing.headingTop }
-        return Spacing.block
+        if case .heading = block.kind { return style.blockSpacing + Spacing.headingTop }
+        return style.blockSpacing
     }
 
     /// Inline Markdown as an `AttributedString`, with code runs put in the

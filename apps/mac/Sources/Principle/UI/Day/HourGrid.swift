@@ -1,0 +1,161 @@
+import DesignSystem
+import PrincipleCore
+import SwiftUI
+
+/// The day, 00:00 to 24:00, at Apple Calendar's density.
+///
+/// The whole day is drawn rather than a working window: a run at 06:00 and a
+/// dinner at 21:00 are both real, and a grid that hides them teaches you not to
+/// trust it. It scrolls inside column 2 and opens on the morning.
+struct HourGrid: View {
+    @Bindable var journal: JournalModel
+    @Bindable var ui: DayShellState
+    let now: Date
+
+    /// The drag in progress, if any. Held here rather than per block, because a
+    /// drag that starts on a block and ends on empty canvas is still one drag.
+    @State var draft: GridDraft?
+    /// The grid opens on the morning once, not every time it re-appears.
+    @State private var hasOpenedOnMorning = false
+
+    var body: some View {
+        GeometryReader { viewport in
+            gridScroll(viewportHeight: viewport.size.height)
+        }
+    }
+
+    private func gridScroll(viewportHeight: CGFloat) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                // The hours are a real stack rather than 25 offset overlays: an
+                // `.offset` leaves a view's layout position at zero, and a
+                // scroll view can only be sent to a position that layout knows
+                // about. Blocks are still placed by offset, on top.
+                VStack(spacing: 0) {
+                    ForEach(0..<24, id: \.self) { hour in
+                        HourRow(hour: hour).id(HourAnchor.id(hour: hour))
+                    }
+                    EdenColor.black(7).frame(height: 1)
+                }
+                .overlay {
+                    GeometryReader { geometry in
+                        lane(width: max(0, geometry.size.width - DayMetric.gutter))
+                            .offset(x: DayMetric.gutter)
+                        if journal.isToday { nowLine }
+                    }
+                }
+                .padding(.top, DayMetric.topInset)
+                .background(
+                    // Where the grid is scrolled to, so that a new task can
+                    // land on the hour Danny is actually looking at (spec #22).
+                    ScrollOffsetProbe { offset in
+                        ui.noteGridCentre(offsetY: offset, viewportHeight: viewportHeight)
+                    }
+                )
+            }
+            .scrollIndicators(.automatic)
+            .onAppear { openOnMorning(proxy) }
+        }
+    }
+
+    /// Opens on the morning, the way Calendar does, rather than on a midnight
+    /// nothing happens at.
+    ///
+    /// Asked for twice on purpose. During the first layout pass the scroll view
+    /// does not yet know how tall it or its content is, and the scroll comes up
+    /// short of the hour asked for — the grid opened on 02:00 about as often as
+    /// on 06:00. One turn of the run loop later the geometry is settled and the
+    /// same ask lands. The flag keeps a later re-appearance (a drawer closing,
+    /// the sidebar docking again) from yanking the grid back to the morning
+    /// after Danny has scrolled it somewhere else.
+    private func openOnMorning(_ proxy: ScrollViewProxy) {
+        guard !hasOpenedOnMorning else { return }
+        hasOpenedOnMorning = true
+        let anchor = HourAnchor.id(hour: Int(DayMetric.firstVisibleHour))
+        proxy.scrollTo(anchor, anchor: .top)
+        DispatchQueue.main.async { proxy.scrollTo(anchor, anchor: .top) }
+    }
+
+    /// One hour: the line it starts on and the number in the gutter.
+    private struct HourRow: View {
+        let hour: Int
+
+        var body: some View {
+            ZStack(alignment: .topLeading) {
+                EdenColor.black(7).frame(height: 1)
+                Text(String(format: "%02d", hour))
+                    .font(EdenFont.ui(11))
+                    .foregroundStyle(EdenColor.n400)
+                    .frame(width: DayMetric.gutter - 10, alignment: .trailing)
+                    .offset(y: -6)
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(height: DayMetric.hourHeight)
+        }
+    }
+
+    /// Everything right of the gutter: the blocks, the ghost a drag leaves, and
+    /// the empty canvas a new task is dragged out of.
+    private func lane(width: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            EdenColor.black(7).frame(width: 1)
+
+            Color.clear
+                .contentShape(.rect)
+                .gesture(createGesture)
+
+            let layout = DayGridLayout(journal.timed)
+            ForEach(journal.timed) { row in
+                TaskBlockView(
+                    row: row,
+                    schedule: schedule(for: row),
+                    slot: layout.slot(for: row.taskID),
+                    laneWidth: width,
+                    isSelected: ui.selectedTaskID == row.taskID,
+                    toggleDone: { journal.setDone(!row.isDone, taskID: row.taskID) },
+                    select: { ui.select(taskID: row.taskID) },
+                    move: { move(row, by: $0) },
+                    resize: { resize(row, by: $0) },
+                    commit: commit
+                )
+            }
+
+            if let ghost = draft?.ghost {
+                GhostBlock(schedule: ghost)
+                    .frame(width: max(0, width - 8))
+                    .offset(x: 4, y: DayMetric.y(ofMinute: ghost.startMinute))
+            }
+
+            // The task being written, if it has a time (spec #22). Nothing about
+            // it is on disk; it is drawn from the shell's state alone.
+            if let newTask = ui.draft, let schedule = newTask.schedule {
+                DraftBlock(
+                    title: newTask.blockTitle,
+                    color: DayPalette.color(journal.category(id: newTask.categoryID)),
+                    schedule: schedule,
+                    width: max(0, width - 8)
+                )
+                .offset(x: 4, y: DayMetric.y(ofMinute: schedule.startMinute))
+            }
+        }
+        .frame(width: width, height: DayMetric.dayHeight, alignment: .topLeading)
+        // An all-day chip dragged down here gets the time it was dropped at.
+        .dropDestination(for: String.self) { items, location in
+            guard let id = items.first.flatMap(UUID.init(uuidString:)) else { return false }
+            journal.schedule(taskID: id, startingAt: TaskSchedule.snap(DayMetric.minute(atY: location.y)))
+            return true
+        }
+    }
+
+    private var nowLine: some View {
+        let minute = Calendar.current.component(.hour, from: now) * 60
+            + Calendar.current.component(.minute, from: now)
+        return ZStack(alignment: .leading) {
+            DayPalette.now.frame(height: 1.5)
+            Circle().fill(DayPalette.now).frame(width: 8, height: 8)
+        }
+        .padding(.leading, DayMetric.gutter - 10)
+        .offset(y: DayMetric.y(ofMinute: minute))
+        .allowsHitTesting(false)
+    }
+}

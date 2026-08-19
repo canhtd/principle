@@ -21,6 +21,7 @@ extension JournalStore {
         priority: Priority = .nice,
         repeatRule: RepeatRule = .none,
         note: String = "",
+        schedule: TaskSchedule? = nil,
         id: UUID = UUID(),
         at date: Date = Date()
     ) throws -> JournalTask {
@@ -31,6 +32,7 @@ extension JournalStore {
             priority: priority,
             repeatRule: repeatRule,
             note: note,
+            schedule: schedule,
             createdAt: date
         )
         try save(task, at: date)

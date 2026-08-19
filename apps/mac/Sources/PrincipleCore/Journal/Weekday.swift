@@ -33,5 +33,10 @@ public enum Weekday: String, CaseIterable, Codable, Sendable {
     }
 
     /// Monday first — the order a week is written and shown in.
-    var weekOrder: Int { Self.allCases.firstIndex(of: self) ?? 0 }
+    public var weekOrder: Int { Self.allCases.firstIndex(of: self) ?? 0 }
+
+    /// What "Weekdays" means before anything is ticked. Named here rather than
+    /// spelled out at the one call site, because Mon–Fri is a fact about the
+    /// week, not about the picker that offers it.
+    public static let workingWeek: Set<Weekday> = [.monday, .tuesday, .wednesday, .thursday, .friday]
 }

@@ -1,0 +1,211 @@
+# Day-view prototypes — A vs B
+
+Throwaway HTML for ticket #7 (spec #5, Revision 2). Same 3-column shell, same data, same
+interactions — as first drafted they differed only in **density of the time grid**; A has since
+moved on through Danny's comment rounds and is the frozen reference (see "Decisions" below).
+
+Open with `open docs/design/proto-day-A.html` (and `-B`); self-contained, no server.
+Screenshots (1440×900): `proto-day-A-v4.png` is A as it stands now, with Ask Ray floating;
+`proto-day-A-v4-detail.png` is a task made with column 3's “+” — the draft block on the grid,
+the All-day switch, Starts / Ends and the Priority control; `proto-day-A-v4-catmenu.png` is a
+category row's “…” menu with the Change color flyout open;
+`proto-day-A-v3.png` and `proto-day-A-v2.png` are the shots they replaced;
+`proto-day-A-v2-chat-sidebar.png` is the same screen with Ask Ray docked into column 3;
+`proto-day-A-v2-chat.png` is a close-up of the chat panel, its principle card and the
+hover actions on a turn;
+`proto-day-A-v2-principles.png` is the bookmark mode with the excerpt popover open;
+`proto-day-A-v2-cat-menu.png` is the category context menu; `proto-day-A-1280.png`,
+`-1100.png` and `-960.png` show the responsive shell; `proto-day-A.png` is the v1 it
+replaced, kept for comparison; `proto-day-B.png` is B.
+
+| | A — calendar-faithful | B — compact |
+|---|---|---|
+| Grid | full 00–24, 52px/hour, scrolls | 07–22 at 42px/hour; night folded into two 26px bands that open on click |
+| At 1440×900 | needs scrolling | whole day fits |
+| All-day strip | thin, colored chips | taller, plain text rows (checkbox + title, no color) |
+| Column 3 | 320px, white cards | 272px, no card chrome, sidebar tone |
+| Status | **chosen** — v2 after Danny's comments (2026-08-18), frozen as the reference | **rejected**, kept for comparison |
+
+**A v2 — the shell is Eden.** Canvas `#fafaf8` with columns 1 and 3 floating on it as Eden
+panels at an 8px inset: 260px wide (content 234), `#f4f3ee`, r=12, 1px black/6%,
+`shadow-sm` — every number from `VessaStudio/docs/design/eden-components.md` §1 and
+`eden-tokens.md`. Column 2 is the bare canvas. Column 1 holds the Eden sidebar rhythm:
+Calendar/Principles as 36×36 r=12 icon buttons (calendar + bookmark) at the panel's right, a “Categories” section
+header at h26/13.5px neutral-500 (mt-3 mb-1, pl-2 pr-1) carrying a “+” and its disclosure
+chevron at the panel’s right edge — hover-only while the section is open, always up while it
+is collapsed — and rows at h30 / r=12 / pl-2 pr-3 / gap-8 / 14px
+neutral-600 in a gap-0.5 group, hover `black/4%` + neutral-900. Each row is a colored tick
+square + name that filters the day (blocks, all-day chips and dots all follow); a “…” button
+appears at the row's right edge on hover and opens the row's menu, as right-clicking does:
+Rename…, Change color ▸ swatches (a flyout that opens on hover), Show only <name>, Delete
+Category, dismissed by Escape or a click outside. The mini month sits at the bottom of the same panel, drawn like Apple Calendar’s:
+12px numerals and 10px weekday letters on 26px circles, today filled red with a white
+numeral, any other selected day filled neutral. The habit
+sub-rows are gone. Day/Week/Month sits at the centre of the column-2
+toolbar with the date title at its left, and ‹ Today › moved to the top of column 3 — with
+a “+” at that row’s right edge that drops a new task onto the grid as a draft and opens it in
+the detail pane
+(spec #5 rev 2: column 3 carries the date navigation); the dots are a
+plain ranked column of circles (“Order the day” turns them into draggable rows, then
+“Close day”). The bookmark mode is **Principles**, not a backlog: the
+“Principle of the day” card on top, then the favourited principles grouped under
+“Life principles” / “Work principles” — the same section-label style as “Principle of the
+day”, sentence case, no small caps. The card carries a 3px accent stroke inside its
+radius, an uppercase “LIFE PRINCIPLE 5.6” label in place of the id chip, the title, and a
+bookmark toggle. Clicking any card or favourite row opens a short **book excerpt** in a
+**popover beside the thing you clicked** — 360px, Eden card tokens, an arrow on the row's
+centre line, holding the label, title, the excerpt as a quote, the source line, a Favorite
+toggle and **Open in Books** (which opens Apple Books at that page in the real app; inert
+here). It closes on Escape, on a click outside, and re-anchors when you click another row;
+column 3 is left on the day pane throughout. Ask Ray's inline card is the same component
+and opens the same popover, flipped to the card's left where the window runs out. If the
+chat is docked as a sidebar when something needs column 3, the chat floats itself out of
+the way rather than blocking the pane. Ask Ray is a bubble on the window's right margin (right/bottom 20px) instead
+of a header icon, and the chat it opens has two modes like Notion AI — floating panel, or
+docked as a sidebar in place of column 3. Inside, the pane is Eden's chat pane to the
+measurement (`eden-dom/board-chat-pane.json`, `chat-message.json`, `chat-cc.css`, side-peek
+variant): 62px header, hairline day divider, right-aligned user bubble, bare assistant prose,
+14×18px per message, hover timestamp and action row, and the rectangular composer pill. Our
+principle card rides inside the assistant turn, before the prose, on Eden's in-message card
+tokens with our left stroke, favourite toggle and a two-line excerpt. The header's dock icon switches between them
+(“Open as sidebar” / “Float”), the X closes, and the mode you last used is the one the
+bubble reopens for the rest of the session.
+
+**Responsive:** the shell is fluid — only the side panels carry a width (260 / 320), column
+2 takes whatever is left and the hour grid scrolls inside it, and the app always fills
+100vh. Under **1200px** the header switches to the short date (“Mon 17 Aug”) and drops the
+task-count subtitle. Under **1100px** column 3 slides out behind a toggle in the day header; under
+**900px** column 1 does too. An open panel is an overlay and closes on Escape or a click
+off it; widen the window and it docks itself again. The floating chat clamps to the
+window (`min(380px, 100vw-40)` × `min(520px, 100vh-40)`, 420px tall on short windows).
+
+## Decisions from the comment rounds
+
+Every change Danny asked for across the review rounds, and how A v2 stands today. This list is
+the frozen reference the Swift build is measured against.
+
+1. **View switch** — Day / Week / Month is one segmented control centred in column 2's
+   toolbar, with the date title at its left. It is not a sidebar item and not a menu.
+2. **Column 1** — an Eden floating panel (8px inset, 260px, `#f4f3ee`, r=12, 1px black/6%,
+   `shadow-sm`). No app name and no title bar in it. A Calendar / Principles icon pair sits at the
+   panel's top right as 36×36 r=12 Eden icon buttons (calendar, bookmark).
+3. **Categories are a filter**, like Apple Calendar's calendar list: a colored tick square + name
+   per row, ticked by default; unticking hides that category's blocks, chips and dots. Habit
+   sub-rows were removed — a habit is just a task on the grid. Right-click, or the “…” button
+   that appears on hover, gives Rename…, Change color ▸ swatches, Show only <name>,
+   Delete Category.
+4. **Principles mode** (the bookmark icon) is not an inbox or a backlog: the "Principle of the day"
+   card on top, then the favourited principles grouped under "Life principles" / "Work principles" —
+   one section-label style for all three, sentence case. The backlog appears only as column 3's
+   "Backlog" section.
+5. **Clicking a principle opens a popover beside it**, not a pane on the other side of the screen:
+   360px, arrow on the clicked row's centre line, holding the label, title, the excerpt as a quote,
+   the source line, a **Favorite** toggle and **Open in Books**. Escape / click-away closes it,
+   another row re-anchors it, and column 3 is left alone.
+6. **‹ Today ›** date navigation lives at the top of column 3, not in column 2's header
+   (spec #5 rev 2: column 3 carries the date navigation).
+7. **The dots column is static** — a plain ranked column of circles. Ranking is a mode you enter:
+   "Order the day" turns them into draggable rows, "Close day" ends it.
+8. **Ask Ray is a floating bubble** on the window's right margin, not a header icon. The chat has
+   two modes like Notion AI — floating panel, or docked as a sidebar in place of column 3 — the
+   header's dock icon switches, the last mode is remembered, and a docked chat floats itself out
+   of the way when something needs column 3.
+9. **Warning copy is short** — one line under the date ("7 tasks — more than usual."), no
+   paragraph, no banner.
+10. **The shell is fluid**, with breakpoints at 1199px (short date, subtitle hidden), 1099px
+    (column 3 becomes a drawer) and 899px (column 1 too). No fixed-width wrapper anywhere.
+11. **Everything on the grid snaps to 15 minutes** — moving, resizing, creating by drag, and
+    dropping an all-day item onto the grid.
+12. **The Ask Ray pane is Eden's chat pane**, rebuilt from the measured dumps rather than by
+    eye — h62 header, hairline day divider, right-aligned user bubble, bare assistant prose,
+    14×18px per message, hover timestamp and actions, rectangular composer pill; see the
+    paragraph above for the numbers. Identical floating and docked.
+
+### Round 3 (comments 13–21)
+
+13. **The log bar is gone.** The strip under the grid that logged an outcome that was never on
+    the list is removed, along with the space it reserved: column 2 is now the header, the
+    all-day strip and the grid, nothing else. Hand-logged dots stay in the sample data — they
+    simply have no input on this screen any more.
+14. **The Categories header carries its controls at the right edge.** "Categories" on the left,
+    then a "+" (new category) and, on the very edge, the disclosure chevron. Expanded, both fade
+    in only on hover; collapsed, both stay visible so the section can be reopened without
+    hunting for it — how Finder and Calendar handle their sidebar sections. "+" appends a
+    category already sitting in its rename box.
+15. **Column 3's header has a "+"** at its right, with ‹ Today › still dead centre (a
+    `1fr auto 1fr` grid keeps it there). It opens the task detail in a new-task state: empty
+    title with the cursor already in it. (Round 4 made what it creates a draft block on the
+    grid rather than an all-day item — see 22.)
+16. **The mini month is Apple Calendar's.** 12px numerals, 10px weekday letters, 26px circles
+    on the panel's 234px content width; today is a filled red circle with a white numeral, and
+    any other selected day a filled neutral one.
+18. **Delete / Backspace removes the selected block** and drops column 3 back to the day pane.
+    Ignored while a text field has the cursor, and while a menu, a rename or the excerpt
+    popover is open.
+19. **The selection ring is inset** — `inset 0 0 0 2px` inside the block's own radius instead of
+    an `outline` outside it, so it can never read as clipped or broken against a column edge or
+    the edge of the lane. A "nice to" block keeps its tint ring underneath.
+20. **Year is gone** from the segmented control: Day / Week / Month.
+21. **Column 3's "Suggested from backlog" is now "Backlog"**, in two groups — "Must do" first,
+    then "Like to do" — of category-tick + title rows, the tick being the same colored square
+    the Categories rows carry. An empty group is left out entirely; clicking a row still pulls
+    it into today.
+
+### Round 4 (comments 22–26)
+
+22. **Column 3's "+" makes a draft block on the grid**, the way Apple Calendar drops a new
+    event into the window you are looking at: the new task lands at the whole hour nearest the
+    vertical centre of the *visible* grid, one hour long, on the 15-minute snap — not in the
+    all-day strip. The detail pane opens with the title focused, and while the task is still a
+    draft the pane's top row is **Cancel / Add** instead of ‹ Back. **Cancel**, **Escape**, and
+    an empty title all discard it — the block disappears and nothing is kept — and so does
+    walking away to another task or another day while it is still unnamed. Only a draft with a
+    name survives.
+23. **A "…" button on every category row.** It fades in on the row's right edge on hover, stays
+    up while its menu is open, and opens exactly the menu right-click gives — which still works.
+    The menu is anchored under the button rather than at the pointer.
+24. **Fixed: "Change color ▸" showed no colors.** The swatches were there, but only a *click*
+    on the row revealed them, so hovering the ▸ appeared to do nothing. They are now a real
+    flyout that opens on hover, positioned to the right of the row (and flipped to its left near
+    the window edge). Because the flyout is a child of the row, moving the pointer into it keeps
+    the row hovered, so it does not close on the way. Clicking still works too.
+25. **The time field is Calendar's inspector.** **All-day** is a toggle switch; with it off, two
+    rows — **Starts** and **Ends** — each carry a time picker on the 15-minute grid, and Ends
+    sets the duration. With it on, both rows are hidden and the task moves to the all-day strip;
+    switching back off restores the time it had.
+26. **The Priority control is the same segmented control as Day / Week / Month** — a filled
+    white pill with a soft shadow riding on the grey track, dark text — instead of the faint
+    tinted state it had. Its labels now match the backlog's: **Must do** / **Like to do**.
+
+**Working interactions:** untick a category to filter it off the day · right-click one
+to rename, recolor, isolate or delete it, or reach the same menu from the “…” on the row ·
+hover “Change color ▸” for the swatch flyout · “+” on the Categories header adds one, already
+in its rename box · collapse the section with its chevron · dock or float the Ask Ray chat ·
+drag a block to move · drag its bottom edge to resize · drag on empty grid to create (all
+snapped to 15 min) · drag an all-day item onto the grid to give it a time · click a block
+→ task detail in column 3 · Delete or Backspace → the selected block goes · tick a
+checkbox → done · “+” in column 3's header → a draft block at the middle of the visible grid,
+title focused, Cancel/Escape/no name discards it · All-day switch → the task leaves the grid
+for the all-day strip and back · click a backlog row → lands in the all-day strip · drag the dots to rank best→worst · Close day ·
+mini calendar picks a day · Day/Week/Month switch.
+
+## Commenting
+
+Press **C** to start commenting, then click anything — the element under the cursor is
+outlined, and clicking holds that outline and names the element in the popover header
+("block · Decide M4 scope for VessaStudio"), so you always see what the comment is
+attached to; a numbered pin drops where you clicked. Type and press Enter. **Shift+C**
+opens the list; pins can be replied to, resolved or deleted. **Copy as Markdown** in the
+list is what to paste back to me (Export/Import JSON also work). Comments live in
+localStorage per prototype file, so a reload keeps them. The pill sits bottom-**centre** so
+it never covers a prototype's own corners. New prototype? Add one line
+before `</body>`: `<script src="./proto-comments.js"></script>`. `?selftest` seeds two
+demo pins in memory without touching your saved ones — see `proto-day-A-comments.png`.
+
+**Faked:** principle titles and excerpts are placeholders; only 17 Aug 2026 has data, every other day is deliberately empty; "now" is
+pinned to 10:24; nothing persists (reload = reset); Week/Month are empty states; the
+Ask Ray exchange is a fixed sample. **No principle text is stored in these files** — the
+"Principle of the day" card and the Ask Ray card carry only a corpus id (`life:5.3`,
+`life:5.6`) plus placeholder copy; the real text is read from the local corpus at runtime,
+because the translation is copyrighted and must never be committed. Geist is not installed
+locally, so type falls back to the system sans.

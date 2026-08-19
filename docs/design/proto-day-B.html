@@ -1,0 +1,716 @@
+<!doctype html>
+<!-- PROTOTYPE - throwaway. Principle macOS app: 3-column shell + Day view, variant B.
+     Not production code: no persistence, no real data, sample content only. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Principle - Day view (variant B)</title>
+<style>
+:root{
+  --page:#f6f6f6; --canvas:#fafaf8; --sidebar:#f4f3ee; --card:#fff;
+  --field:#f7f7f7; --field-hover:#e8e8e8; --chip:#eff2ee;
+  --text:#272523; --text-2:#55524e; --muted:#77746f; --faint:#a1a1a1;
+  --accent:#09321f; --olive:#39624d; --btn:#224735; --btn-text:#eff2ee;
+  --border:rgba(39,37,35,.10); --line:rgba(39,37,35,.07);
+  --now:#c8402a;
+  --r-sm:8px; --r-md:12px; --r-lg:18px;
+  --shadow:0 8px 20px rgba(15,23,42,.06);
+  --hour:42px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;background:var(--canvas);
+  color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ---------- column 1: rail ---------- */
+.col1{width:260px;flex:0 0 260px;background:var(--sidebar);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:14px 12px 12px;overflow:auto}
+.brand{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;padding:2px 8px 12px}
+.axis{display:flex;background:rgba(39,37,35,.05);border-radius:var(--r-sm);padding:2px;margin-bottom:12px}
+.axis button{flex:1;font-size:12px;padding:5px 0;border-radius:6px;color:var(--muted)}
+.axis button.on{background:#fff;color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.railrow{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border-radius:var(--r-md);
+  font-size:14px;color:var(--text-2);text-align:left}
+.railrow:hover{background:rgba(39,37,35,.05)}
+.railrow .n{margin-left:auto;font-size:12px;color:var(--faint)}
+.sechead{font-size:13.5px;color:var(--muted);padding:14px 8px 4px}
+.catrow{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--r-md);font-size:14px;color:var(--text-2)}
+.catrow .dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;box-shadow:0 0 0 .75px #fff}
+.catrow:hover{background:rgba(39,37,35,.05)}
+.habit{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:1px 8px 1px 25px}
+.habit .rep{margin-left:auto;font-size:11px;color:var(--faint)}
+.pod{margin-top:16px;background:#fff;border:1px solid var(--border);border-radius:var(--r-md);
+  padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,.03);cursor:pointer}
+.pod .lbl{font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:7px}
+.pnum{font-size:11px;font-weight:600;color:var(--accent);background:var(--chip);border-radius:999px;padding:2px 8px}
+.pod .ttl{font-size:13px;line-height:1.45;margin-top:6px}
+
+/* mini month */
+.mini{margin-top:auto;padding-top:16px}
+.mhead{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--text-2);padding:0 4px 6px}
+.mhead .sp{flex:1}
+.mnav{width:22px;height:22px;border-radius:6px;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px}
+.mnav:hover{background:rgba(39,37,35,.06)}
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.mgrid .wd{font-size:10px;color:var(--faint);text-align:center;padding-bottom:3px}
+.mgrid .d{font-size:11px;text-align:center;padding:4px 0;border-radius:6px;color:var(--text-2);cursor:pointer}
+.mgrid .d:hover{background:rgba(39,37,35,.07)}
+.mgrid .d.out{color:#c9c6c2}
+.mgrid .d.today{font-weight:600;color:var(--accent)}
+.mgrid .d.sel{background:var(--btn);color:#fff}
+
+/* ---------- column 2: day ---------- */
+.col2{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--canvas)}
+.dayhead{padding:16px 20px 10px;display:flex;align-items:flex-start;gap:12px}
+.dayhead .left{flex:1;min-width:0}
+.dayhead .h1{font-size:21px;font-weight:500;letter-spacing:-.02em}
+.dayhead .warn{font-size:12px;color:var(--muted);margin-top:3px}
+.allday{display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--canvas)}
+.allday .gut{width:56px;flex:0 0 56px;font-size:11px;color:var(--faint);text-align:right;padding:9px 8px 0 0}
+.allday .items{flex:1;min-width:0}
+.adempty{font-size:12px;color:var(--faint);padding:10px 10px}
+.allday{align-items:stretch}
+.allday .items{padding:5px 10px 7px;min-height:84px}
+.adit{display:flex;align-items:center;gap:8px;padding:6px 6px;border-radius:var(--r-sm);
+  font-size:13px;color:var(--text);cursor:grab;user-select:none}
+.adit:hover{background:rgba(39,37,35,.04)}
+.adit .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adit.done .t{color:var(--muted);text-decoration:line-through}
+
+.gridwrap{flex:1;overflow-y:auto;position:relative}
+.grid{position:relative;user-select:none}
+.hr{position:absolute;left:0;right:0;border-top:1px solid var(--line)}
+.hlab{position:absolute;left:0;width:46px;text-align:right;font-size:11px;color:var(--faint);transform:translateY(-6px)}
+#lane{position:absolute;left:56px;right:0;top:0;bottom:0;border-left:1px solid var(--line);cursor:crosshair}
+.band{position:absolute;left:0;right:0;display:flex;align-items:center;gap:8px;padding-left:56px;
+  font-size:11px;color:var(--faint);background:rgba(39,37,35,.025);cursor:pointer;z-index:5}
+.band:hover{background:rgba(39,37,35,.05);color:var(--muted)}
+.foldbtn{flex:0 0 auto;margin-top:4px;font-size:12px;color:var(--muted);
+  background:#fff;border:1px solid var(--border);border-radius:999px;padding:4px 12px}
+.foldbtn:hover{background:var(--field)}
+.nowline{position:absolute;left:46px;right:0;height:0;border-top:1.5px solid var(--now);z-index:6;pointer-events:none}
+.nowline::before{content:"";position:absolute;left:0;top:-4.5px;width:8px;height:8px;border-radius:50%;background:var(--now)}
+.blk{position:absolute;border-radius:8px;padding:3px 7px;overflow:hidden;cursor:pointer}
+.blk .r1{display:flex;align-items:center;gap:6px;min-width:0}
+.blk .t{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.blk .tm{font-size:11px;opacity:.72;margin-left:19px}
+.blk.done .t{text-decoration:line-through}
+.blk.done{opacity:.55}
+.blk.sel{outline:2px solid var(--btn);outline-offset:1px}
+.blk .rz{position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize}
+.ghost{position:absolute;border-radius:8px;background:rgba(34,71,53,.14);border:1px dashed var(--btn);
+  z-index:7;pointer-events:none;display:none}
+.cb{width:15px;height:15px;border-radius:4px;border:1.5px solid currentColor;opacity:.5;flex:0 0 15px;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.cb.on{opacity:1;background:currentColor}
+.cb.on::after{content:"";width:7px;height:3.5px;border-left:2px solid var(--canvas);border-bottom:2px solid var(--canvas);
+  transform:rotate(-45deg) translate(1px,-1px)}
+.logbar{display:flex;align-items:center;gap:8px;padding:8px 20px;border-top:1px solid var(--border)}
+.logbar input{flex:1;background:none;border:none;outline:none;font-size:13px}
+.logbar input::placeholder{color:var(--faint)}
+.logbar select{background:none;border:none;font-size:12px;color:var(--muted);outline:none}
+.emptyview{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
+
+/* ---------- column 3 ---------- */
+.col3{width:272px;flex:0 0 272px;border-left:1px solid var(--border);
+  display:flex;flex-direction:column;background:var(--canvas)}
+.c3head{display:flex;align-items:center;gap:2px;padding:12px 10px 10px;border-bottom:1px solid var(--border)}
+.c3head .ttl{font-size:13.5px;color:var(--text-2);padding-left:4px}
+.c3body{flex:1;overflow:auto;padding:12px 12px 16px;display:flex;flex-direction:column}
+.iconbtn{min-width:26px;height:26px;padding:0 6px;border-radius:var(--r-sm);color:var(--text-2);
+  display:flex;align-items:center;justify-content:center;font-size:13px}
+.iconbtn:hover{background:rgba(39,37,35,.06)}
+.sec{margin-bottom:20px}
+.sec .h{font-size:12px;color:var(--muted);margin-bottom:7px}
+.edge{font-size:10px;color:var(--faint);letter-spacing:.07em;text-transform:uppercase;padding:0 2px 4px}
+.edge.b{padding:4px 2px 0}
+.dotrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r-sm);
+  margin-bottom:4px;font-size:13px;cursor:grab}
+.dotrow.over{background:var(--chip)}
+.dotbadge{width:20px;height:20px;border-radius:50%;color:#fff;font-size:11px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;flex:0 0 20px}
+.sugrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r-sm);
+  font-size:13px;color:var(--text-2);cursor:pointer}
+.sugrow:hover{background:rgba(39,37,35,.05)}
+.sugrow .dot{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+.sugrow .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sugrow .add{margin-left:auto;font-size:12px;color:var(--muted);opacity:0}
+.sugrow:hover .add{opacity:1}
+.btn{padding:6px 12px;border-radius:var(--r-sm);background:var(--field);border:1px solid var(--border);font-size:13px}
+.btn:hover{background:var(--field-hover)}
+.btn.primary{background:var(--btn);color:var(--btn-text);border-color:transparent;font-weight:500}
+.btn.primary:hover{background:var(--accent)}
+.btn.wide{width:100%}
+.fld{padding:8px 2px}
+.fld .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.fld input[type=text],.fld select{width:100%;padding:6px 9px;border-radius:var(--r-sm);background:var(--field);
+  border:1px solid var(--border);outline:none;font-size:13px}
+.fld input[type=text]:focus,.fld select:focus{border-color:var(--olive)}
+.two{display:flex;gap:8px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.seg span{font-size:12px;padding:4px 12px;color:var(--muted);cursor:pointer}
+.seg span.on{background:var(--chip);color:var(--accent);font-weight:500}
+.days{display:flex;gap:4px;margin-top:8px}
+.days button{width:30px;height:26px;border-radius:var(--r-sm);border:1px solid var(--border);font-size:12px;color:var(--muted)}
+.days button.on{background:var(--chip);border-color:transparent;color:var(--accent);font-weight:500}
+.note{font-size:12px;color:var(--faint);padding:2px}
+/* variant B: column 3 is quieter - no card chrome, hairline separators only */
+.col3{background:var(--sidebar)}
+.dotrow{background:transparent;border:1px solid transparent}
+.dotrow:hover{background:rgba(39,37,35,.05)}
+.sec .h{color:var(--faint)}
+.btn{background:transparent}
+
+/* Ask Ray pane - eden.so chat tokens */
+.chat{display:flex;flex-direction:column;flex:1}
+.cc-day{text-align:center;font-size:11px;color:#9a8f84;margin:2px 0 14px}
+.cc-user{margin-left:auto;width:fit-content;max-width:88%;border-radius:18px;background:rgba(70,60,45,.03);
+  border:1px solid rgba(70,60,45,.10);padding:10px 15px;font-size:14px;color:#3f342c;
+  box-shadow:0 10px 24px rgba(15,23,42,.08)}
+.cc-md{font-size:14px;line-height:1.65;color:#3f342c;margin-top:14px}
+.cc-md p{margin-bottom:.9rem}
+.pcard{background:#fff;border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;
+  margin-top:14px;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+.pcard .ttl{font-size:13px;line-height:1.45;margin-top:6px}
+.pcard .src{font-size:11px;color:var(--faint);margin-top:6px}
+.cc-composer{margin-top:auto;border-radius:22px;background:rgba(255,255,255,.6);
+  border:1px solid rgba(70,60,45,.22);padding:10px 14px;font-size:13px;color:#9a8f84;
+  display:flex;align-items:center;gap:8px}
+.cc-composer .snd{margin-left:auto;width:24px;height:24px;border-radius:50%;background:rgba(70,60,45,.06);
+  display:flex;align-items:center;justify-content:center;color:#7a6f64;font-size:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="col1" id="col1"></aside>
+  <main class="col2" id="col2"></main>
+  <aside class="col3" id="col3"></aside>
+</div>
+
+<script>
+// ============================ prototype constants ============================
+const V = 'B';                 // which variant this file is
+const HOUR = 42;             // px per hour on the grid
+const SNAP = 15;                   // minutes: everything snaps to quarter hours
+const GUT = 56;                    // px: hour-label gutter
+const TODAY = '2026-08-17';        // Monday - fixed so screenshots are reproducible
+const NOW = 10 * 60 + 24;          // fixed "now" (10:24) for the red line
+const DS = 7, DE = 22, FOLD = 26;  // variant B: working window + folded band height
+const WD = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MON = ['January','February','March','April','May','June','July','August',
+             'September','October','November','December'];
+const noRepeat = () => ({mode:'none', days:[1,1,1,1,1,0,0], weekday:0});
+const CHAT_ICON =
+  '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">' +
+  '<path d="M2 4.2a1.7 1.7 0 0 1 1.7-1.7h8.6A1.7 1.7 0 0 1 14 4.2v5a1.7 1.7 0 0 1-1.7 1.7H6.6L3.4 13.4V10.9' +
+  'A1.7 1.7 0 0 1 2 9.2z" stroke-linejoin="round"/></svg>';
+
+const CATS = [
+  {id:'c1', name:'Learning', color:'#39624d'},
+  {id:'c2', name:'Work',     color:'#4f6b7a'},
+  {id:'c3', name:'Health',   color:'#a35d3d'},
+  {id:'c4', name:'Family',   color:'#6a4c7a'},
+];
+
+// ============================ sample state ============================
+let S = {
+  axis:'day', date:TODAY, month:'2026-08',
+  pane:'day', sel:null, chat:false, expanded:false, logCat:'c2', toast:'',
+  tasks:[
+    {id:'t1', title:'Morning run', cat:'c3', must:false, done:false, start:7*60,  dur:45,
+     repeat:{mode:'weekdays', days:[1,1,1,1,1,0,0], weekday:0}, note:''},
+    {id:'t2', title:'Decide M4 scope for VessaStudio', cat:'c2', must:true, done:false, start:9*60, dur:90,
+     repeat:noRepeat(), note:'Bring the two options and the cost of each.'},
+    {id:'t3', title:'English - 30 min', cat:'c1', must:true, done:true, start:11*60, dur:30,
+     repeat:{mode:'daily', days:[1,1,1,1,1,0,0], weekday:0}, note:''},
+    {id:'t4', title:'Review 4 LearnEnglish findings', cat:'c1', must:false, done:false, start:14*60, dur:60,
+     repeat:noRepeat(), note:''},
+    {id:'t5', title:'Dinner with family', cat:'c4', must:true, done:false, start:19*60, dur:60,
+     repeat:noRepeat(), note:''},
+    {id:'t6', title:'Fix tax paperwork', cat:'c2', must:true, done:false, start:null, dur:60,
+     repeat:noRepeat(), note:''},
+    {id:'t7', title:'Buy groceries', cat:'c3', must:false, done:false, start:null, dur:60,
+     repeat:noRepeat(), note:''},
+  ],
+  backlog:[
+    {id:'b1', title:'Re-read Dalio chapter 5',     cat:'c1', must:false, done:false, start:null, dur:60, repeat:noRepeat(), note:''},
+    {id:'b2', title:'Call the doctor',             cat:'c3', must:true,  done:false, start:null, dur:30, repeat:noRepeat(), note:''},
+    {id:'b3', title:'Try the new Principle build', cat:'c2', must:true,  done:false, start:null, dur:60, repeat:noRepeat(), note:''},
+    {id:'b4', title:'Weekend walk with family',    cat:'c4', must:false, done:false, start:null, dur:90, repeat:noRepeat(), note:''},
+  ],
+  // outcomes logged by hand - they were never on the list
+  logs:[{id:'g1', title:'Unblocked Ha on the API', cat:'c2'}],
+  order:['t3','g1'],   // dot ids, best -> worst
+};
+let seq = 100;
+const uid = () => 'x' + (++seq);
+
+// ============================ helpers ============================
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cat = id => CATS.find(c => c.id === id) || CATS[0];
+const task = id => S.tasks.find(t => t.id === id) || S.backlog.find(t => t.id === id);
+const pad2 = n => String(n).padStart(2, '0');
+const fmt = m => pad2(Math.floor(m/60)) + ':' + pad2(m % 60);
+const isToday = () => S.date === TODAY;
+const rgba = (hex, a) => {
+  const n = parseInt(hex.slice(1), 16);
+  return 'rgba(' + (n>>16 & 255) + ',' + (n>>8 & 255) + ',' + (n & 255) + ',' + a + ')';
+};
+// only the seeded day carries data - every other date is deliberately empty
+const dayTasks = () => isToday() ? S.tasks : [];
+const timed   = () => dayTasks().filter(t => t.start !== null);
+const untimed = () => dayTasks().filter(t => t.start === null);
+const dots = () => (isToday()
+  ? S.tasks.filter(t => t.done).map(t => ({id:t.id, title:t.title, cat:t.cat})).concat(S.logs)
+  : []);
+function syncOrder(){
+  const ids = dots().map(d => d.id);
+  S.order = S.order.filter(i => ids.includes(i)).concat(ids.filter(i => !S.order.includes(i)));
+}
+const orderedDots = () => { syncOrder(); const m = dots(); return S.order.map(i => m.find(d => d.id === i)); };
+
+// ---------- geometry: minutes <-> pixels ----------
+const folded = () => !S.expanded;
+function yOf(m){
+  if (!folded()) return m / 60 * HOUR;
+  if (m < DS*60)  return m / (DS*60) * FOLD;
+  if (m > DE*60)  return FOLD + (DE-DS)*HOUR + (m - DE*60) / ((24-DE)*60) * FOLD;
+  return FOLD + (m - DS*60) / 60 * HOUR;
+}
+function mOf(y){
+  if (!folded()) return y / HOUR * 60;
+  const top = FOLD, bot = FOLD + (DE-DS)*HOUR;
+  if (y < top) return y / FOLD * (DS*60);
+  if (y > bot) return DE*60 + (y - bot) / FOLD * ((24-DE)*60);
+  return DS*60 + (y - top) / HOUR * 60;
+}
+const gridH = () => folded() ? FOLD*2 + (DE-DS)*HOUR : 24*HOUR;
+const snapM = m => Math.round(m / SNAP) * SNAP;
+function clampStart(m, dur){
+  const lo = folded() ? DS*60 : 0, hi = (folded() ? DE*60 : 1440) - dur;
+  return Math.max(lo, Math.min(hi, m));
+}
+
+// ---------- overlap: split a cluster of overlapping blocks into columns ----------
+function layout(list){
+  const sorted = list.slice().sort((a,b) => a.start - b.start || a.dur - b.dur);
+  const out = new Map();
+  let cluster = [], clusterEnd = -1;
+  const flush = () => {
+    if (!cluster.length) return;
+    const cols = [];
+    cluster.forEach(t => {
+      let i = 0;
+      while (i < cols.length && cols[i] > t.start) i++;
+      if (i === cols.length) cols.push(0);
+      cols[i] = t.start + t.dur;
+      out.set(t.id, {col:i, n:0});
+    });
+    cluster.forEach(t => out.get(t.id).n = cols.length);
+    cluster = []; clusterEnd = -1;
+  };
+  sorted.forEach(t => {
+    if (cluster.length && t.start >= clusterEnd) flush();
+    cluster.push(t);
+    clusterEnd = Math.max(clusterEnd, t.start + t.dur);
+  });
+  flush();
+  return out;
+}
+
+// ============================ actions ============================
+const A = {
+  axis(k){ S.axis = k; render(); },
+  pickDate(d){ S.date = d; S.pane = 'day'; S.sel = null; render(); },
+  today(){ S.date = TODAY; S.month = TODAY.slice(0,7); S.pane = 'day'; render(); },
+  shiftDay(n){
+    const d = new Date(S.date + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
+    S.date = d.toISOString().slice(0,10); S.month = S.date.slice(0,7); S.pane = 'day'; S.sel = null; render();
+  },
+  shiftMonth(n){
+    const [y, m] = S.month.split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + n, 1));
+    S.month = d.toISOString().slice(0,7); render();
+  },
+  toggleChat(){ S.chat = !S.chat; render(); },
+  open(id){ S.sel = id; S.pane = 'detail'; S.chat = false; render(); },
+  back(){ S.pane = 'day'; S.sel = null; render(); },
+  toggleDone(id){ const t = task(id); if (t) { t.done = !t.done; S.toast = ''; } render(); },
+  create(start, dur){
+    const t = {id:uid(), title:'New task', cat:'c2', must:false, done:false, start, dur,
+               repeat:noRepeat(), note:''};
+    S.tasks.push(t); A.open(t.id);
+  },
+  // clicking a suggestion pulls it into today's all-day strip
+  pull(id){
+    const i = S.backlog.findIndex(b => b.id === id); if (i < 0) return;
+    const t = S.backlog.splice(i, 1)[0]; t.start = null;
+    S.tasks.push(t); S.date = TODAY; render();
+  },
+  setTitle(id, v){ task(id).title = v; },
+  setNote(id, v){ task(id).note = v; },
+  setCat(id, v){ task(id).cat = v; render(); },
+  setMust(id, v){ task(id).must = v; render(); },
+  setStart(id, v){ task(id).start = v === '' ? null : +v; render(); },
+  setDur(id, v){ task(id).dur = +v; render(); },
+  setRepeat(id, v){ task(id).repeat.mode = v; render(); },
+  toggleDay(id, i){ const r = task(id).repeat; r.days[i] = r.days[i] ? 0 : 1; render(); },
+  setWeekday(id, i){ task(id).repeat.weekday = +i; render(); },
+  toggleFold(){ S.expanded = !S.expanded; render(); },
+  log(inp){
+    const t = inp.value.trim(); if (!t) return;
+    S.logs.push({id:uid(), title:t, cat:S.logCat}); inp.value = ''; S.toast = ''; render();
+  },
+  logCat(v){ S.logCat = v; },
+  closeDay(){
+    const n = orderedDots().length; if (!n) return;
+    S.toast = 'Day closed - ' + n + (n === 1 ? ' dot' : ' dots') + ' recorded, best to worst.';
+    render();
+  },
+  // ranking drag (column 3)
+  dstart(e, id){ e.dataTransfer.setData('text/plain', id); e.dataTransfer.effectAllowed = 'move'; },
+  dover(e, id){ e.preventDefault(); e.currentTarget.classList.add('over'); },
+  dleave(e){ e.currentTarget.classList.remove('over'); },
+  ddrop(e, id){
+    e.preventDefault(); e.currentTarget.classList.remove('over');
+    const from = e.dataTransfer.getData('text/plain'); if (!from || from === id) return;
+    syncOrder();
+    S.order.splice(S.order.indexOf(from), 1);
+    S.order.splice(S.order.indexOf(id), 0, from);
+    render();
+  },
+};
+
+// ============================ column 1 ============================
+function miniMonth(){
+  const [y, m] = S.month.split('-').map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const lead = (first.getUTCDay() + 6) % 7;                 // Monday-first
+  const cells = [];
+  for (let i = 0; i < 42; i++){
+    const d = new Date(Date.UTC(y, m - 1, 1 - lead + i));
+    const key = d.toISOString().slice(0,10);
+    const out = d.getUTCMonth() !== m - 1;
+    cells.push('<div class="d ' + (out ? 'out ' : '') + (key === TODAY ? 'today ' : '') +
+      (key === S.date ? 'sel' : '') + '" onclick="A.pickDate(\'' + key + '\')">' + d.getUTCDate() + '</div>');
+  }
+  return '<div class="mini">' +
+    '<div class="mhead"><span>' + MON[m-1] + ' ' + y + '</span><span class="sp"></span>' +
+      '<button class="mnav" onclick="A.shiftMonth(-1)">&#8249;</button>' +
+      '<button class="mnav" onclick="A.shiftMonth(1)">&#8250;</button></div>' +
+    '<div class="mgrid">' + WD.map(d => '<div class="wd">' + d[0] + '</div>').join('') +
+      cells.join('') + '</div></div>';
+}
+function renderCol1(){
+  const habits = S.tasks.filter(t => t.repeat.mode !== 'none');
+  const repLabel = r => ({daily:'Every day', weekdays:'Weekdays', weekly:'Once a week'}[r.mode] || '');
+  const catBlock = c => '<div class="catrow"><span class="dot" style="background:' + c.color + '"></span>' +
+      esc(c.name) + '</div>' +
+    habits.filter(h => h.cat === c.id).map(h =>
+      '<div class="habit">' + esc(h.title) + '<span class="rep">' + repLabel(h.repeat) + '</span></div>').join('');
+
+  document.getElementById('col1').innerHTML =
+    '<div class="brand">Principle</div>' +
+    '<div class="axis">' + ['day','week','month','year'].map(k =>
+      '<button class="' + (S.axis === k ? 'on' : '') + '" onclick="A.axis(\'' + k + '\')">' +
+      k[0].toUpperCase() + k.slice(1) + '</button>').join('') + '</div>' +
+    '<button class="railrow">Inbox<span class="n">' + S.backlog.length + '</span></button>' +
+    '<div class="sechead">Categories</div>' +
+    CATS.map(catBlock).join('') +
+    '<div class="pod" onclick="A.toggleChat()">' +
+      '<div class="lbl">Principle of the day</div>' +
+      // only the corpus id ever lives in this file - the text itself is read at runtime
+      '<span class="pnum">life:5.3</span>' +
+      '<div class="ttl">[principle text loads from the local corpus at runtime]</div>' +
+    '</div>' +
+    miniMonth();
+}
+
+// ============================ column 2 ============================
+function blockHtml(t, pos){
+  const c = cat(t.cat);
+  const top = yOf(t.start), h = Math.max(16, yOf(t.start + t.dur) - top - 2);
+  const w = 100 / pos.n, left = pos.col * w;
+  const style = t.must
+    ? 'background:' + c.color + ';color:#fff;'
+    : 'background:' + rgba(c.color, .18) + ';color:var(--text);box-shadow:inset 0 0 0 1px ' + rgba(c.color, .34) + ';';
+  return '<div class="blk ' + (t.done ? 'done ' : '') + (S.sel === t.id && S.pane === 'detail' ? 'sel' : '') +
+    '" data-id="' + t.id + '" style="top:' + top + 'px;height:' + h + 'px;left:calc(' + left + '% + 4px);' +
+      'width:calc(' + w + '% - 8px);' + style + '">' +
+    '<div class="r1"><span class="cb ' + (t.done ? 'on' : '') + '" data-tid="' + t.id + '"></span>' +
+      '<span class="t">' + esc(t.title) + '</span></div>' +
+    (h >= 34 ? '<div class="tm">' + fmt(t.start) + ' - ' + fmt(t.start + t.dur) + '</div>' : '') +
+    '<div class="rz"></div></div>';
+}
+function gridHtml(){
+  const list = timed();
+  const pos = layout(list);
+  let out = '';
+  if (folded()){
+    out += '<div class="band" style="top:0;height:' + FOLD + 'px" onclick="A.toggleFold()">' +
+           '&#9662;&nbsp; 00:00 - 07:00</div>';
+    for (let h = DS; h <= DE; h++){
+      const y = yOf(h * 60);
+      out += '<div class="hr" style="top:' + y + 'px"></div>';
+      if (h < DE) out += '<div class="hlab" style="top:' + y + 'px">' + pad2(h) + '</div>';
+    }
+    out += '<div class="band" style="top:' + (FOLD + (DE-DS)*HOUR) + 'px;height:' + FOLD + 'px" ' +
+           'onclick="A.toggleFold()">&#9662;&nbsp; 22:00 - 24:00</div>';
+  } else {
+    for (let h = 0; h <= 24; h++){
+      out += '<div class="hr" style="top:' + (h * HOUR) + 'px"></div>';
+      if (h < 24) out += '<div class="hlab" style="top:' + (h * HOUR) + 'px">' + pad2(h) + '</div>';
+    }
+  }
+  out += '<div id="lane">' + list.map(t => blockHtml(t, pos.get(t.id))).join('') +
+         '<div class="ghost" id="ghost"></div></div>';
+  if (isToday() && (!folded() || (NOW >= DS*60 && NOW <= DE*60)))
+    out += '<div class="nowline" style="top:' + yOf(NOW) + 'px"></div>';
+  return '<div class="grid" style="height:' + gridH() + 'px">' + out + '</div>';
+}
+function alldayHtml(){
+  const list = untimed();
+  if (!list.length) return '<div class="adempty">Nothing without a time.</div>';
+  // variant B: plain text rows - checkbox + title, no chips, no colour
+  return list.map(t =>
+    '<div class="adit ' + (t.done ? 'done' : '') + '" data-id="' + t.id + '">' +
+      '<span class="cb ' + (t.done ? 'on' : '') + '" data-tid="' + t.id + '"></span>' +
+      '<span class="t">' + esc(t.title) + '</span></div>').join('');
+}
+function renderCol2(){
+  const el = document.getElementById('col2');
+  const d = new Date(S.date + 'T00:00:00Z');
+  const title = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getUTCDay()] +
+    ', ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()];
+  if (S.axis !== 'day'){
+    el.innerHTML = '<div class="dayhead"><div class="h1">' + S.axis[0].toUpperCase() + S.axis.slice(1) +
+      '</div></div><div class="emptyview">' + S.axis[0].toUpperCase() + S.axis.slice(1) +
+      ' view - coming later.</div>';
+    return;
+  }
+  const n = dayTasks().length;
+  const warn = n > 5
+    ? '<div class="warn">' + n + ' tasks today. More than a day usually holds.</div>' : '';
+  let headExtra = '';
+  // variant B: the night hours fold back up from here once they are open
+  if (!folded()) headExtra = '<button class="foldbtn" onclick="A.toggleFold()">Fold night hours</button>';
+  el.innerHTML =
+    '<div class="dayhead"><div class="left"><div class="h1">' + title + '</div>' + warn + '</div>' +
+      headExtra + '</div>' +
+    '<div class="allday"><div class="gut">all-day</div><div class="items">' + alldayHtml() + '</div></div>' +
+    '<div class="gridwrap" id="gridwrap">' + gridHtml() + '</div>' +
+    '<div class="logbar">' +
+      '<input type="text" id="loginp" placeholder="Log an outcome that was never on the list"' +
+        ' onkeydown="if(event.key===\'Enter\')A.log(this)">' +
+      '<select onchange="A.logCat(this.value)">' + CATS.map(c =>
+        '<option value="' + c.id + '"' + (S.logCat === c.id ? ' selected' : '') + '>' + esc(c.name) +
+        '</option>').join('') + '</select>' +
+      '<button class="btn" onclick="A.log(document.getElementById(\'loginp\'))">Log</button>' +
+    '</div>';
+}
+
+// ============================ column 3 ============================
+function dayPane(){
+  const ranked = orderedDots();
+  let out = '';
+  if (ranked.length){
+    out += '<div class="sec"><div class="h">Order the day</div>' +
+      '<div class="edge">Best</div>' +
+      ranked.map(o => {
+        const c = cat(o.cat);
+        return '<div class="dotrow" draggable="true" ondragstart="A.dstart(event,\'' + o.id + '\')" ' +
+          'ondragover="A.dover(event,\'' + o.id + '\')" ondragleave="A.dleave(event)" ' +
+          'ondrop="A.ddrop(event,\'' + o.id + '\')">' +
+          '<span class="dotbadge" style="background:' + c.color + '">' + c.name[0] + '</span>' +
+          '<span class="t">' + esc(o.title) + '</span></div>';
+      }).join('') +
+      '<div class="edge b">Worst</div>' +
+      '<div style="margin-top:10px"><button class="btn primary wide" onclick="A.closeDay()">Close day</button></div>' +
+      (S.toast ? '<div class="note" style="margin-top:8px;color:var(--olive)">' + esc(S.toast) + '</div>' : '') +
+      '</div>';
+  }
+  out += '<div class="sec"><div class="h">Suggested from backlog</div>' +
+    (S.backlog.length
+      ? S.backlog.map(b => '<div class="sugrow" onclick="A.pull(\'' + b.id + '\')">' +
+          '<span class="dot" style="background:' + cat(b.cat).color + '"></span>' +
+          '<span class="t">' + esc(b.title) + '</span><span class="add">+ Today</span></div>').join('')
+      : '<div class="note">Backlog is empty.</div>') +
+    '</div>';
+  if (!ranked.length)
+    out += '<div class="note">Order the day appears once something is done.</div>';
+  return out;
+}
+function detailPane(){
+  const t = task(S.sel);
+  if (!t) return dayPane();
+  const modes = [['none','None'],['daily','Every day'],['weekdays','Weekdays'],['weekly','Once a week']];
+  const starts = [];
+  for (let m = 0; m < 1440; m += SNAP) starts.push(m);
+  const durs = [15,30,45,60,90,120,180];
+  return '<button class="iconbtn" style="align-self:flex-start;margin:-2px 0 6px -4px;padding:0 6px"' +
+      ' onclick="A.back()">&#8249; Back</button>' +
+    '<div class="fld"><div class="lbl">Title</div>' +
+      '<input type="text" value="' + esc(t.title) + '" oninput="A.setTitle(\'' + t.id + '\',this.value)"></div>' +
+    '<div class="fld"><div class="lbl">Category</div>' +
+      '<select onchange="A.setCat(\'' + t.id + '\',this.value)">' + CATS.map(c =>
+        '<option value="' + c.id + '"' + (t.cat === c.id ? ' selected' : '') + '>' + esc(c.name) +
+        '</option>').join('') + '</select></div>' +
+    '<div class="fld"><div class="lbl">Priority</div><span class="seg">' +
+      '<span class="' + (t.must ? 'on' : '') + '" onclick="A.setMust(\'' + t.id + '\',true)">Must</span>' +
+      '<span class="' + (t.must ? '' : 'on') + '" onclick="A.setMust(\'' + t.id + '\',false)">Nice to</span>' +
+      '</span></div>' +
+    '<div class="fld"><div class="lbl">Time</div><div class="two">' +
+      '<select onchange="A.setStart(\'' + t.id + '\',this.value)">' +
+        '<option value=""' + (t.start === null ? ' selected' : '') + '>All-day</option>' +
+        starts.map(m => '<option value="' + m + '"' + (t.start === m ? ' selected' : '') + '>' + fmt(m) +
+          '</option>').join('') + '</select>' +
+      '<select onchange="A.setDur(\'' + t.id + '\',this.value)"' + (t.start === null ? ' disabled' : '') + '>' +
+        durs.map(d => '<option value="' + d + '"' + (t.dur === d ? ' selected' : '') + '>' +
+          (d < 60 ? d + ' min' : (d/60) + ' h') + '</option>').join('') + '</select>' +
+      '</div></div>' +
+    '<div class="fld"><div class="lbl">Repeat</div>' +
+      '<select onchange="A.setRepeat(\'' + t.id + '\',this.value)">' + modes.map(([m,l]) =>
+        '<option value="' + m + '"' + (t.repeat.mode === m ? ' selected' : '') + '>' + l +
+        '</option>').join('') + '</select>' +
+      (t.repeat.mode === 'weekdays' ? '<div class="days">' + WD.map((d,i) =>
+        '<button class="' + (t.repeat.days[i] ? 'on' : '') + '" onclick="A.toggleDay(\'' + t.id + '\',' + i +
+        ')">' + d[0] + '</button>').join('') + '</div>' : '') +
+      (t.repeat.mode === 'weekly' ? '<div class="days">' + WD.map((d,i) =>
+        '<button class="' + (t.repeat.weekday === i ? 'on' : '') + '" onclick="A.setWeekday(\'' + t.id +
+        '\',' + i + ')">' + d[0] + '</button>').join('') + '</div>' : '') +
+      '</div>' +
+    '<div class="fld"><div class="lbl">Note</div>' +
+      '<input type="text" value="' + esc(t.note || '') + '" placeholder="Anything worth remembering"' +
+      ' oninput="A.setNote(\'' + t.id + '\',this.value)"></div>';
+}
+function chatPane(){
+  return '<div class="chat">' +
+    '<div class="cc-day">Today</div>' +
+    '<div class="cc-user">I have seven things on today and I already know I cannot do them all. ' +
+      'Which one do I drop?</div>' +
+    '<div class="pcard"><span class="pnum">life:5.6</span>' +
+      '<div class="ttl">[principle text loads from the local corpus at runtime]</div>' +
+      '<div class="src">quoted from the local corpus, never stored in this file</div></div>' +
+    '<div class="cc-md"><p>Drop the one whose expected value is lowest, not the one that feels heaviest. ' +
+      'Tax paperwork costs you an hour today and nothing if it slips a week. The M4 scope decision ' +
+      'blocks two people tomorrow morning.</p>' +
+      '<p>Keep the M4 block where it is. Move the paperwork to Thursday and let the groceries go ' +
+      'to whoever is home first.</p></div>' +
+    '<div class="cc-composer">Ask Ray about today<span class="snd">&#8593;</span></div>' +
+    '</div>';
+}
+function renderCol3(){
+  const el = document.getElementById('col3');
+  const head = S.chat
+    ? '<span class="ttl">Ask Ray</span><span style="flex:1"></span>' +
+      '<button class="iconbtn" onclick="A.toggleChat()">&#10005;</button>'
+    : '<button class="iconbtn" onclick="A.shiftDay(-1)">&#8249;</button>' +
+      '<button class="iconbtn" style="padding:0 10px" onclick="A.today()">Today</button>' +
+      '<button class="iconbtn" onclick="A.shiftDay(1)">&#8250;</button>' +
+      '<span style="flex:1"></span>' +
+      '<button class="iconbtn" title="Ask Ray" onclick="A.toggleChat()">' + CHAT_ICON + '</button>';
+  const body = S.chat ? chatPane() : (S.pane === 'detail' ? detailPane() : dayPane());
+  el.innerHTML = '<div class="c3head">' + head + '</div><div class="c3body">' + body + '</div>';
+}
+
+// ============================ pointer: drag / create / resize ============================
+let drag = null, firstPaint = true;
+const laneEl = () => document.getElementById('lane');
+const laneY = e => e.clientY - laneEl().getBoundingClientRect().top;
+function ghost(a, b){
+  const g = document.getElementById('ghost'); if (!g) return;
+  g.style.display = 'block';
+  g.style.top = yOf(a) + 'px';
+  g.style.height = Math.max(10, yOf(b) - yOf(a) - 2) + 'px';
+  g.style.left = '4px'; g.style.right = '4px';
+}
+const hideGhost = () => { const g = document.getElementById('ghost'); if (g) g.style.display = 'none'; };
+
+document.addEventListener('mousedown', e => {
+  const cb = e.target.closest('.cb[data-tid]');
+  if (cb){ e.preventDefault(); A.toggleDone(cb.dataset.tid); return; }
+  const ad = e.target.closest('.adit');
+  if (ad){ e.preventDefault(); drag = {mode:'allday', id:ad.dataset.id, y0:e.clientY, x0:e.clientX, moved:false}; return; }
+  const blk = e.target.closest('.blk');
+  if (blk){
+    e.preventDefault();
+    const t = task(blk.dataset.id);
+    drag = {mode: e.target.classList.contains('rz') ? 'resize' : 'move', id:t.id, el:blk,
+            y0:e.clientY, x0:e.clientX, start0:t.start, dur0:t.dur, moved:false};
+    return;
+  }
+  if (e.target.closest('#lane')){
+    e.preventDefault();
+    const m = clampStart(snapM(mOf(laneY(e))), SNAP);
+    drag = {mode:'create', m0:m, m1:m, y0:e.clientY, x0:e.clientX, moved:false};
+    ghost(m, m + SNAP);
+  }
+});
+document.addEventListener('mousemove', e => {
+  if (!drag) return;
+  const dy = e.clientY - drag.y0;
+  if (Math.abs(dy) > 3 || Math.abs(e.clientX - drag.x0) > 3) drag.moved = true;
+  if (drag.mode === 'move'){
+    const s = clampStart(snapM(mOf(yOf(drag.start0) + dy)), drag.dur0);
+    drag.cur = s;
+    drag.el.style.top = yOf(s) + 'px';
+    drag.el.style.height = Math.max(16, yOf(s + drag.dur0) - yOf(s) - 2) + 'px';
+  } else if (drag.mode === 'resize'){
+    const end = Math.max(drag.start0 + SNAP,
+      Math.min(folded() ? DE*60 : 1440, snapM(mOf(yOf(drag.start0 + drag.dur0) + dy))));
+    drag.curEnd = end;
+    drag.el.style.height = Math.max(16, yOf(end) - yOf(drag.start0) - 2) + 'px';
+  } else if (drag.mode === 'create'){
+    drag.m1 = clampStart(snapM(mOf(laneY(e))), SNAP);
+    const a = Math.min(drag.m0, drag.m1), b = Math.max(drag.m0, drag.m1);
+    ghost(a, Math.max(b, a + SNAP));
+  } else if (drag.mode === 'allday'){
+    if (!drag.moved) return;
+    const r = laneEl().getBoundingClientRect();
+    if (e.clientY > r.top && e.clientY < r.bottom && e.clientX > r.left){
+      drag.drop = clampStart(snapM(e.clientY - r.top < 0 ? 0 : mOf(e.clientY - r.top)), 60);
+      ghost(drag.drop, drag.drop + 60);
+    } else { drag.drop = null; hideGhost(); }
+  }
+});
+document.addEventListener('mouseup', () => {
+  if (!drag) return;
+  const d = drag; drag = null; hideGhost();
+  if (d.mode === 'move'){
+    if (!d.moved) A.open(d.id);
+    else { task(d.id).start = d.cur; render(); }
+  } else if (d.mode === 'resize'){
+    if (d.moved) task(d.id).dur = d.curEnd - task(d.id).start;
+    render();
+  } else if (d.mode === 'create'){
+    const a = Math.min(d.m0, d.m1), b = Math.max(d.m0, d.m1);
+    if (d.moved && b - a >= SNAP) A.create(a, b - a); else render();
+  } else if (d.mode === 'allday'){
+    if (!d.moved) A.open(d.id);
+    else if (d.drop != null){ const t = task(d.id); t.start = d.drop; t.dur = 60; render(); }
+    else render();
+  }
+});
+
+// ============================ render ============================
+function render(){
+  const w = document.getElementById('gridwrap');
+  const keep = w ? w.scrollTop : null;
+  renderCol1(); renderCol2(); renderCol3();
+  const nw = document.getElementById('gridwrap');
+  if (nw){
+    // first paint lands on the morning, like Apple Calendar does;
+    // when the night hours are folded the whole day already fits, so start at the top
+    const start = folded() ? 0 : Math.max(0, yOf(6 * 60) - 8);
+    nw.scrollTop = firstPaint ? start : (keep === null ? 0 : keep);
+  }
+  firstPaint = false;
+}
+render();
+</script>
+<!-- shared review-comment layer; every prototype in this folder adds this one line -->
+<script src="./proto-comments.js"></script>
+</body>
+</html>

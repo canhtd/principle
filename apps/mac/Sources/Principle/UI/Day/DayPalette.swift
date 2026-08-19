@@ -1,0 +1,94 @@
+import AppKit
+import DesignSystem
+import PrincipleCore
+import SwiftUI
+
+/// The only colours this screen spells itself.
+///
+/// Everything structural — panels, rows, text, borders — comes from
+/// `DesignSystem`. What cannot come from there is the category palette: Eden has
+/// no notion of "the user's own kinds of activity", and the whole point of a
+/// category colour is that Danny chose it. The keys are the store's
+/// (``JournalPalette``); the values are here, because a hex in `categories.jsonl`
+/// would freeze today's theme into the repo for good.
+enum DayPalette {
+    /// The six a category can wear, in the order they are handed out. Muted
+    /// enough to sit on Eden's warm canvas without shouting at the type.
+    static let colors: [String: Color] = [
+        "olive": EdenColor.olive,
+        "blueberry": EdenColor.hex(0x4F6B7A),
+        "clay": EdenColor.hex(0xA35D3D),
+        "plum": EdenColor.hex(0x6A4C7A),
+        "sand": EdenColor.hex(0x7A6A3C),
+        "slate": EdenColor.hex(0x2F4F66),
+    ]
+
+    /// A category's colour, or the neutral an untagged task wears — the state a
+    /// task is left in when its category is deleted.
+    static func color(_ category: JournalCategory?) -> Color {
+        guard let category else { return EdenColor.n500 }
+        return colors[category.colorKey] ?? colors[JournalPalette.fallbackColorKey] ?? EdenColor.n500
+    }
+
+    /// A colour swatch for the `Change color` menu, drawn rather than borrowed
+    /// from SF Symbols.
+    ///
+    /// AppKit renders a menu item's image as a **template** — flat black,
+    /// whatever colour SwiftUI was asked for — so `Image(systemName:)` in a menu
+    /// gave six identical black dots and a colour menu you could not read a
+    /// colour off. An `NSImage` with `isTemplate = false` keeps its own paint.
+    ///
+    /// The current colour wears the prototype's ring rather than a checkmark:
+    /// the swatch is the content here, and a tick beside it would say the same
+    /// thing twice.
+    static func swatch(_ color: Color, isCurrent: Bool) -> NSImage {
+        let side: CGFloat = isCurrent ? 14 : 12
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            let inset = isCurrent ? 3.0 : 1.0
+            NSColor(color).setFill()
+            NSBezierPath(ovalIn: rect.insetBy(dx: inset, dy: inset)).fill()
+            if isCurrent {
+                NSColor(color).setStroke()
+                let ring = NSBezierPath(ovalIn: rect.insetBy(dx: 0.75, dy: 0.75))
+                ring.lineWidth = 1.5
+                ring.stroke()
+            }
+            return true
+        }
+        image.isTemplate = false
+        return image
+    }
+
+    /// The current-time line. Not an Eden token — Eden has no clock — and
+    /// deliberately the one warm red on the screen, so it is never mistaken for
+    /// a category.
+    static let now = EdenColor.hex(0xC8402A)
+}
+
+/// How a task is filled on the grid: Must reads as a solid object, Nice-to as a
+/// tint of the same colour (spec #5 rev 2). One decision, in one place, because
+/// blocks and all-day chips have to agree — a chip that changes shade when it is
+/// dragged onto the grid would look like a different task.
+struct TaskFill {
+    let background: Color
+    let foreground: Color
+    let border: Color
+
+    init(category: JournalCategory?, priority: Priority) {
+        let color = DayPalette.color(category)
+        switch priority {
+        case .must:
+            background = color
+            foreground = .white
+            border = .clear
+        case .nice:
+            background = color.opacity(0.18)
+            foreground = EdenColor.textPrimary
+            border = color.opacity(0.34)
+        }
+    }
+
+    init(_ row: PlannedTask) {
+        self.init(category: row.category, priority: row.priority)
+    }
+}
