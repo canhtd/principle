@@ -11,6 +11,9 @@ struct DayHeader: View {
     let isNarrow: Bool
     let showsSidebarToggle: Bool
     let showsDetailToggle: Bool
+    /// Native full screen has no traffic lights on the window, so this header
+    /// stops reserving the room for them.
+    var isFullScreen = false
 
     /// Close, minimise and zoom, plus the gap after them.
     static let trafficLightWidth: CGFloat = 72
@@ -31,8 +34,10 @@ struct DayHeader: View {
             // The window has no title bar, so the traffic lights sit on whatever
             // is at the top left. With column 1 docked that is its own empty
             // corner; once it becomes a drawer it is this header, and the toggle
-            // has to clear them rather than hide under them.
-            .padding(.leading, showsSidebarToggle ? Self.trafficLightWidth : 0)
+            // has to clear them rather than hide under them. In native full
+            // screen the window has no lights at all, and reserving the room
+            // would leave the toggle stranded in the middle of nothing.
+            .padding(.leading, showsSidebarToggle && !isFullScreen ? Self.trafficLightWidth : 0)
 
             axis
         }

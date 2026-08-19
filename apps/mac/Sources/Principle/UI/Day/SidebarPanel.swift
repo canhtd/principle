@@ -8,10 +8,21 @@ import SwiftUI
 ///
 /// No app name and no title bar in it: the panel is content from its first
 /// pixel, which is what makes the window read as a document rather than a tool.
+/// The traffic lights sit *on* that first pixel — `WindowChrome` puts them 12 pt
+/// inside the panel's own top-left corner — so the panel opens with enough room
+/// above its first control for them to land on its surface rather than on a
+/// strip of canvas above it.
 struct SidebarPanel: View {
     @Bindable var journal: JournalModel
     @Bindable var ui: DayShellState
     let favorites: FavoritesModel
+    /// Native full screen has no lights to clear, so the panel keeps only its
+    /// own top pad and gives the rest back.
+    var isFullScreen = false
+
+    private var topInset: CGFloat {
+        isFullScreen ? EdenMetric.sidebarTopInsetFullScreen : EdenMetric.sidebarTopInset
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -26,7 +37,7 @@ struct SidebarPanel: View {
             }
             settingsRow
         }
-        .padding(.top, EdenMetric.libraryPaddingTop - 4)
+        .padding(.top, topInset)
         .padding(.bottom, EdenMetric.sidebarPadding)
     }
 

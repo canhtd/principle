@@ -11,6 +11,9 @@ struct DayColumn: View {
     let isHeaderNarrow: Bool
     let showsSidebarToggle: Bool
     let showsDetailToggle: Bool
+    /// Only the header cares, and only to stop reserving room for traffic
+    /// lights that native full screen does not draw.
+    var isFullScreen = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,7 +22,8 @@ struct DayColumn: View {
                 ui: ui,
                 isNarrow: isHeaderNarrow,
                 showsSidebarToggle: showsSidebarToggle,
-                showsDetailToggle: showsDetailToggle
+                showsDetailToggle: showsDetailToggle,
+                isFullScreen: isFullScreen
             )
             if ui.axis == .day {
                 AllDayStrip(journal: journal, ui: ui)

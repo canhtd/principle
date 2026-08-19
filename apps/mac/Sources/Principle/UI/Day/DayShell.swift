@@ -16,6 +16,9 @@ struct DayShell: View {
     @State var ui = DayShellState()
     /// Ticks the current-time line along, and rolls the screen over at midnight.
     @State var now = Date()
+    /// Native full screen has no traffic lights, so the panels that were
+    /// holding room for them give it back. `WindowChrome` is what knows.
+    @State private var isFullScreen = false
 
     init(repoURL: URL, session: SessionViewModel, favorites: FavoritesModel) {
         _journal = State(initialValue: JournalModel(repoURL: repoURL))
@@ -43,7 +46,8 @@ struct DayShell: View {
                         now: now,
                         isHeaderNarrow: width < DayMetric.narrowHeader,
                         showsSidebarToggle: !docksSidebar,
-                        showsDetailToggle: !docksDetail
+                        showsDetailToggle: !docksDetail,
+                        isFullScreen: isFullScreen
                     )
                     if docksDetail {
                         detailColumn.frame(width: DayMetric.detailWidth)
@@ -68,6 +72,8 @@ struct DayShell: View {
                 journal.showToday()
             }
         }
+        // The lights belong inside column 1's panel, not on its corner.
+        .edenWindowChrome(isFullScreen: $isFullScreen)
         .onExitCommand { ui.dismissTopmost() }
         // Delete on a selected block, from wherever the key lands in the window
         // — the grid has no first responder of its own to hang it off.
@@ -98,7 +104,8 @@ struct DayShell: View {
     @ViewBuilder
     private var sidebar: some View {
         EdenPanel {
-            SidebarPanel(journal: journal, ui: ui, favorites: favorites)
+            SidebarPanel(journal: journal, ui: ui, favorites: favorites,
+                         isFullScreen: isFullScreen)
         }
     }
 
