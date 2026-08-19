@@ -12,24 +12,30 @@ struct TaskDetailPane: View {
 
     @State private var title = ""
     @State private var note = ""
-    @FocusState private var titleFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             back
             if let task = journal.task(id: taskID) {
-                field("Title") {
-                    textField("Task title", text: $title) { journal.setTitle(title, taskID: taskID) }
-                        .focused($titleFocused)
+                TaskField(label: "Title") {
+                    TaskTextField(prompt: "Task title", text: $title) {
+                        journal.setTitle(title, taskID: taskID)
+                    }
                 }
-                field("Category") { categoryPicker(task) }
-                field("Priority") { priorityToggle(task) }
-                field("Time") { TimeFields(schedule: task.schedule) { journal.setSchedule($0, taskID: taskID) } }
-                field("Repeat") {
+                TaskField(label: "Category") {
+                    TaskCategoryPicker(categories: journal.categories, categoryID: categoryBinding(task))
+                }
+                TaskField(label: "Priority") { priorityToggle(task) }
+                TaskField(label: "Time") {
+                    TimeFields(schedule: task.schedule) { journal.setSchedule($0, taskID: taskID) }
+                }
+                TaskField(label: "Repeat") {
                     RepeatPicker(rule: task.repeatRule) { journal.setRepeatRule($0, taskID: taskID) }
                 }
-                field("Note") {
-                    textField("Anything worth remembering", text: $note) { journal.setNote(note, taskID: taskID) }
+                TaskField(label: "Note") {
+                    TaskTextField(prompt: "Anything worth remembering", text: $note) {
+                        journal.setNote(note, taskID: taskID)
+                    }
                 }
                 delete
             }
@@ -49,12 +55,6 @@ struct TaskDetailPane: View {
         let task = journal.task(id: taskID)
         title = task?.title ?? ""
         note = task?.note ?? ""
-        // A task the app just made opens ready to be named. Anything else opens
-        // with no caret at all: the pane is being read.
-        if ui.titleFocusTaskID == taskID {
-            ui.titleFocusTaskID = nil
-            titleFocused = true
-        }
     }
 
     private var back: some View {
@@ -79,40 +79,6 @@ struct TaskDetailPane: View {
         .buttonStyle(EdenGhostButtonStyle())
         .padding(.leading, -14)
         .padding(.top, EdenMetric.sidebarPadding)
-    }
-
-    private func field(_ label: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(label.uppercased())
-                .font(EdenFont.ui(11))
-                .tracking(11 * 0.05)
-                .foregroundStyle(EdenColor.hex(0x77746F))
-            content()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 8)
-    }
-
-    private func textField(_ prompt: String, text: Binding<String>, commit: @escaping () -> Void) -> some View {
-        TextField(prompt, text: text)
-            .textFieldStyle(.plain)
-            .font(EdenFont.ui(13))
-            .onSubmit(commit)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 6)
-            .background(EdenColor.hex(0xF7F7F7), in: .rect(cornerRadius: EdenRadius.sm, style: .continuous))
-            .edenBorder(EdenColor.black(10), radius: EdenRadius.sm)
-    }
-
-    private func categoryPicker(_ task: JournalTask) -> some View {
-        Picker("Category", selection: categoryBinding(task)) {
-            Text("None").tag(UUID?.none)
-            ForEach(journal.categories) { category in
-                Text(category.name).tag(UUID?.some(category.id))
-            }
-        }
-        .labelsHidden()
-        .font(EdenFont.ui(13))
     }
 
     private func categoryBinding(_ task: JournalTask) -> Binding<UUID?> {

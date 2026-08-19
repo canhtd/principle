@@ -16,7 +16,9 @@ struct DetailPanel: View {
             dateNavigation
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    if let taskID = ui.selectedTaskID, journal.task(id: taskID) != nil {
+                    if ui.draft != nil {
+                        NewTaskPane(journal: journal, ui: ui)
+                    } else if let taskID = ui.selectedTaskID, journal.task(id: taskID) != nil {
                         TaskDetailPane(journal: journal, ui: ui, taskID: taskID)
                     } else {
                         SuggestionsPane(journal: journal, ui: ui)
@@ -55,11 +57,11 @@ struct DetailPanel: View {
         .overlay(alignment: .bottom) { EdenColor.black(6).frame(height: 1) }
     }
 
-    /// The same path the grid's drag takes, minus the time: the task lands in
-    /// the all-day strip and opens here with its title under the caret.
+    /// Apple Calendar's new event, not a row appearing in a list: a draft block
+    /// shows up on the grid at the hour in the middle of it, an hour long, and
+    /// this pane opens on its name. Nothing is in the journal yet (spec #22).
     private func newTask() {
-        guard let id = journal.createTask() else { return }
-        ui.select(taskID: id, focusingTitle: true)
+        ui.startDraft(categoryID: journal.defaultCategoryID)
     }
 }
 

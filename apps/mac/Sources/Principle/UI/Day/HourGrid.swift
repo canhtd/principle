@@ -14,11 +14,17 @@ struct HourGrid: View {
 
     /// The drag in progress, if any. Held here rather than per block, because a
     /// drag that starts on a block and ends on empty canvas is still one drag.
-    @State private var draft: GridDraft?
+    @State var draft: GridDraft?
     /// The grid opens on the morning once, not every time it re-appears.
     @State private var hasOpenedOnMorning = false
 
     var body: some View {
+        GeometryReader { viewport in
+            gridScroll(viewportHeight: viewport.size.height)
+        }
+    }
+
+    private func gridScroll(viewportHeight: CGFloat) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 // The hours are a real stack rather than 25 offset overlays: an
@@ -39,6 +45,13 @@ struct HourGrid: View {
                     }
                 }
                 .padding(.top, DayMetric.topInset)
+                .background(
+                    // Where the grid is scrolled to, so that a new task can
+                    // land on the hour Danny is actually looking at (spec #22).
+                    ScrollOffsetProbe { offset in
+                        ui.noteGridCentre(offsetY: offset, viewportHeight: viewportHeight)
+                    }
+                )
             }
             .scrollIndicators(.automatic)
             .onAppear { openOnMorning(proxy) }
@@ -112,6 +125,18 @@ struct HourGrid: View {
                     .frame(width: max(0, width - 8))
                     .offset(x: 4, y: DayMetric.y(ofMinute: ghost.startMinute))
             }
+
+            // The task being written, if it has a time (spec #22). Nothing about
+            // it is on disk; it is drawn from the shell's state alone.
+            if let newTask = ui.draft, let schedule = newTask.schedule {
+                DraftBlock(
+                    title: newTask.blockTitle,
+                    color: DayPalette.color(journal.category(id: newTask.categoryID)),
+                    schedule: schedule,
+                    width: max(0, width - 8)
+                )
+                .offset(x: 4, y: DayMetric.y(ofMinute: schedule.startMinute))
+            }
         }
         .frame(width: width, height: DayMetric.dayHeight, alignment: .topLeading)
         // An all-day chip dragged down here gets the time it was dropped at.
@@ -132,55 +157,5 @@ struct HourGrid: View {
         .padding(.leading, DayMetric.gutter - 10)
         .offset(y: DayMetric.y(ofMinute: minute))
         .allowsHitTesting(false)
-    }
-
-    // MARK: - Dragging
-
-    /// Dragging on empty canvas draws a new block out of it (decision 11: every
-    /// edge lands on a quarter hour).
-    private var createGesture: some Gesture {
-        DragGesture(minimumDistance: 4)
-            .onChanged { value in
-                draft = .creating(
-                    from: TaskSchedule.snap(DayMetric.minute(atY: value.startLocation.y)),
-                    to: TaskSchedule.snap(DayMetric.minute(atY: value.location.y))
-                )
-            }
-            .onEnded { _ in
-                if let schedule = draft?.ghost, let id = journal.createTask(at: schedule) {
-                    // Straight into column 3: a block called "New task" is only
-                    // useful if it can be named without hunting for it.
-                    ui.select(taskID: id)
-                }
-                draft = nil
-            }
-    }
-
-    private func move(_ row: PlannedTask, by offset: CGFloat) {
-        guard let schedule = row.schedule else { return }
-        let moved = schedule.starting(at: TaskSchedule.snap(schedule.startMinute + DayMetric.minute(atY: offset)))
-        draft = .adjusting(taskID: row.taskID, schedule: moved)
-    }
-
-    private func resize(_ row: PlannedTask, by offset: CGFloat) {
-        guard let schedule = row.schedule else { return }
-        let resized = schedule.ending(at: TaskSchedule.snap(schedule.endMinute + DayMetric.minute(atY: offset)))
-        draft = .adjusting(taskID: row.taskID, schedule: resized)
-    }
-
-    /// One write at the end of the drag, not one per frame: every intermediate
-    /// position would otherwise be a line in `tasks.jsonl`.
-    private func commit() {
-        if case .adjusting(let taskID, let schedule) = draft {
-            journal.setSchedule(schedule, taskID: taskID)
-        }
-        draft = nil
-    }
-
-    /// What a block should be drawn at right now — the drag in progress if it is
-    /// the one being dragged, otherwise what is on disk.
-    private func schedule(for row: PlannedTask) -> TaskSchedule? {
-        if case .adjusting(let taskID, let schedule) = draft, taskID == row.taskID { return schedule }
-        return row.schedule
     }
 }

@@ -26,6 +26,42 @@ extension JournalModel {
     /// Something that happened but was never on the list. It lands on today as
     /// a finished, untimed row — which is what makes it a dot
     /// (spec #13) without inventing a second kind of record.
+    /// A task written in full before it existed — column 3's draft (spec #22)
+    /// committing itself.
+    ///
+    /// One append, not four: the draft already knows its category, its
+    /// priority, its rule and its time, and a task that arrives in the file as
+    /// four successive edits reads like someone changed their mind three times.
+    /// A blank title is not a task and writes nothing at all.
+    @discardableResult
+    public func createTask(
+        title: String,
+        categoryID: UUID?,
+        priority: Priority,
+        repeatRule: RepeatRule = .none,
+        note: String = "",
+        schedule: TaskSchedule?
+    ) -> UUID? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        var created: UUID?
+        write { store in
+            let task = try store.addTask(
+                title: trimmed,
+                categoryID: categoryID,
+                priority: priority,
+                repeatRule: repeatRule,
+                note: note,
+                schedule: schedule
+            )
+            // A repeating task arrives in its days by its rule; planning one on
+            // a day is refused by the store, and rightly.
+            if !repeatRule.isRepeating { try store.plan(taskID: task.id, on: self.day) }
+            created = task.id
+        }
+        return created
+    }
+
     @discardableResult
     public func logOutcome(title: String, categoryID: UUID?) -> UUID? {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -101,7 +137,8 @@ extension JournalModel {
     }
 
     /// The category a new row starts with: the first one, so that a block
-    /// dragged onto the grid is already colored rather than grey. `nil` only on
-    /// a journal that has no categories at all.
-    var defaultCategoryID: UUID? { categories.first?.id }
+    /// dragged onto the grid — or a draft opened from column 3's "+" — is
+    /// already coloured rather than grey. `nil` only on a journal that has no
+    /// categories at all.
+    public var defaultCategoryID: UUID? { categories.first?.id }
 }

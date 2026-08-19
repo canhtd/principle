@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import PrincipleCore
 import SwiftUI
 
 /// Which axis column 2 is showing. Only Day is built (ticket #7); the other two
@@ -38,14 +39,17 @@ final class DayShellState {
     var categoriesExpanded = true
     /// The task open in column 3, or `nil` for the day pane.
     var selectedTaskID: UUID?
-    /// The task whose title should take the caret the moment its pane opens.
-    /// Only ever a task the app has just made — one that was clicked is being
-    /// read, not named.
-    var titleFocusTaskID: UUID?
     /// The category being renamed in place, the way Finder renames a file.
     var renamingCategoryID: UUID?
     /// True while the "New category" field the section header's "+" opens is up.
     var isAddingCategory = false
+    /// The task being written, if any — see ``TaskDraft``. Nothing about it is
+    /// on disk, and column 3 shows it in place of the day's own pane.
+    var draft: TaskDraft?
+    /// Which hour is at the vertical middle of the grid as it is scrolled right
+    /// now. A new task lands there rather than at some hour nobody is looking
+    /// at; the grid is the only thing that can know it, so it reports it here.
+    var visibleCentreHour = Int(DayMetric.firstVisibleHour)
     /// The principle whose excerpt is open in a popover beside it.
     var openPrincipleID: String?
 
@@ -73,6 +77,29 @@ final class DayShellState {
         return max(240, sane * 0.6)
     }
 
+    /// Opens a draft at the hour in the middle of the grid, an hour long — the
+    /// two defaults Apple Calendar uses for a new event made from the toolbar
+    /// rather than by dragging.
+    func startDraft(categoryID: UUID?) {
+        selectedTaskID = nil
+        if isChatDocked { setChatMode(.floating) }
+        draft = TaskDraft(
+            categoryID: categoryID,
+            schedule: TaskSchedule(startMinute: visibleCentreHour * 60)
+        )
+    }
+
+    /// Where the grid is: called as it scrolls, and only ever with the hour, so
+    /// a drag of the scroller writes state a handful of times rather than once
+    /// a frame.
+    func noteGridCentre(offsetY: CGFloat, viewportHeight: CGFloat) {
+        guard viewportHeight > 0 else { return }
+        let centre = offsetY + viewportHeight / 2 - DayMetric.topInset
+        let hour = Int((Double(DayMetric.minute(atY: centre)) / 60).rounded())
+        let clamped = min(23, max(0, hour))
+        if clamped != visibleCentreHour { visibleCentreHour = clamped }
+    }
+
     var isChatOpen: Bool { chatMode != nil }
     var isChatDocked: Bool { chatMode == .docked }
 
@@ -91,10 +118,11 @@ final class DayShellState {
 
     /// Opening a task's detail needs column 3, so a chat docked there floats
     /// itself out of the way rather than blocking the pane (decision 8).
-    func select(taskID: UUID?, focusingTitle: Bool = false) {
+    func select(taskID: UUID?) {
         if taskID != nil, isChatDocked { setChatMode(.floating) }
         selectedTaskID = taskID
-        titleFocusTaskID = focusingTitle ? taskID : nil
+        // A draft and a selection are two answers to the same question.
+        if taskID != nil { draft = nil }
     }
 
     /// Escape, in the order a macOS window closes things: the innermost first.
@@ -104,6 +132,9 @@ final class DayShellState {
     func dismissTopmost() -> Bool {
         if renamingCategoryID != nil { renamingCategoryID = nil; return true }
         if isAddingCategory { isAddingCategory = false; return true }
+        // Escape on a draft throws it away — that is the whole bargain of a
+        // draft, and it must beat the drawers and the chat to the key.
+        if draft != nil { draft = nil; return true }
         if openPrincipleID != nil { openPrincipleID = nil; return true }
         if isSidebarDrawerOpen || isDetailDrawerOpen {
             isSidebarDrawerOpen = false
