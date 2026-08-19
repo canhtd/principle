@@ -1,4 +1,5 @@
 import AppKit
+import DesignSystem
 import PrincipleCore
 import SwiftUI
 
@@ -12,6 +13,11 @@ struct SettingsView: View {
     @State private var availability: EngineAvailability?
     @State private var isChecking = false
     @State private var isEditingProfile = false
+
+    /// Vietnamese needs the leading more than the size: its marks sit above
+    /// *and* below the line. `DesignSystem` names faces, not line boxes, so the
+    /// ratio stays here.
+    private static let captionLeading = EdenType.meta.size * 0.4
 
     var body: some View {
         Form {
@@ -90,7 +96,7 @@ struct SettingsView: View {
             Image(systemName: statusIcon)
                 .foregroundStyle(statusTint)
             Text(statusTitle)
-                .font(Typography.body)
+                .edenText(EdenType.row)
             Spacer()
             Button(isChecking ? "Checking…" : "Check Again") {
                 Task { await check() }
@@ -99,8 +105,8 @@ struct SettingsView: View {
         }
         if let guidance = statusGuidance {
             Text(guidance)
-                .font(Typography.caption)
-                .lineSpacing(Typography.captionLineSpacing)
+                .edenText(EdenType.meta)
+                .lineSpacing(Self.captionLeading)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
@@ -142,7 +148,7 @@ struct SettingsView: View {
         HStack(spacing: 8) {
             TextField("", text: text, prompt: Text(prompt))
                 .textFieldStyle(.roundedBorder)
-                .font(Typography.body)
+                .edenText(EdenType.row)
                 // A Form otherwise reserves a label column for the empty label,
                 // which makes the two path rows come out different widths.
                 .labelsHidden()
@@ -153,8 +159,8 @@ struct SettingsView: View {
 
     private func caption(_ text: String) -> some View {
         Text(text)
-            .font(Typography.caption)
-            .lineSpacing(Typography.captionLineSpacing)
+            .edenText(EdenType.meta)
+            .lineSpacing(Self.captionLeading)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -163,8 +169,8 @@ struct SettingsView: View {
     private func warning(_ text: String?) -> some View {
         if let text {
             Label(text, systemImage: "exclamationmark.triangle.fill")
-                .font(Typography.caption)
-                .lineSpacing(Typography.captionLineSpacing)
+                .edenText(EdenType.meta)
+                .lineSpacing(Self.captionLeading)
                 .foregroundStyle(.orange)
                 .fixedSize(horizontal: false, vertical: true)
         }

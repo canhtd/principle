@@ -11,36 +11,58 @@ import SwiftUI
 /// identity.
 struct MarkdownText: View {
     let text: String
-    /// How the prose is set. Defaults to the reading window's own type; the Ask
-    /// Ray pane is narrower and warmer, and passes its own.
-    var style: ProseStyle = .reading
+    /// How the prose is set. One face today — the Ask Ray pane is the only
+    /// place an answer is read — but it stays a parameter, because a second
+    /// place to read one is a screen, not a rewrite of this view.
+    var style: ProseStyle = .askRay
 
-    /// The type a body of prose is set in. Two of them, because the same answer
-    /// is read in two places: a wide window and a 380 pt pane.
+    /// The type a body of prose is set in.
+    ///
+    /// Everything but the colour is a ratio of ``size``: the block rhythm of a
+    /// paragraph, a list and a heading only reads right relative to the type it
+    /// separates, so one number moves the whole thing.
     struct ProseStyle {
-        let font: Font
-        let lineSpacing: CGFloat
+        /// The size body copy is set at.
+        let size: CGFloat
+        /// The CSS line box, as a multiple of ``size``.
+        let lineHeight: CGFloat
         let color: Color?
-        /// Between two paragraphs. It has to beat `lineSpacing` by enough to
+        /// Between two paragraphs. It has to beat ``lineSpacing`` by enough to
         /// read as a break rather than as one more line.
         let blockSpacing: CGFloat
-
-        /// The consultation window: 15 pt on a 1.7 line, for long Vietnamese.
-        static let reading = ProseStyle(
-            font: Typography.body,
-            lineSpacing: Typography.bodyLineSpacing,
-            color: nil,
-            blockSpacing: Spacing.block
-        )
 
         /// Eden's side-peek chat: 14 pt on a 1.65 line, in the pane's warm ink,
         /// with `.cc-md p`'s 0.9 rem between paragraphs.
         static let askRay = ProseStyle(
-            font: EdenFont.ui(RayChat.bodySize),
-            lineSpacing: RayChat.bodySize * (RayChat.bodyLineHeight - 1),
+            size: RayChat.bodySize,
+            lineHeight: RayChat.bodyLineHeight,
             color: RayChat.ink,
             blockSpacing: 14.4
         )
+
+        var font: Font { EdenFont.ui(size) }
+        /// SwiftUI takes extra spacing rather than a multiplier — and the
+        /// leading matters more than the size for Vietnamese, whose marks sit
+        /// above *and* below the line.
+        var lineSpacing: CGFloat { size * (lineHeight - 1) }
+
+        /// A `###` inside an answer: one step above the body it interrupts.
+        /// The prototype sets no heading for the chat, so it is derived here
+        /// rather than measured.
+        var headingFont: Font { EdenFont.ui(size + 2, .semibold) }
+        var headingLineSpacing: CGFloat { (size + 2) * 0.35 }
+        /// Extra air above a heading that follows other content.
+        var headingTop: CGFloat { size * 0.4 }
+        /// Between two lines of the same list — tighter than a block, so the
+        /// list reads as one thing rather than as loose paragraphs.
+        var listItem: CGFloat { size * 0.3 }
+        /// Gutter a list item is pushed in by.
+        var listIndent: CGFloat { size * 0.5 }
+        /// Between a bullet and its text.
+        var listMarkerGap: CGFloat { size * 0.45 }
+        /// Inline code — `4.3e`, a file path, a command. `DesignSystem` names
+        /// no monospaced face, so this is the system one at the prose's size.
+        var mono: Font { .system(size: size - 1, design: .monospaced) }
     }
 
     var body: some View {
@@ -61,19 +83,20 @@ struct MarkdownText: View {
             paragraph(block.text)
         case .heading:
             Text(styled(block.text))
-                .font(Typography.title)
-                .lineSpacing(Typography.titleLineSpacing)
+                .font(style.headingFont)
+                .lineSpacing(style.headingLineSpacing)
+                .foregroundStyle(style.color ?? Color.primary)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         case .listItem(let marker):
-            HStack(alignment: .firstTextBaseline, spacing: Spacing.listMarkerGap) {
+            HStack(alignment: .firstTextBaseline, spacing: style.listMarkerGap) {
                 Text(marker)
                     .font(style.font)
                     .lineSpacing(style.lineSpacing)
                     .foregroundStyle(.secondary)
                 paragraph(block.text)
             }
-            .padding(.leading, Spacing.listIndent)
+            .padding(.leading, style.listIndent)
         }
     }
 
@@ -92,9 +115,9 @@ struct MarkdownText: View {
     private func topPadding(for block: MessageBlock, after previous: MessageBlock?) -> CGFloat {
         guard let previous else { return 0 }
         if case .listItem = block.kind, case .listItem = previous.kind, !block.afterBlankLine {
-            return Spacing.listItem
+            return style.listItem
         }
-        if case .heading = block.kind { return style.blockSpacing + Spacing.headingTop }
+        if case .heading = block.kind { return style.blockSpacing + style.headingTop }
         return style.blockSpacing
     }
 
@@ -107,7 +130,7 @@ struct MarkdownText: View {
             .filter { $0.inlinePresentationIntent?.contains(.code) == true }
             .map(\.range)
         for range in codeRanges {
-            attributed[range].font = Typography.mono
+            attributed[range].font = style.mono
         }
         return attributed
     }
@@ -128,5 +151,5 @@ struct MarkdownText: View {
             """
     )
     .padding()
-    .frame(width: 520)
+    .frame(width: 380)
 }

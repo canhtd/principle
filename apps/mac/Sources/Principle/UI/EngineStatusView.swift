@@ -1,10 +1,12 @@
+import DesignSystem
 import PrincipleCore
 import SwiftUI
 
 /// Shown instead of the chat when the engine cannot run a turn (AE5).
 ///
 /// It says what is wrong and what to type, because the fix always happens in a
-/// terminal — the app cannot log anybody in.
+/// terminal — the app cannot log anybody in. It is drawn inside the Ask Ray
+/// pane, so it is set in the pane's own type and ink, not the window's.
 struct EngineStatusView: View {
     let model: SessionViewModel
     @State private var isChecking = false
@@ -13,17 +15,21 @@ struct EngineStatusView: View {
         VStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 42))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RayChat.muted)
 
             Text(title)
-                .font(Typography.title)
-                .lineSpacing(Typography.titleLineSpacing)
+                .edenText(EdenType.sectionTitle)
+                .foregroundStyle(RayChat.ink)
+                .multilineTextAlignment(.center)
 
             Text(model.engineGuidance ?? "")
-                .vietnameseBody()
-                .foregroundStyle(.secondary)
+                .font(EdenFont.ui(RayChat.bodySize))
+                // The leading, not the size, is what Vietnamese needs: its marks
+                // sit above *and* below the line.
+                .lineSpacing(RayChat.bodySize * (RayChat.bodyLineHeight - 1))
+                .foregroundStyle(RayChat.inkSoft)
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: 420)
+                .frame(maxWidth: EdenMetric.emptyStateMaxWidth)
                 .textSelection(.enabled)
 
             Button(isChecking ? "Checking…" : "Check Again") {
