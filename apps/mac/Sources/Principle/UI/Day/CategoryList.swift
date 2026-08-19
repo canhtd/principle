@@ -135,8 +135,14 @@ struct CategoryList: View {
     }
 }
 
-/// Type a name, press Enter. The only way to make a category until the
-/// Categories screen exists (#10) — and what the header's "+" opens.
+/// Type a name, press Enter — what the section header's "+" opens, and the
+/// whole of "add a category". There is no separate Categories screen: the list
+/// in column 1 *is* the list (decision 3), so making one happens in it.
+///
+/// No colour is asked for. The palette hands out its six in order and then
+/// wraps (``JournalPalette.nextColorKey(after:)``), so the first few in a fresh
+/// journal are visibly different without anyone being made to choose; picking a
+/// different one afterwards is one item in the row's own menu.
 struct NewCategoryField: View {
     /// True when the field was asked for, false when it is the empty state
     /// standing open: taking the caret on launch would be rude.

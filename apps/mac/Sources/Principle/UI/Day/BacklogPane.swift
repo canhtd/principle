@@ -124,7 +124,7 @@ struct BacklogRow: View {
         Divider()
         Button("Move to \(other.title)") { journal.setPriority(other, taskID: task.id) }
         Menu("Change category") {
-            Button("None") { journal.setCategory(nil, taskID: task.id) }
+            Button("Uncategorised") { journal.setCategory(nil, taskID: task.id) }
             ForEach(journal.categories) { category in
                 Button {
                     journal.setCategory(category.id, taskID: task.id)
