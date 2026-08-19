@@ -123,23 +123,11 @@ struct TaskDetailPane: View {
     }
 
     private func priorityToggle(_ task: JournalTask) -> some View {
-        HStack(spacing: 0) {
-            ForEach(Priority.allCases, id: \.self) { priority in
-                let isOn = task.priority == priority
-                Button { journal.setPriority(priority, taskID: taskID) } label: {
-                    Text(priority.title)
-                        .font(EdenFont.ui(12, isOn ? .medium : .regular))
-                        .foregroundStyle(isOn ? EdenColor.primary : EdenColor.hex(0x77746F))
-                        .padding(.horizontal, EdenMetric.sidebarPadding)
-                        .padding(.vertical, 4)
-                        .background(isOn ? EdenColor.primary5 : .clear)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .clipShape(.rect(cornerRadius: EdenRadius.sm, style: .continuous))
-        .edenBorder(EdenColor.black(10), radius: EdenRadius.sm)
+        DaySegmented(
+            options: Priority.allCases,
+            selection: task.priority,
+            title: \.title
+        ) { journal.setPriority($0, taskID: taskID) }
     }
 }
 

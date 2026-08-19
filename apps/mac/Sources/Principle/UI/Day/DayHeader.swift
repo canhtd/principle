@@ -66,29 +66,15 @@ struct DayHeader: View {
     }
 
     /// Day / Week / Month — one segmented control, not a sidebar item and not a
-    /// menu.
+    /// menu. Same control as the task detail's priority (``DaySegmented``).
     private var axis: some View {
-        HStack(spacing: 0) {
-            ForEach(TimeAxis.allCases) { option in
-                let isOn = ui.axis == option
-                Button { ui.axis = option } label: {
-                    Text(option.title)
-                        .font(EdenFont.ui(isNarrow ? 11.5 : 12, isOn ? .medium : .regular))
-                        .foregroundStyle(isOn ? EdenColor.textPrimary : EdenColor.hex(0x77746F))
-                        .padding(.horizontal, isNarrow ? 10 : 14)
-                        .padding(.vertical, 5)
-                        .background(isOn ? EdenColor.card : .clear, in: .rect(cornerRadius: 6, style: .continuous))
-                        .shadow(color: isOn ? EdenColor.black(8) : .clear, radius: 1, y: 1)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(2)
-        .background(EdenColor.black(5), in: .rect(cornerRadius: EdenRadius.sm, style: .continuous))
-        // The pill is its own selected state; a system focus ring on top of it
-        // reads as a second, contradictory selection.
-        .focusEffectDisabled()
+        DaySegmented(
+            options: TimeAxis.allCases,
+            selection: ui.axis,
+            fontSize: isNarrow ? 11.5 : 12,
+            horizontalPadding: isNarrow ? 10 : 14,
+            title: \.title
+        ) { ui.axis = $0 }
     }
 
     @ViewBuilder
