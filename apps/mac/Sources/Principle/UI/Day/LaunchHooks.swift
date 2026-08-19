@@ -53,6 +53,16 @@ enum LaunchHooks {
         guard let frame = windowFrame else { return }
         // The day's window, not the Settings one that ⌘, may have opened.
         for window in NSApplication.shared.windows where window.isVisible && window.title == "Principle" {
+            // A window macOS restored into a full-screen Space has no frame to
+            // set — and taking `.resizable` away below would strip it of the
+            // only way back out, leaving a window that reports full screen for
+            // the rest of the run while sitting at whatever size it was handed.
+            // Leave first; the next tick sets the frame.
+            if window.styleMask.contains(.fullScreen) {
+                window.styleMask.insert(.resizable)
+                window.toggleFullScreen(nil)
+                continue
+            }
             // macOS tiles windows on its own, and a tiled window keeps the
             // slot it was put in whatever frame it is handed. A window that
             // cannot be resized cannot be tiled either — and a screenshot run
