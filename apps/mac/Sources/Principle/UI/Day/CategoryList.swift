@@ -170,6 +170,10 @@ struct NewCategoryField: View {
                 }
         }
         .onAppear { if autoFocus { isFocused = true } }
+        // On a journal with no categories the field is already standing open
+        // when the "+" is pressed, so it never appears and `onAppear` never
+        // fires — and the one press that has to put a caret in it did nothing.
+        .onChange(of: autoFocus) { _, wanted in if wanted { isFocused = true } }
         // Clicking away is how a field like this is abandoned; an empty one
         // closes rather than sitting there waiting.
         .onChange(of: isFocused) { _, focused in
