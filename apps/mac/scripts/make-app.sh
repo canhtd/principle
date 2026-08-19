@@ -4,7 +4,6 @@
 set -euo pipefail
 
 APP_NAME="Principle"
-BUNDLE_ID="com.danny.principle"
 MIN_SYSTEM_VERSION="14.0"
 
 PACKAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,13 +12,24 @@ APP_BUNDLE="$INSTALL_DIR/$APP_NAME.app"
 
 cd "$PACKAGE_DIR"
 
-# Single source of truth for the version is PrincipleCore, not this script.
-VERSION="$(sed -n 's/.*static let version = "\([^"]*\)".*/\1/p' \
-    Sources/PrincipleCore/PrincipleCore.swift | head -n 1)"
-if [[ -z "$VERSION" ]]; then
-    echo "error: could not read version from Sources/PrincipleCore/PrincipleCore.swift" >&2
-    exit 1
-fi
+# Single source of truth for the version and the bundle id is PrincipleCore,
+# not this script. The id is not cosmetic: `AppSettings.defaultsSuite` *is* the
+# bundle identifier, and macOS keys the app's TCC grants off it too — a copy
+# here that drifted from the library would move the shipped app to an empty
+# preferences domain and make the system treat it as an app it has never seen.
+info() {
+    sed -n "s/.*static let $1 = \"\([^\"]*\)\".*/\1/p" \
+        Sources/PrincipleCore/PrincipleCore.swift | head -n 1
+}
+
+VERSION="$(info version)"
+BUNDLE_ID="$(info bundleIdentifier)"
+for pair in "version:$VERSION" "bundleIdentifier:$BUNDLE_ID"; do
+    if [[ -z "${pair#*:}" ]]; then
+        echo "error: could not read ${pair%%:*} from Sources/PrincipleCore/PrincipleCore.swift" >&2
+        exit 1
+    fi
+done
 
 echo "==> Building $APP_NAME $VERSION (release)"
 swift build -c release --product "$APP_NAME"
@@ -77,7 +87,7 @@ printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 
 # Ad-hoc signature: unsigned bundles get killed on launch on Apple silicon.
 echo "==> Signing (ad-hoc)"
-codesign --force --sign - "$APP_BUNDLE"
+codesign --force --sign - --identifier "$BUNDLE_ID" "$APP_BUNDLE"
 
 echo "==> Done: $APP_BUNDLE"
 echo "    open \"$APP_BUNDLE\""
