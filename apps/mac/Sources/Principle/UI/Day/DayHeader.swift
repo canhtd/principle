@@ -18,6 +18,12 @@ struct DayHeader: View {
     /// Close, minimise and zoom, plus the gap after them.
     static let trafficLightWidth: CGFloat = 72
 
+    /// What the launch smoke reads out of the accessibility tree to prove the
+    /// app came up on the day rather than on some other screen
+    /// (`Tests/E2E/e2e-launch-smoke.sh`). A window is only evidence that
+    /// *something* opened; this element's value is the day itself.
+    static let titleIdentifier = "day-header-title"
+
     var body: some View {
         // The axis is laid over the row rather than sitting in it (decision 1):
         // in a three-cell stack the date title sets its own width first and
@@ -58,6 +64,7 @@ struct DayHeader: View {
                     .tracking(-0.02 * (isNarrow ? 17 : 21))
                     .foregroundStyle(EdenColor.textPrimary)
                     .lineLimit(1)
+                    .accessibilityIdentifier(Self.titleIdentifier)
                 // One line, never a banner (decision 9), and it steps aside
                 // entirely when the header is narrow.
                 if let warning = journal.overloadLine, !isNarrow {

@@ -1,3 +1,4 @@
+import DesignSystem
 import PrincipleCore
 import SwiftUI
 
@@ -25,16 +26,23 @@ struct ProfileView: View {
         who you are, what you're working on, recurring patterns.
         """
 
+    /// Between two blocks of the sheet. `DesignSystem` names faces, not a prose
+    /// spacing scale, so the rhythm stays a ratio of the type it separates.
+    private static let blockGap = EdenType.row.size * 0.85
+    /// Vietnamese needs the leading more than the size: its marks sit above
+    /// *and* below the line, so English-ish line-height makes them collide.
+    private static let bodyLeading = EdenType.row.size * 0.7
+    private static let captionLeading = EdenType.meta.size * 0.4
+
     private var isDirty: Bool { draft != saved }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.block) {
+        VStack(alignment: .leading, spacing: Self.blockGap) {
             Text("Profile")
-                .font(Typography.title)
-                .lineSpacing(Typography.titleLineSpacing)
+                .edenText(EdenType.sectionTitle)
             Text(Self.caption)
-                .font(Typography.caption)
-                .lineSpacing(Typography.captionLineSpacing)
+                .edenText(EdenType.meta)
+                .lineSpacing(Self.captionLeading)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -62,10 +70,10 @@ struct ProfileView: View {
 
     private var editor: some View {
         TextEditor(text: $draft)
-            .font(Typography.body)
-            .lineSpacing(Typography.bodyLineSpacing)
+            .font(EdenType.row.font)
+            .lineSpacing(Self.bodyLeading)
             .scrollContentBackground(.hidden)
-            .padding(Spacing.controlPadding)
+            .padding(EdenType.row.size * 0.5)
             .background(Color(nsColor: .textBackgroundColor))
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
@@ -79,8 +87,8 @@ struct ProfileView: View {
     private var status: some View {
         if let errorMessage {
             Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                .font(Typography.caption)
-                .lineSpacing(Typography.captionLineSpacing)
+                .edenText(EdenType.meta)
+                .lineSpacing(Self.captionLeading)
                 .foregroundStyle(.orange)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
@@ -88,9 +96,9 @@ struct ProfileView: View {
     }
 
     private var buttons: some View {
-        HStack(spacing: Spacing.block) {
+        HStack(spacing: Self.blockGap) {
             Text(isDirty ? "Unsaved changes" : "Saved")
-                .font(Typography.caption)
+                .edenText(EdenType.meta)
                 .foregroundStyle(isDirty ? .orange : .secondary)
             Spacer()
             Button("Revert") { draft = saved }

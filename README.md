@@ -43,6 +43,17 @@ apps/mac/Tests/E2E/e2e-smoke.sh
 Chạy một ca thật trên repo giả lập tách biệt, tốn đúng 2 lượt haiku, không đụng
 vào `memory/` thật.
 
+Kiểm tra app mở lên có ra đúng màn hình Day không:
+
+```bash
+apps/mac/Tests/E2E/e2e-launch-smoke.sh
+```
+
+Dựng bundle vào thư mục tạm, mở nó trên cùng repo giả lập đó, rồi đọc ngày trên
+đầu cột 2 từ cây accessibility. Không tốn lượt engine nào. Cần máy đang đăng
+nhập và **màn hình đã mở khoá** — khoá màn hình thì macOS không cấp cửa sổ nào
+để mà kiểm.
+
 ## Corpus
 
 `references/corpus.jsonl` đi kèm sẵn (bản cá nhân). Nếu mất hoặc muốn dựng lại:
