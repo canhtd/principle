@@ -29,6 +29,8 @@ struct BacklogPane: View {
                 // only a group with one above it opens a gap.
                 group("Like to do", tasks: journal.backlogTasks(priority: .nice), isFirst: must.isEmpty)
             }
+
+            LaterSection()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
