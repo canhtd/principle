@@ -73,29 +73,12 @@ struct CategoryList: View {
         .contextMenu { menu(category) }
     }
 
-    /// The "…" at the row's right edge, on hover — the same menu right-click
-    /// opens, for the half of the world that never right-clicks. A menu is not
-    /// discoverable if the only way to find it is to already know it is there.
+    /// The "…" at the row's right edge, on hover — the same one a backlog row
+    /// wears, opening the same menu right-click gives.
     private func more(_ category: JournalCategory) -> some View {
-        let isShowing = hoveredCategoryID == category.id
-        return Menu {
+        RowEllipsisMenu(isShowing: hoveredCategoryID == category.id, help: "Category options") {
             menu(category)
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(EdenFont.ui(11, .semibold))
-                .foregroundStyle(EdenColor.n500)
-                .frame(width: 18, height: 18)
-                .contentShape(.rect)
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .frame(width: 18, height: 18)
-        .focusEffectDisabled()
-        .opacity(isShowing ? 1 : 0)
-        // Invisible is not clickable: the tick-and-name row must keep the whole
-        // width to click on while nothing is hovering it.
-        .allowsHitTesting(isShowing)
-        .help("Category options")
     }
 
     /// The four things a category can do, as a native macOS menu (decision 3).

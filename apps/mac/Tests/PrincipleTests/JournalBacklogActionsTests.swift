@@ -112,6 +112,24 @@ struct JournalBacklogActionsTests {
         #expect(model.task(id: reading.id)?.categoryID == health.id)
     }
 
+    @Test("Deleting a backlog row takes it off the list and leaves nothing to report")
+    func deletingABacklogRowIsClean() throws {
+        let repo = try TempRepo(prefix: "backlog-delete-task")
+        let task = try repo.journal.addTask(title: "Book flights", priority: .nice)
+        let model = JournalModel(store: repo.journal, day: Self.noon)
+
+        model.deleteTask(id: task.id)
+        // The detail pane writes its fields back as it is torn down, and the
+        // delete is what tore it down. Neither may resurrect the row or set the
+        // "could not be saved" line under it.
+        model.setTitle("Book flights", taskID: task.id)
+        model.setNote("via Skyscanner", taskID: task.id)
+
+        #expect(model.suggestions.isEmpty)
+        #expect(model.task(id: task.id) == nil)
+        #expect(model.errorMessage == nil)
+    }
+
     @Test("A category deleted while it was hidden stops filtering anything")
     func deletingAHiddenCategoryClearsTheFilter() throws {
         let repo = try TempRepo(prefix: "backlog-delete-hidden")

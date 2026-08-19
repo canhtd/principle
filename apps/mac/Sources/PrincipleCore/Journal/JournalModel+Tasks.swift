@@ -105,16 +105,22 @@ extension JournalModel {
         write { try $0.setCategory(categoryID, taskID: taskID) }
     }
 
+    /// An empty title would leave a block nothing can be read off; the field
+    /// keeps what was there until something is typed.
+    ///
+    /// A task that is *gone* is left alone as well. The detail pane writes its
+    /// fields back as it is torn down, and deleting the task tears it down — so
+    /// without this the last act of a delete was an edit to something that no
+    /// longer exists, which the store rightly refused and the screen reported as
+    /// a failed save.
     public func setTitle(_ title: String, taskID: UUID) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        // An empty title would leave a block nothing can be read off; the field
-        // keeps what was there until something is typed.
-        guard !trimmed.isEmpty, trimmed != task(id: taskID)?.title else { return }
+        guard let current = task(id: taskID), !trimmed.isEmpty, trimmed != current.title else { return }
         write { try $0.setTitle(trimmed, taskID: taskID) }
     }
 
     public func setNote(_ note: String, taskID: UUID) {
-        guard note != task(id: taskID)?.note else { return }
+        guard let current = task(id: taskID), note != current.note else { return }
         write { try $0.setNote(note, taskID: taskID) }
     }
 
