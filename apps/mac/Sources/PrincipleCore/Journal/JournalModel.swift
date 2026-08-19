@@ -22,6 +22,14 @@ public final class JournalModel {
     public private(set) var visibleMonth: Date
     public private(set) var sections: DaySections
     public private(set) var backlog: [BacklogGroup] = []
+    /// Every live task as of the last read.
+    ///
+    /// Held rather than fetched on demand, and the reason is observation: a
+    /// lookup straight through to the store returns the right task but
+    /// registers no dependency, so a view whose body reads only ``task(id:)``
+    /// — the detail pane — never redrew when the task changed underneath it.
+    /// It sat there showing a priority the file no longer had.
+    public private(set) var tasks: [JournalTask] = []
     public private(set) var categories: [JournalCategory] = []
     /// Categories unticked in column 1. Deliberately not persisted: a filter
     /// that survives a relaunch is a filter that can hide a whole category of
@@ -84,7 +92,7 @@ public final class JournalModel {
     }
 
     /// The whole task behind a row — what the detail pane opens on.
-    public func task(id: UUID) -> JournalTask? { store.task(id: id) }
+    public func task(id: UUID) -> JournalTask? { tasks.first { $0.id == id } }
 
     /// Every backlog task in one flat list, in category order: column 3 suggests
     /// from the backlog without repeating its headers.
@@ -156,6 +164,7 @@ public final class JournalModel {
         do {
             sections = try store.today(day)
             backlog = store.backlog()
+            tasks = store.tasks()
             categories = store.categories()
             // A category deleted while it was hidden would otherwise keep
             // filtering a day by an id nothing can untick again.

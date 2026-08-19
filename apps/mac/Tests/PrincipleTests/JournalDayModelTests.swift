@@ -33,6 +33,21 @@ struct JournalDayModelTests {
         #expect(scheduled != nil)
     }
 
+    @Test("An edit reaches the model's own task list, not just the file")
+    func editsAreVisibleOnTheModel() throws {
+        let (model, repo) = try makeModel("day-observe")
+        _ = repo
+        let id = try #require(model.createTask(at: TaskSchedule(startMinute: 9 * 60), title: "Decide M4 scope"))
+        #expect(model.task(id: id)?.priority == .nice)
+
+        model.setPriority(.must, taskID: id)
+
+        // Through the model's held list — what the detail pane reads, and what
+        // it can only redraw from if the value lives on the model itself.
+        #expect(model.task(id: id)?.priority == .must)
+        #expect(model.tasks.first { $0.id == id }?.priority == .must)
+    }
+
     @Test("A logged outcome lands on the day already done")
     func loggedOutcomeIsDone() throws {
         let (model, repo) = try makeModel("day-log")
