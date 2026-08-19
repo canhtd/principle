@@ -88,6 +88,40 @@ struct EdenIconButton: View {
     }
 }
 
+/// The "…" at a row's right edge, on hover — the same menu right-click opens,
+/// for the half of the world that never right-clicks. A menu is not
+/// discoverable if the only way to find it is to already know it is there.
+///
+/// `isShowing` is the row's business, not the button's: the pointer is over the
+/// *row*, and a button that watched its own 18 pt of hover would blink out
+/// every time the pointer crossed the title beside it.
+struct RowEllipsisMenu<Items: View>: View {
+    let isShowing: Bool
+    var help = "Options"
+    @ViewBuilder var items: Items
+
+    var body: some View {
+        Menu {
+            items
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(EdenFont.ui(11, .semibold))
+                .foregroundStyle(EdenColor.n500)
+                .frame(width: 18, height: 18)
+                .contentShape(.rect)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .frame(width: 18, height: 18)
+        .focusEffectDisabled()
+        .opacity(isShowing ? 1 : 0)
+        // Invisible is not clickable: the rest of the row must keep the whole
+        // width to click on while nothing is hovering it.
+        .allowsHitTesting(isShowing)
+        .help(help)
+    }
+}
+
 /// The tick box — on a task it is the one control a row wears; on a category it
 /// is what filters the day, and wears that category's colour.
 struct TickBox: View {

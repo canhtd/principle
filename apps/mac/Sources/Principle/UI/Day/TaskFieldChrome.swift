@@ -45,15 +45,18 @@ struct TaskTextField: View {
     }
 }
 
-/// Which category a task belongs to, or none — the row that gives a block its
-/// colour.
+/// Which category a task belongs to — the row that gives a block its colour.
+///
+/// "Uncategorised" is a real choice rather than an empty one: it is the state a
+/// task is left in when the category it wore is deleted, and the word here has
+/// to be the word the rest of the screen uses for that state.
 struct TaskCategoryPicker: View {
     let categories: [JournalCategory]
     @Binding var categoryID: UUID?
 
     var body: some View {
         Picker("Category", selection: $categoryID) {
-            Text("None").tag(UUID?.none)
+            Text("Uncategorised").tag(UUID?.none)
             ForEach(categories) { category in
                 Text(category.name).tag(UUID?.some(category.id))
             }

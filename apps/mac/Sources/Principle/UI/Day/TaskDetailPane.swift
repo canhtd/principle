@@ -37,7 +37,7 @@ struct TaskDetailPane: View {
                         journal.setNote(note, taskID: taskID)
                     }
                 }
-                delete
+                footer(task)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -71,12 +71,28 @@ struct TaskDetailPane: View {
         .padding(.bottom, 4)
     }
 
-    private var delete: some View {
-        Button("Delete task") {
-            journal.deleteTask(id: taskID)
-            ui.select(taskID: nil)
+    /// The two ways a task leaves the day, side by side because they are two
+    /// answers to the same question and one of them is not a delete.
+    ///
+    /// A task on the day can be put back on the list — the other half of the
+    /// backlog's "+ Today", and the only way anything gets *into* the backlog
+    /// once it has been pulled out. A repeating task has no day to be sent back
+    /// from: its days come from its rule, so it is never offered.
+    private func footer(_ task: JournalTask) -> some View {
+        HStack(spacing: EdenMetric.sidebarInset) {
+            if task.plannedDay != nil {
+                Button("Send back to backlog") {
+                    journal.sendBackToBacklog(taskID: taskID)
+                    ui.select(taskID: nil)
+                }
+                .buttonStyle(EdenGhostButtonStyle())
+            }
+            Button("Delete task") {
+                journal.deleteTask(id: taskID)
+                ui.select(taskID: nil)
+            }
+            .buttonStyle(EdenGhostButtonStyle())
         }
-        .buttonStyle(EdenGhostButtonStyle())
         .padding(.leading, -14)
         .padding(.top, EdenMetric.sidebarPadding)
     }

@@ -73,29 +73,12 @@ struct CategoryList: View {
         .contextMenu { menu(category) }
     }
 
-    /// The "…" at the row's right edge, on hover — the same menu right-click
-    /// opens, for the half of the world that never right-clicks. A menu is not
-    /// discoverable if the only way to find it is to already know it is there.
+    /// The "…" at the row's right edge, on hover — the same one a backlog row
+    /// wears, opening the same menu right-click gives.
     private func more(_ category: JournalCategory) -> some View {
-        let isShowing = hoveredCategoryID == category.id
-        return Menu {
+        RowEllipsisMenu(isShowing: hoveredCategoryID == category.id, help: "Category options") {
             menu(category)
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(EdenFont.ui(11, .semibold))
-                .foregroundStyle(EdenColor.n500)
-                .frame(width: 18, height: 18)
-                .contentShape(.rect)
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .frame(width: 18, height: 18)
-        .focusEffectDisabled()
-        .opacity(isShowing ? 1 : 0)
-        // Invisible is not clickable: the tick-and-name row must keep the whole
-        // width to click on while nothing is hovering it.
-        .allowsHitTesting(isShowing)
-        .help("Category options")
     }
 
     /// The four things a category can do, as a native macOS menu (decision 3).
@@ -152,8 +135,14 @@ struct CategoryList: View {
     }
 }
 
-/// Type a name, press Enter. The only way to make a category until the
-/// Categories screen exists (#10) — and what the header's "+" opens.
+/// Type a name, press Enter — what the section header's "+" opens, and the
+/// whole of "add a category". There is no separate Categories screen: the list
+/// in column 1 *is* the list (decision 3), so making one happens in it.
+///
+/// No colour is asked for. The palette hands out its six in order and then
+/// wraps (``JournalPalette.nextColorKey(after:)``), so the first few in a fresh
+/// journal are visibly different without anyone being made to choose; picking a
+/// different one afterwards is one item in the row's own menu.
 struct NewCategoryField: View {
     /// True when the field was asked for, false when it is the empty state
     /// standing open: taking the caret on launch would be rude.
@@ -181,6 +170,10 @@ struct NewCategoryField: View {
                 }
         }
         .onAppear { if autoFocus { isFocused = true } }
+        // On a journal with no categories the field is already standing open
+        // when the "+" is pressed, so it never appears and `onAppear` never
+        // fires — and the one press that has to put a caret in it did nothing.
+        .onChange(of: autoFocus) { _, wanted in if wanted { isFocused = true } }
         // Clicking away is how a field like this is abandoned; an empty one
         // closes rather than sitting there waiting.
         .onChange(of: isFocused) { _, focused in

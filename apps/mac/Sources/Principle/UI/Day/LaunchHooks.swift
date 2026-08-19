@@ -35,15 +35,23 @@ enum LaunchHooks {
         case chatDocked = "chat-docked"
     }
 
-    /// Sizes the window and keeps it that size for the first few seconds.
+    /// Sizes the window and keeps it that size for as long as a shot takes.
     ///
     /// Once is not enough: macOS restores its own saved frame — and re-applies
     /// a tiled one — at a moment nothing here can predict, so the ask is
     /// repeated until the restore has had its turn and stopped.
+    ///
+    /// Seven seconds of that turned out not to be long enough. With another
+    /// window of the same app already open, macOS tiles the new one into the
+    /// free half of the screen — and it does so *after* the last tick, at which
+    /// point nothing outside the process can undo it: `setFrame` from
+    /// AppleScript and from the accessibility API both report success and move
+    /// nothing. A minute covers a screenshot run, and the whole hook still does
+    /// nothing at all unless `PRINCIPLE_WINDOW` is set.
     @MainActor
     static func applyWindowFrame() {
         guard windowFrame != nil else { return }
-        for step in 0...28 {
+        for step in 0...240 {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(step) * 0.25) { setFrameNow() }
         }
     }
@@ -71,7 +79,17 @@ enum LaunchHooks {
             // …and stop it saving and restoring a frame behind our back, which
             // is the other half of the argument.
             window.setFrameAutosaveName("")
-            if window.frame != frame { window.setFrame(frame, display: true) }
+            guard window.frame != frame else { continue }
+            window.setFrame(frame, display: true)
+            // `setFrame` takes the size and drops the origin when a second
+            // window of the same app is already open: macOS cascades the new
+            // one into the free half of the screen and holds it there, so the
+            // window came up 1300 pt wide — our number — at an x nobody asked
+            // for, with column 3 hanging off the right edge. `setFrameOrigin`
+            // on its own is not cascaded, and lands.
+            if window.frame.origin != frame.origin {
+                window.setFrameOrigin(frame.origin)
+            }
         }
     }
 }

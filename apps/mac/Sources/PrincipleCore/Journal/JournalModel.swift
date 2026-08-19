@@ -103,7 +103,7 @@ public final class JournalModel {
     /// would be nice to. Category order is kept inside each group, so a task
     /// does not move about between the two views of the same list.
     public func backlogTasks(priority: Priority) -> [JournalTask] {
-        suggestions.filter { $0.priority == priority }
+        visibleSuggestions.filter { $0.priority == priority }
     }
 
     public func category(id: UUID?) -> JournalCategory? {
