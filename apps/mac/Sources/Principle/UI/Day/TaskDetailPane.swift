@@ -24,7 +24,7 @@ struct TaskDetailPane: View {
                 }
                 field("Category") { categoryPicker(task) }
                 field("Priority") { priorityToggle(task) }
-                field("Time") { TimePicker(schedule: task.schedule) { journal.setSchedule($0, taskID: taskID) } }
+                field("Time") { TimeFields(schedule: task.schedule) { journal.setSchedule($0, taskID: taskID) } }
                 field("Repeat") {
                     RepeatPicker(rule: task.repeatRule) { journal.setRepeatRule($0, taskID: taskID) }
                 }
