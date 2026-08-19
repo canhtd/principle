@@ -111,12 +111,12 @@ struct CategoryList: View {
                 Button {
                     journal.recolorCategory(id: category.id, to: key)
                 } label: {
-                    Label {
-                        Text(key.capitalized)
-                    } icon: {
-                        Image(systemName: category.colorKey == key ? "circle.inset.filled" : "circle.fill")
-                            .foregroundStyle(DayPalette.colors[key] ?? EdenColor.n500)
-                    }
+                    // Drawn, not an SF Symbol: see DayPalette.swatch.
+                    Image(nsImage: DayPalette.swatch(
+                        DayPalette.colors[key] ?? EdenColor.n500,
+                        isCurrent: category.colorKey == key
+                    ))
+                    Text(key.capitalized)
                 }
             }
         }

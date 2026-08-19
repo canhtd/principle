@@ -1,3 +1,4 @@
+import AppKit
 import DesignSystem
 import PrincipleCore
 import SwiftUI
@@ -27,6 +28,35 @@ enum DayPalette {
     static func color(_ category: JournalCategory?) -> Color {
         guard let category else { return EdenColor.n500 }
         return colors[category.colorKey] ?? colors[JournalPalette.fallbackColorKey] ?? EdenColor.n500
+    }
+
+    /// A colour swatch for the `Change color` menu, drawn rather than borrowed
+    /// from SF Symbols.
+    ///
+    /// AppKit renders a menu item's image as a **template** — flat black,
+    /// whatever colour SwiftUI was asked for — so `Image(systemName:)` in a menu
+    /// gave six identical black dots and a colour menu you could not read a
+    /// colour off. An `NSImage` with `isTemplate = false` keeps its own paint.
+    ///
+    /// The current colour wears the prototype's ring rather than a checkmark:
+    /// the swatch is the content here, and a tick beside it would say the same
+    /// thing twice.
+    static func swatch(_ color: Color, isCurrent: Bool) -> NSImage {
+        let side: CGFloat = isCurrent ? 14 : 12
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            let inset = isCurrent ? 3.0 : 1.0
+            NSColor(color).setFill()
+            NSBezierPath(ovalIn: rect.insetBy(dx: inset, dy: inset)).fill()
+            if isCurrent {
+                NSColor(color).setStroke()
+                let ring = NSBezierPath(ovalIn: rect.insetBy(dx: 0.75, dy: 0.75))
+                ring.lineWidth = 1.5
+                ring.stroke()
+            }
+            return true
+        }
+        image.isTemplate = false
+        return image
     }
 
     /// The current-time line. Not an Eden token — Eden has no clock — and
