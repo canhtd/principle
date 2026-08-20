@@ -60,6 +60,22 @@ public struct JournalStore: Sendable {
         )
     }
 
+    /// Writes the Bar — the sentence about what a good day for this category
+    /// looks like (ADR 0001). An empty sentence takes it back rather than
+    /// storing a blank one: a bar nobody wrote is not a bar.
+    public func setBar(_ text: String, categoryID: UUID, at date: Date = Date()) throws {
+        try JournalLog.append(
+            CategoryRecord(
+                id: categoryID,
+                name: nil,
+                color: nil,
+                bar: text.trimmingCharacters(in: .whitespacesAndNewlines),
+                updatedAt: date
+            ),
+            to: categoriesFileURL
+        )
+    }
+
     public func recolorCategory(id: UUID, to colorKey: String, at date: Date = Date()) throws {
         try JournalLog.append(
             CategoryRecord(id: id, name: nil, color: colorKey, updatedAt: date),
@@ -86,10 +102,15 @@ public struct JournalStore: Sendable {
             // A rename or a recolour carries one field: whatever the line leaves
             // out, the category keeps.
             merge: { record, previous in
-                JournalCategory(
+                // An empty bar on the line is the one written way of clearing
+                // it, so it is read back as no bar at all rather than as a
+                // sentence with nothing in it.
+                let bar = record.bar ?? previous?.bar
+                return JournalCategory(
                     id: record.id,
                     name: record.name ?? previous?.name ?? "",
-                    colorKey: record.color ?? previous?.colorKey ?? ""
+                    colorKey: record.color ?? previous?.colorKey ?? "",
+                    bar: bar?.isEmpty == true ? nil : bar
                 )
             }
         )

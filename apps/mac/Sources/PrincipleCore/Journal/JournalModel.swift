@@ -17,6 +17,11 @@ import os
 public final class JournalModel {
     /// The day on screen, in the store's calendar.
     public internal(set) var day: Date
+    /// True while the day on screen is on screen *because it was today* when it
+    /// was shown — which is the only case midnight is allowed to move (#17). A
+    /// day Danny opened from the mini month is his choice, and reviewing it
+    /// takes longer than the minute the clock ticks in.
+    public internal(set) var isFollowingToday: Bool
     /// The month the mini calendar is showing, which is not always the month the
     /// day is in: paging ahead to look at September must not move the day.
     public internal(set) var visibleMonth: Date
@@ -36,6 +41,11 @@ public final class JournalModel {
     /// Held rather than fetched for the same reason ``tasks`` is: a view reading
     /// straight through to the store registers no dependency on it.
     public private(set) var dots: [UUID: JournalDot] = [:]
+    /// What Danny wrote about the day as a whole, or `nil` for a day he has not
+    /// written about. Held beside the Dots and for the same reason: the field
+    /// reading straight through to the store would never redraw when the day
+    /// changed under it.
+    public private(set) var dayNote: String?
     /// Categories unticked in column 1. Deliberately not persisted: a filter
     /// that survives a relaunch is a filter that can hide a whole category of
     /// work for weeks without anyone noticing it is on.
@@ -53,9 +63,10 @@ public final class JournalModel {
     /// (spec #11).
     public static let softCap = 5
 
-    public init(store: JournalStore, day: Date = Date()) {
+    public init(store: JournalStore, day: Date = Date(), now: Date = Date()) {
         self.store = store
         self.day = day
+        isFollowingToday = store.calendar.isDate(day, inSameDayAs: now)
         visibleMonth = day
         sections = DaySections(day: JournalDay(day, calendar: store.calendar), must: [], nice: [])
         refresh()
@@ -127,6 +138,7 @@ public final class JournalModel {
             tasks = store.tasks()
             categories = store.categories()
             dots = store.dots(on: day)
+            dayNote = store.dayNote(on: day)
             // A category deleted while it was hidden would otherwise keep
             // filtering a day by an id nothing can untick again.
             hiddenCategoryIDs.formIntersection(Set(categories.map(\.id)))
@@ -152,13 +164,5 @@ public final class JournalModel {
     func report(_ error: any Error) {
         Self.logger.error("Journal write failed: \(String(describing: error), privacy: .public)")
         errorMessage = "That change could not be saved. Check the repo path in Settings."
-    }
-}
-
-extension JournalModel {
-    /// True when the day on screen is behind `date` — what an app left open
-    /// overnight looks like in the morning.
-    public func selectionIsStale(before date: Date) -> Bool {
-        JournalDay(day, calendar: calendar) < JournalDay(date, calendar: calendar)
     }
 }

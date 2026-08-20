@@ -67,10 +67,9 @@ struct DayShell: View {
         .onReceive(Self.clock) { tick in
             now = tick
             // Left open overnight, the app must be showing the new day in the
-            // morning rather than yesterday's grid.
-            if journal.isToday == false, Calendar.current.isDateInToday(tick), journal.selectionIsStale(before: tick) {
-                journal.showToday()
-            }
+            // morning rather than yesterday's grid — and a day Danny opened to
+            // review must stay where he put it (#17).
+            journal.advanceIfDayRolledOver(at: tick)
         }
         // The lights belong inside column 1's panel, not on its corner.
         .edenWindowChrome(isFullScreen: $isFullScreen)

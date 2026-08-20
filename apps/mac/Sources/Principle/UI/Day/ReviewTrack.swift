@@ -62,6 +62,10 @@ struct ReviewTrack: View {
         .contentShape(.rect)
         .overlay(alignment: .bottom) { EdenColor.black(10).frame(height: 1) }
         .onHover { isHovering = $0 }
+        // The Bar is one hover away rather than printed under every track, so
+        // the pane stays quiet (story 9). Picked, the same sentence reads in
+        // full under the chart.
+        .help(category.bar ?? "No bar set for \(category.name)")
         .gesture(setting)
     }
 
