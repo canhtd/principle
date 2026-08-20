@@ -127,3 +127,18 @@ a small unblocked ticket "Remove the Backlog surface from column 3".
 
 **Next.** Finish #18 loop → Danny tries it (STOP point) → #19 Week view next
 (#9 needs #18 merged first). `/design-gauntlet` for #7: evenings.
+
+## 2026-08-20 night — fixer stopped mid-work to save usage
+
+- w-t18b (fix pass for the #18 review findings) was STOPPED before committing.
+  Its half-done work sits UNCOMMITTED in worktree
+  `.claude/worktrees/agent-a9d722f974c6cbd23` (branch `feat/column3-shell`,
+  tip still `5ca1d74`): 11 modified files + 3 new ones (`PanelLayout.swift`,
+  `PanelLayoutTests.swift`, `AskRayColumn.swift`) — aimed at the two blocking
+  findings (divider drag math, docked Ask Ray keeping card + bookmarks).
+- To resume: spawn a FRESH fixer into that same worktree; brief = the findings
+  list in the "2026-08-20 evening" entry above + "uncommitted work in the tree
+  is a half-done fix pass — inspect it, keep what is right, finish, commit as
+  fix(mac)". Do not reset the tree before reading it.
+- Everything else in the evening entry stands (re-review → merge → CTO re-runs
+  tests + make-app.sh → Danny tries #18; Backlog-removal ticket still open).
