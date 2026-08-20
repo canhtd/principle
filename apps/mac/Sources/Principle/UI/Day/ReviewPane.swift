@@ -10,26 +10,35 @@ import SwiftUI
 /// records is a judgement, not a count: nothing here is derived from the tasks,
 /// and ticking one never moves a Dot.
 ///
-/// The Category's Bar, the evidence list and the Day note belong under this and
-/// are #15; the space they take is left rather than filled with something else.
+/// Under the chart sit the picked track's Bar and what was ticked for it, and
+/// under those the Day note — the second step of the review, in Danny's own
+/// words (#15).
 struct ReviewPane: View {
     @Bindable var journal: JournalModel
     @Bindable var ui: DayShellState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text("Review your day")
-                .font(EdenFont.ui(12))
-                .foregroundStyle(EdenColor.hex(0x77746F))
-
-            if tracks.isEmpty {
-                Text("Every category is hidden.")
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 7) {
+                Text("Review your day")
                     .font(EdenFont.ui(12))
-                    .foregroundStyle(EdenColor.n400)
-                    .padding(.leading, EdenMetric.sidebarInset)
-            } else {
-                chart
+                    .foregroundStyle(EdenColor.hex(0x77746F))
+
+                if tracks.isEmpty {
+                    Text("Every category is hidden.")
+                        .font(EdenFont.ui(12))
+                        .foregroundStyle(EdenColor.n400)
+                        .padding(.leading, EdenMetric.sidebarInset)
+                } else {
+                    chart
+                    ReviewEvidence(journal: journal, ui: ui)
+                }
             }
+            .padding(.bottom, 20)
+
+            // Always there, whatever the tracks are doing: a day with every
+            // category hidden is still a day worth writing a line about.
+            DayNoteField(journal: journal)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

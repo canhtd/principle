@@ -12,6 +12,8 @@ struct CategoryList: View {
     @State private var draftName = ""
     /// The row under the pointer, which is the only one wearing its "…".
     @State private var hoveredCategoryID: UUID?
+    /// The category whose Bar is open for writing, if any.
+    @State private var barCategoryID: UUID?
     @FocusState private var renameFocused: Bool
 
     var body: some View {
@@ -71,6 +73,7 @@ struct CategoryList: View {
         .onHover { hoveredCategoryID = $0 ? category.id : nil }
         .onTapGesture { journal.toggleVisibility(of: category.id) }
         .contextMenu { menu(category) }
+        .categoryBarEditor(category, editingID: $barCategoryID) { journal.setBar($0, for: category.id) }
     }
 
     /// The "…" at the row's right edge, on hover — the same one a backlog row
@@ -81,13 +84,18 @@ struct CategoryList: View {
         }
     }
 
-    /// The four things a category can do, as a native macOS menu (decision 3).
+    /// The things a category can do, as a native macOS menu (decision 3).
     @ViewBuilder
     private func menu(_ category: JournalCategory) -> some View {
         Button("Rename…") {
             draftName = category.name
             ui.renamingCategoryID = category.id
             renameFocused = true
+        }
+        // What a good day here looks like — the sentence the Review pane shows
+        // on the track and judges its Dot against (#15).
+        Button(category.bar == nil ? "Set the bar…" : "Edit the bar…") {
+            barCategoryID = category.id
         }
         Menu("Change color") {
             ForEach(journal.colorKeys, id: \.self) { key in

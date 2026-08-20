@@ -41,6 +41,11 @@ public final class JournalModel {
     /// Held rather than fetched for the same reason ``tasks`` is: a view reading
     /// straight through to the store registers no dependency on it.
     public private(set) var dots: [UUID: JournalDot] = [:]
+    /// What Danny wrote about the day as a whole, or `nil` for a day he has not
+    /// written about. Held beside the Dots and for the same reason: the field
+    /// reading straight through to the store would never redraw when the day
+    /// changed under it.
+    public private(set) var dayNote: String?
     /// Categories unticked in column 1. Deliberately not persisted: a filter
     /// that survives a relaunch is a filter that can hide a whole category of
     /// work for weeks without anyone noticing it is on.
@@ -133,6 +138,7 @@ public final class JournalModel {
             tasks = store.tasks()
             categories = store.categories()
             dots = store.dots(on: day)
+            dayNote = store.dayNote(on: day)
             // A category deleted while it was hidden would otherwise keep
             // filtering a day by an id nothing can untick again.
             hiddenCategoryIDs.formIntersection(Set(categories.map(\.id)))
