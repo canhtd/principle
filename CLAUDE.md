@@ -27,6 +27,10 @@ kể một vấn đề):
 1. Đọc `memory/MEMORY.md` (hồ sơ + index ca) và `goals/GOALS.md`.
 2. Kiểm tra ca mới có phải tập tiếp theo của một ca cũ không — nếu có, đọc file
    ca đó trong `memory/cases/` và tiếp nối, đừng chẩn đoán lại từ đầu.
+3. Hai file trên là bộ nhớ của việc **tư vấn**. Việc **dựng app** đọc `STATE.md`
+   ở gốc repo — điểm nối lại của mọi session build: đang ở đâu, xong gì, bước
+   kế. Vào session code thì đọc nó trước tiên, và ghi thêm mục mới ở cuối mỗi
+   khi cột mốc dịch chuyển.
 
 **Sau mỗi lần tư vấn xong:**
 
