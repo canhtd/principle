@@ -57,3 +57,42 @@ Per item, state the verification level explicitly: "done, ran for real" versus
 **Next.** Danny comments on the prototypes → the comments are translated into
 rounds for `w-proto2` (cap 5) → freeze the winner as the visual spec → re-cut
 #9 and #16 against it → hand to code workers.
+
+---
+
+## 2026-08-20 — Proto freeze + re-cut (spec #14 Rev 6)
+
+**Proto-loop closed.** Four comment rounds, ten comments; Danny chose variant A
+and froze it as v4. B was deleted in round 2.
+
+- Frozen visual spec: `docs/design/proto-calendar-A.html` v4 +
+  `proto-calendar-A{,-chart,-chart-28,-filter,-week,-month}.png` +
+  `proto-calendar-README.md`. All of it is still UNCOMMITTED in the main
+  checkout — the CTO commits after review.
+- Final form: Week and Month are Apple-style task calendars over real windows;
+  the Chart is renamed **Trends** and lives in the Review pane behind
+  `Today | Trends`, standing on a rolling Last 7 days or Last 28 days, one
+  window at a time; a day is a ranked stack of lettered circles with no
+  numerals; category chips are the only legend and filter, and a filtered
+  Category is placed by score; column 3 reads Principle of the day → pane →
+  Day note → Bookmarks; both dividers drag.
+- `CONTEXT.md` updated (Chart → Trends, Level and direction, Day / Week /
+  Month); #14 carries **Revision 6**, which supersedes Revision 5's chart shape
+  only. #14 itself is untouched and open.
+
+**Tickets re-cut**, all labelled `ready-for-agent`, block chain in the bodies:
+
+- #18 Column 3 restructure + draggable dividers — blocked by none.
+- #9 Trends mode: the Dalio record of the Dots — rewritten, blocked by #18.
+- #16 Trends filter: category chips + score scatter — rewritten, blocked by #9.
+- #19 Week view: real-week task calendar — blocked by none.
+- #20 Month view: real-month task grid — blocked by #19.
+
+**Verification.** Prototype behaviour ran for real in a browser (zoom toggle,
+chip filter and clear, both windows measured). Everything else this entry
+records is document work, not code — no app build was made.
+
+**Next.** Code workers one ticket at a time from the frontier (#18 and #19 are
+unblocked; #18 first), and STOP at the first ticket that runs so Danny can try
+it. Still parked: the old #9 WIP in worktree `agent-a0d650685afc5161d`, and
+`/design-gauntlet` for #7 (evenings only).

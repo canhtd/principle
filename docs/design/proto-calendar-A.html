@@ -1,0 +1,897 @@
+<!doctype html>
+<!-- PROTOTYPE - throwaway. Principle macOS app: the Day / Week / Month time axis as real
+     calendars, plus the Review pane's "Today | Chart" toggle. v2, after Danny's round-1
+     comments: no backlog surface anywhere; Apple's selected/today colours in every month
+     grid; the Chart redrawn as Dalio's stacked RECORD, where height means nothing and the
+     numeral is the judgement; the principles moved out of the sidebar into the pane.
+     Shell, palette and tokens are lifted verbatim from proto-review-B.html (v2, frozen).
+     Not production code: no persistence, sample content only. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Principle - Week / Month / Trends</title>
+<style>
+:root{
+  --page:#f6f6f6; --canvas:#fafaf8; --sidebar:#f4f3ee; --card:#fff;
+  --field:#f7f7f7; --field-hover:#e8e8e8; --chip:#eff2ee;
+  --text:#272523; --text-2:#55524e; --muted:#77746f; --faint:#a1a1a1;
+  --accent:#09321f; --olive:#39624d; --btn:#224735; --btn-text:#eff2ee;
+  --border:rgba(39,37,35,.10); --line:rgba(39,37,35,.07);
+  /* Eden neutrals - eden-tokens.md §2 "Text" */
+  --n900:#171717; --n800:#262626; --n700:#404040; --n600:#525252;
+  --n500:#737373; --n400:#a1a1a1; --n300:#d4d4d4; --n200:#e5e5e5;
+  --panel-border:rgba(0,0,0,.06); --row-hover:rgba(0,0,0,.04); --row-on:rgba(0,0,0,.06);
+  --sb-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px -1px rgba(0,0,0,.1);
+  --now:#c8402a;
+  --r-sm:8px; --r-md:12px; --r-lg:18px;
+  --hour:52px;
+  /* column 3 carries the chart, and 35 day columns is what decides how big a circle
+     can be - hence the width. The divider drags it from 300 to 720. */
+  --c1w:260px; --c3w:560px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;background:var(--canvas);
+  color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+.app{display:flex;position:relative;height:100vh;overflow:hidden;
+  background:var(--canvas);padding:8px;gap:8px}
+/* the two dividers: zero-width flex items sitting inside the 8px gap, with a wider
+   invisible hit area, exactly as Apple's apps let you drag a sidebar edge */
+.dvd{flex:0 0 0;width:0;margin:0 -4px;position:relative;z-index:30}
+.dvd::before{content:"";position:absolute;top:0;bottom:0;left:-5px;right:-5px;cursor:col-resize}
+.dvd::after{content:"";position:absolute;top:14px;bottom:14px;left:-.5px;width:1px;
+  background:transparent;border-radius:1px;transition:background-color .15s}
+.dvd:hover::after,.dvd.on::after{background:rgba(39,37,35,.24)}
+body.resizing{cursor:col-resize;user-select:none}
+
+/* ---------- column 1: the Eden sidebar panel ---------- */
+.col1{width:var(--c1w);flex:0 0 var(--c1w);background:var(--sidebar);border:1px solid var(--panel-border);
+  border-radius:var(--r-md);box-shadow:var(--sb-shadow);
+  display:flex;flex-direction:column;padding:16px 0 12px;overflow:auto;user-select:none}
+/* the time axis sits centred in the column-2 toolbar, like Apple Calendar */
+.axis{display:inline-flex;background:rgba(39,37,35,.05);border-radius:var(--r-sm);padding:2px}
+.axis button{font-size:12px;padding:5px 14px;border-radius:6px;color:var(--muted)}
+.axis button.on{background:#fff;color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.sechead{display:flex;align-items:center;height:26px;margin:12px 12px 4px;padding:0 4px 0 8px;
+  border-radius:var(--r-md);font-size:13.5px;line-height:20.25px;color:var(--n500)}
+.sblist{display:flex;flex-direction:column;gap:2px;padding:0 12px}
+.catrow{display:flex;align-items:center;gap:8px;height:30px;padding:0 12px 0 8px;
+  border-radius:var(--r-md);font-size:14px;color:var(--n600);cursor:default;
+  transition:background-color .15s,color .15s}
+.catrow:hover{background:var(--row-hover);color:var(--n900)}
+.catrow.off{color:var(--n400)}
+.prow{display:flex;align-items:center;gap:8px;height:30px;padding:0 12px 0 8px;border-radius:var(--r-md);
+  font-size:14px;color:var(--n600);cursor:pointer}
+.prow:hover{background:var(--row-hover)}
+.prow .pn{flex:0 0 auto;font-size:12px;color:var(--n400);font-variant-numeric:tabular-nums}
+.prow .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* mini month - Apple Calendar's: 12px numerals, today a filled red circle */
+.mini{margin-top:auto;padding:16px 12px 0}
+.mhead{display:flex;align-items:center;gap:2px;font-size:12px;color:var(--text-2);padding:0 4px 6px}
+.mhead .sp{flex:1}
+.mnav{width:22px;height:22px;border-radius:6px;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px}
+.mnav:hover{background:rgba(39,37,35,.06)}
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px 0;justify-items:center}
+.mgrid .wd{font-size:10px;color:var(--faint);text-align:center;padding-bottom:4px}
+.mgrid .d{width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  font-size:12px;border-radius:50%;color:var(--text-2);cursor:pointer;
+  font-variant-numeric:tabular-nums;transition:background-color .12s,color .12s}
+.mgrid .d:hover{background:rgba(39,37,35,.07)}
+.mgrid .d.out{color:var(--n300)}
+/* Apple Calendar's two states, and only these: TODAY unselected is its numeral in the
+   accent, no fill; the SELECTED day is a filled accent circle with a white numeral. */
+.mgrid .d.today{color:var(--now);font-weight:600}
+.mgrid .d.sel{background:var(--now);color:#fff;font-weight:600}
+.mgrid .d.sel:hover{background:#b23724}
+
+/* ---------- column 2 ---------- */
+.col2{flex:1;min-width:0;display:flex;flex-direction:column;background:transparent;position:relative}
+.dayhead{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:14px 16px 10px}
+.dayhead .left{min-width:0;display:flex;align-items:center;gap:10px}
+.dayhead .ttls{min-width:0}
+.dayhead .h1{font-size:21px;font-weight:500;letter-spacing:-.02em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dayhead .warn{font-size:12px;color:var(--muted);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dayhead .right{display:flex;align-items:center;justify-content:flex-end;gap:2px}
+.panetog{display:none;width:28px;height:28px;flex:0 0 28px;border-radius:var(--r-sm);color:var(--n600);
+  align-items:center;justify-content:center}
+.panetog:hover{background:var(--row-hover);color:var(--n900)}
+/* date navigation lives at the top of column 3 (spec #5 rev 2) */
+.c3head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;flex:0 0 auto;
+  padding:10px 10px 9px;border-bottom:1px solid var(--panel-border)}
+.c3head .nav{grid-column:2;display:flex;align-items:center;justify-content:center;gap:2px}
+.c3head .add{grid-column:3;justify-self:end;width:26px;padding:0}
+.c3head .rev{grid-row:1;grid-column:1;justify-self:start;padding:0 8px}
+.navbtn{min-width:26px;height:26px;padding:0 9px;border-radius:var(--r-sm);color:var(--n600);
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+  transition:background-color .15s,color .15s}
+.navbtn:hover{background:var(--row-hover);color:var(--n900)}
+/* the all-day strip, shared by Day and Week */
+.allday{display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--canvas)}
+.allday .gut{width:56px;flex:0 0 56px;font-size:11px;color:var(--faint);text-align:right;padding:9px 8px 0 0}
+.allday .items{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px;padding:7px 10px;min-height:40px;align-content:flex-start}
+.allday .cols{flex:1;min-width:0;display:flex;min-height:38px}
+.allday .cols > div{flex:1 1 0;min-width:0;padding:6px 4px;display:flex;flex-direction:column;gap:4px;
+  border-left:1px solid var(--line)}
+.adempty{font-size:12px;color:var(--faint);padding:10px 10px}
+.adit{display:inline-flex;align-items:center;gap:6px;max-width:250px;padding:3px 9px;border-radius:999px;
+  font-size:12px;user-select:none}
+.adit .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gridwrap{flex:1;overflow-y:auto;position:relative}
+.grid{position:relative;user-select:none}
+.hr{position:absolute;left:0;right:0;border-top:1px solid var(--line)}
+.hlab{position:absolute;left:0;width:46px;text-align:right;font-size:11px;color:var(--faint);transform:translateY(-6px)}
+#lane{position:absolute;left:56px;right:0;top:0;bottom:0;border-left:1px solid var(--line)}
+.dcol{position:absolute;top:0;bottom:0;border-left:1px solid var(--line)}
+.nowline{position:absolute;height:0;border-top:1.5px solid var(--now);z-index:6;pointer-events:none}
+.nowline::before{content:"";position:absolute;left:0;top:-4.5px;width:8px;height:8px;border-radius:50%;background:var(--now)}
+.blk{position:absolute;border-radius:8px;padding:3px 7px;overflow:hidden;cursor:pointer}
+.blk .r1{display:flex;align-items:center;gap:6px;min-width:0}
+.blk .t{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.blk .tm{font-size:11px;opacity:.72;margin-left:19px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.blk.done .t{text-decoration:line-through}
+.blk.done{opacity:.55}
+.blk.sel{box-shadow:inset 0 0 0 2px var(--btn)}
+.cb{width:15px;height:15px;border-radius:4px;border:1.5px solid currentColor;opacity:.5;flex:0 0 15px;
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.cb.on{opacity:1;background:currentColor}
+.cb.on::after{content:"";width:7px;height:3.5px;border-left:2px solid var(--canvas);border-bottom:2px solid var(--canvas);
+  transform:rotate(-45deg) translate(1px,-1px)}
+/* ---------- Week: Apple Calendar's seven-day hour grid ---------- */
+.wkhead{display:flex;padding-left:56px;flex:0 0 auto}
+.wkhead .wc{flex:1 1 0;min-width:0;text-align:center;padding:2px 0 6px;cursor:pointer;border-radius:var(--r-sm)}
+.wkhead .wc:hover .dn{background:var(--row-hover)}
+.wkhead .wd{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.wkhead .dn{width:28px;height:28px;margin:1px auto 0;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;font-size:16px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.wkhead .wc.sel .dn{background:var(--row-on);color:var(--n900)}
+.wkhead .wc.today .dn{background:var(--now);color:#fff;font-weight:600}
+/* ---------- Month: a true month grid of task chips ---------- */
+.mo{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 12px 12px}
+.mowd{display:grid;grid-template-columns:repeat(7,1fr)}
+.mowd div{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);
+  text-align:center;padding-bottom:5px}
+.mogrid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,1fr);
+  border-top:1px solid var(--line);border-left:1px solid var(--line);
+  background:var(--card);border-radius:2px;overflow:hidden}
+.mocell{min-width:0;min-height:0;overflow:hidden;padding:3px 4px 0;cursor:pointer;
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.mocell:hover{background:var(--row-hover)}
+.mocell.out{background:rgba(39,37,35,.022)}
+.mocell.sel{background:rgba(200,64,42,.05)}
+.mocell .dn{display:flex;align-items:center;justify-content:center;width:20px;height:20px;
+  margin:0 0 2px auto;border-radius:50%;font-size:11.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.mocell.out .dn{color:var(--n300)}
+.mocell.today .dn{color:var(--now);font-weight:600}
+.mocell.sel .dn{background:var(--now);color:#fff;font-weight:600}
+.chip{display:block;height:17px;margin-bottom:2px;padding:0 5px;border-radius:4px;font-size:11px;
+  line-height:17px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.chip.done{opacity:.5;text-decoration:line-through}
+.momore{font-size:10.5px;color:var(--faint);padding-left:5px}
+
+/* ---------- column 3 ---------- */
+.col3{width:var(--c3w);flex:0 0 var(--c3w);background:var(--sidebar);border:1px solid var(--panel-border);
+  border-radius:var(--r-md);box-shadow:var(--sb-shadow);overflow:hidden;
+  display:flex;flex-direction:column}
+.c3body{flex:1;overflow:auto;padding:16px 12px;display:flex;flex-direction:column}
+.sec{margin-bottom:20px}
+.sec .h{font-size:12px;color:var(--muted);margin-bottom:7px}
+.sec .h.hrow{display:flex;align-items:center;gap:2px}
+.sec .h.hrow > span:first-child{margin-right:auto}
+.sec .h.hrow .mnav + span{margin:0 2px}
+.sec .h.hrow .mnav + span + .mnav{margin-right:auto}
+.sec .h.hrow .seg{margin-left:auto}
+/* the same segmented control as Day / Week / Month, one size quieter */
+.seg{display:inline-flex;background:rgba(39,37,35,.05);border-radius:var(--r-sm);padding:2px}
+.seg span{font-size:12px;padding:5px 12px;border-radius:6px;color:var(--muted);cursor:pointer;
+  transition:background-color .15s,color .15s}
+.seg span:hover{color:var(--text-2)}
+.seg span.on{background:#fff;color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.seg.tiny span{font-size:11px;padding:3px 9px}
+/* ---------- Review your day (frozen from proto-review-B v2, unchanged) ---------- */
+.chart{display:flex;align-items:flex-end;padding:4px 0 0}
+.ccol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center}
+.vtrack{position:relative;width:100%;height:196px;cursor:pointer;border-bottom:1px solid var(--border)}
+.vrail{position:absolute;left:50%;margin-left:-2px;top:10px;bottom:10px;width:4px;border-radius:2px;
+  background:rgba(39,37,35,.07)}
+.vtrack:hover .vrail{background:rgba(39,37,35,.11)}
+.vtk{position:absolute;left:50%;margin-left:-1px;margin-bottom:-1px;width:2px;height:2px;
+  border-radius:50%;background:rgba(39,37,35,.20);opacity:0;transition:opacity .15s}
+.vtrack:hover .vtk,.ccol.setting .vtk{opacity:1}
+.vdot{position:absolute;left:50%;margin-left:-11px;width:22px;height:22px;border-radius:50%;
+  color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 2px var(--sidebar);transition:bottom .12s ease}
+.ccol.setting .vdot{transition:none;transform:scale(1.1)}
+.vdot.unset{background:var(--n200);color:var(--n400);
+  box-shadow:0 0 0 2px var(--sidebar),inset 0 0 0 1px rgba(0,0,0,.07)}
+.vtrack:hover .vdot.unset{background:var(--n300);color:var(--n600)}
+.vnum{position:absolute;left:calc(50% + 15px);margin-bottom:-6px;font-size:12px;line-height:1;
+  font-weight:500;color:var(--text);font-variant-numeric:tabular-nums;pointer-events:none}
+.ccol:last-child .vnum{left:auto;right:calc(50% + 15px)}
+.cname{font-size:11.5px;color:var(--muted);margin-top:7px;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.ccol.on .cname{color:var(--n700)}
+.pick{margin-top:14px;padding:0 2px}
+.pickbar{font-size:11.5px;line-height:1.45;color:var(--faint);margin-bottom:7px}
+.dnote textarea{width:100%;min-height:92px;resize:vertical;padding:9px 10px;border-radius:var(--r-sm);
+  background:var(--field);border:1px solid var(--border);outline:none;
+  font-size:13px;line-height:1.6;color:var(--text)}
+.dnote textarea:focus{border-color:var(--olive)}
+.dnote textarea::placeholder{color:var(--faint)}
+.evi{display:flex;flex-direction:column;gap:3px}
+.evi span{font-size:11.5px;line-height:1.4;color:var(--muted)}
+.evi span::before{content:"\2713";margin-right:6px;color:var(--faint)}
+.grph{font-size:11.5px;color:var(--faint);padding:0 8px;margin:9px 0 3px}
+.sec .h + .grph{margin-top:0}
+.note{font-size:12px;color:var(--faint);padding:2px}
+.grph{font-size:11.5px;color:var(--faint);padding:0 8px;margin:9px 0 3px}
+.sec .h + .grph{margin-top:0}
+/* the principle card: a left stroke inside the radius, the corpus number as an uppercase
+   label, the title, and the bookmark toggle */
+.pcard{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--panel-border);
+  border-radius:var(--r-md);padding:11px 13px 11px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04);
+  transition:box-shadow .15s,border-color .15s}
+.pcard:hover{border-color:rgba(0,0,0,.12);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.pcard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.pcard .top{display:flex;align-items:flex-start;gap:8px}
+.pcard .lbl{flex:1;min-width:0;font-size:10.5px;font-weight:600;letter-spacing:.08em;
+  color:var(--n500);line-height:1.4}
+.pcard .ttl{font-size:13.5px;line-height:1.5;color:var(--text);margin-top:5px}
+.fav{width:22px;height:22px;flex:0 0 22px;margin:-3px -3px 0 0;border-radius:6px;color:var(--n400);
+  display:flex;align-items:center;justify-content:center;transition:background-color .15s,color .15s}
+.fav:hover{background:var(--row-hover);color:var(--n700)}
+.fav.on{color:var(--accent)}
+/* a month with no dots at all says so, rather than showing an empty frame */
+.empty{font-size:12px;color:var(--faint);text-align:center;padding:86px 0}
+
+/* ---------- the Chart: drawn the way Dalio draws it ----------
+   ONE panel at a time - 7 days or 28 days, two zoom levels of the same view, never both at
+   once - standing on its baseline with the goodness axis at the left, GOOD at the top and
+   BAD at the floor. Unfiltered, a day is a column of large lettered circles SORTED best at
+   the top; the slot is rank, not value, and no number is printed anywhere. Filtered to one
+   category, every circle takes its height from its own score, so a run of improvement reads
+   as a rising scatter. Circle size is computed from whichever runs out first, the width of
+   the columns or the height of the deepest day. */
+.dch{display:flex;align-items:flex-end;gap:9px}
+.drail{flex:0 0 26px;position:relative;display:flex;flex-direction:column;
+  justify-content:space-between;align-items:flex-end;padding-right:7px;
+  font-size:7.5px;line-height:1;letter-spacing:.07em;color:var(--faint)}
+.drail::after{content:"";position:absolute;right:0;top:0;bottom:0;width:1px;background:var(--border)}
+.drail span{color:var(--muted);font-weight:600}
+.dpanel{flex:1;min-width:0;position:relative;border-bottom:1px solid var(--border)}
+.ddot{position:absolute;border-radius:50%;color:#fff;font-weight:700;line-height:1;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px var(--sidebar)}
+.ddot.gone{opacity:.36}
+/* the two zoom levels, as quiet as a caption - it sits where a chart title would */
+.zoomtog{display:flex;align-items:center;gap:7px;margin:2px 0 8px 35px;
+  font-size:10.5px;color:var(--faint)}
+.zoomtog span{cursor:pointer;transition:color .15s}
+.zoomtog span:hover{color:var(--text-2)}
+.zoomtog span.on{color:var(--text-2);font-weight:500}
+.zoomtog i{width:1px;height:9px;background:var(--n300)}
+/* one line of category chips under the chart - the legend and the filter in one */
+.cchips{display:flex;flex-wrap:wrap;gap:5px;margin-top:14px}
+.cchip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;
+  border-radius:999px;font-size:11.5px;color:var(--text-2);background:rgba(39,37,35,.045);
+  cursor:pointer;transition:background-color .15s,color .15s}
+.cchip:hover{background:rgba(39,37,35,.09)}
+.cchip.on{color:#fff}
+.cchip.on:hover{filter:brightness(1.08)}
+.cchip .sw{width:8px;height:8px;flex:0 0 8px;border-radius:50%}
+.cchip.gone{color:var(--faint)}
+.cchip.gone .sw{opacity:.4}
+
+/* Ask Ray keeps its place on the window's margin (the chat itself is out of scope here) */
+.rayfab{position:fixed;right:20px;bottom:20px;z-index:20;width:44px;height:44px;border-radius:50%;
+  background:var(--btn);color:var(--btn-text);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 10px 24px rgba(15,23,42,.20)}
+.rayfab:hover{background:var(--accent)}
+
+/* ============================ responsive ============================ */
+@media (max-width:1199px){
+  .dayhead{padding:12px 14px 9px;gap:10px}
+  .dayhead .h1{font-size:17px}
+  .axis button{font-size:11.5px;padding:5px 10px}
+}
+@media (max-width:1099px){
+  .col3{position:absolute;right:8px;top:8px;bottom:8px;z-index:40;
+    box-shadow:0 22px 60px rgba(0,0,0,.14),var(--sb-shadow);
+    transform:translateX(calc(100% + 16px));transition:transform .18s ease}
+  .app.c3open .col3{transform:none}
+  .panetog.t3{display:flex}
+  .dvd[data-div="3"]{display:none}
+}
+@media (max-width:899px){
+  .col1{position:absolute;left:8px;top:8px;bottom:8px;z-index:41;
+    box-shadow:0 22px 60px rgba(0,0,0,.14),var(--sb-shadow);
+    transform:translateX(calc(-100% - 16px));transition:transform .18s ease}
+  .app.c1open .col1{transform:none}
+  .panetog.t1{display:flex}
+  .dvd[data-div="1"]{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="col1" id="col1"></aside>
+  <div class="dvd" data-div="1" title="Drag to resize the sidebar"></div>
+  <main class="col2" id="col2"></main>
+  <div class="dvd" data-div="3" title="Drag to resize the panel"></div>
+  <aside class="col3" id="col3"></aside>
+</div>
+
+<script>
+// ============================ prototype constants ============================
+const HOUR = 52, GUT = 56;
+const TODAY = '2026-08-17';        // a Monday - fixed so screenshots are reproducible
+const NOW = 10 * 60 + 24;          // "now" pinned at 10:24 for the red line
+const WD = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MON = ['January','February','March','April','May','June','July','August',
+             'September','October','November','December'];
+const svg = d => '<svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" ' +
+  'stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
+const BOOKMARK_D = '<path d="M4 2.4h8a1 1 0 0 1 1 1v10.2L8 10.9l-5 2.7V3.4a1 1 0 0 1 1-1z"/>';
+const ICON_MARK = svg(BOOKMARK_D);
+const ICON_MARK_ON = '<svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" ' +
+  'stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">' + BOOKMARK_D + '</svg>';
+const ICON_PLUS = svg('<path d="M8 3.4v9.2M3.4 8h9.2"/>');
+const ICON_PANEL_L = svg('<rect x="2" y="3" width="12" height="10" rx="2"/><path d="M6 3v10"/>');
+const ICON_PANEL_R = svg('<rect x="2" y="3" width="12" height="10" rx="2"/><path d="M10 3v10"/>');
+const ICON_CHAT = svg('<path d="M2.6 4.4a1.7 1.7 0 0 1 1.7-1.7h7.4a1.7 1.7 0 0 1 1.7 1.7v4.4a1.7 1.7 0 0 1-1.7 1.7H6.4L3.6 13v-2.5a1.7 1.7 0 0 1-1-1.7z"/>');
+// a category may carry a "bar": one sentence on what a good day here looks like
+const CATS = [
+  {id:'c1', name:'Learning', color:'#39624d', bar:''},
+  {id:'c2', name:'Work',     color:'#4f6b7a', bar:'A good day is one decision made and shipped, not five discussed.'},
+  {id:'c3', name:'Health',   color:'#a35d3d', bar:'Moved for half an hour and went to bed before midnight.'},
+  {id:'c4', name:'Family',   color:'#6a4c7a', bar:''},
+];
+// deleted on 11 Aug. It is gone from the sidebar and from today's tracks, but its dots stay
+// in history under the name and colour it had when it went - the Chart keeps its past.
+const GONE = [{id:'c5', name:'Side project', color:'#7a6a3c', bar:'', gone:true}];
+const ALL = CATS.concat(GONE);
+
+// ---- tasks: [date, start-minute or null, minutes, category, must, done, title] ----
+const SEED = [
+  ['2026-08-03', 540, 90,'c2',1,1,'Plan the week'], ['2026-08-03', 660, 30,'c1',1,1,'English - 30 min'],
+  ['2026-08-04', 420, 45,'c3',0,1,'Morning run'],   ['2026-08-04', 600,120,'c2',1,1,'Rewrite the pricing page'],
+  ['2026-08-05', 660, 30,'c1',1,1,'English - 30 min'], ['2026-08-05', 900, 60,'c2',0,1,'Interview candidate'],
+  ['2026-08-06', 420, 45,'c3',0,1,'Morning run'],   ['2026-08-06',1140, 60,'c4',1,1,'Dinner with family'],
+  ['2026-08-07', 540,120,'c2',1,1,'Ship the M2 build'],
+  ['2026-08-09', 600,120,'c4',0,1,'Weekend walk'],
+  ['2026-08-10', 420, 45,'c3',0,1,'Morning run'],   ['2026-08-10', 540, 90,'c2',1,1,'M3 scope review'],
+  ['2026-08-11', 660, 30,'c1',1,1,'English - 30 min'], ['2026-08-11', 840, 60,'c2',1,1,'Fix the billing bug'],
+  ['2026-08-12', 420, 45,'c3',0,1,'Morning run'],   ['2026-08-12',1140, 90,'c4',1,1,'Cook with the kids'],
+  ['2026-08-13', 540,150,'c2',1,1,'Write the M4 brief'],
+  ['2026-08-14', 540,180,'c2',1,1,'Ship the M3 build'], ['2026-08-14', 780, 30,'c1',1,1,'English - 30 min'],
+  ['2026-08-15', 600, 60,'c3',0,1,'Fix the bike'],
+  ['2026-08-16', 540,120,'c4',0,1,'Long walk with the kids'],
+  // 17 Aug - the seeded day, identical to the frozen day shell
+  ['2026-08-17', 420, 45,'c3',0,1,'Morning run'],
+  ['2026-08-17', 540, 90,'c2',1,1,'Decide M4 scope for VessaStudio'],
+  ['2026-08-17', 660, 30,'c1',1,1,'English - 30 min'],
+  ['2026-08-17', 840, 60,'c1',0,0,'Review 4 LearnEnglish findings'],
+  ['2026-08-17',1140, 60,'c4',1,0,'Dinner with family'],
+  ['2026-08-17',null, 60,'c2',1,0,'Fix tax paperwork'],
+  ['2026-08-17',null, 60,'c3',0,0,'Buy groceries'],
+  ['2026-08-18', 420, 45,'c3',0,0,'Morning run'],   ['2026-08-18', 570, 30,'c2',1,0,'Standup'],
+  ['2026-08-18', 660, 30,'c1',1,0,'English - 30 min'], ['2026-08-18', 960, 60,'c3',1,0,'Dentist'],
+  ['2026-08-19', 420, 45,'c3',0,0,'Morning run'],   ['2026-08-19', 600,120,'c2',1,0,'Write the M4 spec'],
+  ['2026-08-19', 780, 30,'c1',1,0,'English - 30 min'],
+  ['2026-08-20', 420, 45,'c3',0,0,'Morning run'],   ['2026-08-20', 840, 60,'c2',0,0,'Interview candidate'],
+  ['2026-08-20',1080, 90,'c3',0,0,'Football with Minh'],
+  ['2026-08-21', 540,120,'c2',1,0,'Ship the M4 build'], ['2026-08-21',1140, 90,'c4',1,0,'Family dinner'],
+  ['2026-08-21',null, 30,'c1',0,0,'Order the Dalio workbook'],
+  ['2026-08-22', 540, 90,'c4',0,0,'Weekend walk'],  ['2026-08-22', 900, 60,'c1',0,0,'Re-read Dalio chapter 5'],
+  ['2026-08-23', 660,120,'c4',0,0,'Cook with the kids'],
+  ['2026-08-25', 540, 90,'c2',1,0,'M5 kick-off'],   ['2026-08-27', 660, 30,'c1',1,0,'English - 30 min'],
+];
+let seq = 0;
+const mkTask = r => ({id:'t' + (++seq), d:r[0], start:r[1], dur:r[2], cat:r[3],
+                      must:!!r[4], done:!!r[5], title:r[6]});
+
+// ============================ sample state ============================
+let S = {
+  axis:'day', date:TODAY, month:'2026-08',
+  rmode:'today',         // the pane's two modes: 'today' | 'chart' (shown as Today | Trends)
+  zoom:7,                // the chart's zoom level: 7 or 28 days, never both at once
+  filter:null,           // chart filtered to one category
+  sel:null,              // the selected task block
+  favs:['life:5.3', 'life:5.6', 'work:3.3'],   // bookmarked principles
+  pod:'life:5.3',                              // the principle of the day
+  setting:null,          // {cat, v} while a dot is in hand - that is when the number shows
+  pick:null,             // the track whose bar and evidence are listed
+  off:[],                // categories unticked in column 1
+  c1Open:false, c3Open:false,
+  tasks: SEED.map(mkTask),
+  // one dot per CATEGORY per day, 1 (low) - 10 (high). A missing entry is blank, and blank
+  // is not a bad day: 3 and 8 Aug carry nothing at all, and c5 stops after 10 Aug.
+  reviews:{
+    '2026-07-21':{s:{c1:5, c2:6, c3:4, c5:5},       note:''},
+    '2026-07-22':{s:{c2:7, c3:5, c5:6},             note:''},
+    '2026-07-23':{s:{c1:4, c2:5, c4:7, c5:4},       note:''},
+    '2026-07-25':{s:{c2:6, c3:6, c5:7},             note:''},
+    '2026-07-26':{s:{c3:7, c4:8},                   note:''},
+    '2026-07-27':{s:{c1:6, c2:7, c3:5, c5:6},       note:''},
+    '2026-07-28':{s:{c2:4, c3:6, c4:6, c5:5},       note:''},
+    '2026-07-30':{s:{c1:5, c2:6, c3:7, c5:6},       note:''},
+    '2026-07-31':{s:{c2:7, c3:6, c4:7, c5:8},       note:''},
+    '2026-08-01':{s:{c2:5, c5:7},                   note:''},
+    '2026-08-02':{s:{c3:6, c4:8, c5:6},             note:''},
+    '2026-08-04':{s:{c1:3, c2:6, c5:5},             note:''},
+    '2026-08-05':{s:{c2:8, c3:7, c5:8},             note:''},
+    '2026-08-06':{s:{c1:5, c2:7, c3:8, c4:7, c5:6}, note:''},
+    '2026-08-07':{s:{c2:5, c3:6},                   note:''},
+    '2026-08-09':{s:{c3:8, c4:9, c5:4},             note:''},
+    '2026-08-10':{s:{c1:6, c2:6, c3:7, c5:5},       note:''},
+    '2026-08-11':{s:{c2:8, c3:5},                   note:''},
+    '2026-08-12':{s:{c1:7, c2:7, c4:6},             note:''},
+    '2026-08-13':{s:{c2:6, c3:7},                   note:''},
+    '2026-08-14':{s:{c1:4, c2:5, c3:3, c4:6},  note:'Ate badly, sat all day. Shipped the build though.'},
+    '2026-08-15':{s:{c2:7, c3:6, c4:8},        note:''},
+    '2026-08-16':{s:{c1:6, c2:4, c3:8, c4:9},  note:'Slow morning, but the afternoon with the kids was the best part of the week.'},
+    '2026-08-17':{s:{c1:7, c2:8, c3:5},        note:''},
+  },
+};
+
+// ============================ helpers ============================
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cat = id => ALL.find(c => c.id === id) || CATS[0];
+const task = id => S.tasks.find(t => t.id === id);
+const pad2 = n => String(n).padStart(2, '0');
+const fmt = m => pad2(Math.floor(m/60)) + ':' + pad2(m % 60);
+const iso = d => d.toISOString().slice(0,10);
+const dt = k => new Date(k + 'T00:00:00Z');
+const addDays = (k, n) => { const d = dt(k); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+const narrowHead = () => window.matchMedia('(max-width:1199px)').matches;
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16);
+  return 'rgba(' + (n>>16 & 255) + ',' + (n>>8 & 255) + ',' + (n & 255) + ',' + a + ')'; };
+const catOn = id => !S.off.includes(id);
+const onDay = k => S.tasks.filter(t => t.d === k && catOn(t.cat));
+const timed = k => onDay(k).filter(t => t.start !== null);
+const untimed = k => onDay(k).filter(t => t.start === null);
+const revOf = d => S.reviews[d] || {s:{}, note:''};
+const rev = () => S.reviews[S.date] || (S.reviews[S.date] = {s:{}, note:''});
+// what was ticked in this category on the shown day - EVIDENCE only, no number comes out of it
+const evidence = c => onDay(S.date).filter(t => t.done && t.cat === c);
+const frac = v => (v - 1) / 9;                       // where 1..10 sits on a track
+const yOf = m => m / 60 * HOUR;
+// the Monday of the week holding a day, and the days of a calendar month
+const monday = k => addDays(k, -((dt(k).getUTCDay() + 6) % 7));
+const shortD = k => dt(k).getUTCDate() + ' ' + MON[dt(k).getUTCMonth()].slice(0,3);
+
+// ============================ actions ============================
+const A = {
+  axis(k){ S.axis = k; render(); },
+  keepPane(){ S.sel = null; },
+  pickDate(d){ S.date = d; S.month = d.slice(0,7); A.keepPane(); render(); },
+  today(){ S.date = TODAY; S.month = TODAY.slice(0,7); A.keepPane(); render(); },
+  // one step of whatever the axis is showing: a day, a whole week, a whole month
+  step(k){
+    if (S.axis === 'month'){
+      const d = dt(S.date), dom = d.getUTCDate();
+      const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + k, 1));
+      const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+      t.setUTCDate(Math.min(dom, last)); S.date = iso(t);
+    } else S.date = addDays(S.date, k * (S.axis === 'week' ? 7 : 1));
+    S.month = S.date.slice(0,7); A.keepPane(); render();
+  },
+  shiftMonth(n){ const [y, m] = S.month.split('-').map(Number);
+    S.month = iso(new Date(Date.UTC(y, m - 1 + n, 1))).slice(0,7); render(); },
+  toggleFav(id){ S.favs = isFav(id) ? S.favs.filter(x => x !== id) : S.favs.concat(id); render(); },
+  toggleCat(id){ S.off = catOn(id) ? S.off.concat(id) : S.off.filter(x => x !== id); render(); },
+  toggleDone(id){ const t = task(id); if (t) t.done = !t.done; render(); },   // never moves a dot
+  select(id){ S.sel = S.sel === id ? null : id; render(); },
+  openDay(d){ S.date = d; S.month = d.slice(0,7); S.axis = 'day'; A.keepPane(); render(); },
+  togglePane(w){ if (w === 1) S.c1Open = !S.c1Open; else S.c3Open = !S.c3Open; render(); },
+  // ---- Review your day ----
+  rmode(k){ S.rmode = k; render(); },
+  filter(c){ S.filter = S.filter === c ? null : c; render(); },
+  zoom(n){ S.zoom = n; render(); },
+  setScore(c, v, quiet){ rev().s[c] = v; if (quiet) renderCol3(); else render(); },
+  clearScore(c){ delete rev().s[c]; render(); },
+  setDayNote(v){ rev().note = v; },
+  pickTrack(c){ S.pick = S.pick === c ? null : c; render(); },
+};
+
+// ============================ column 1 ============================
+function miniMonth(){
+  const [y, m] = S.month.split('-').map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const lead = (first.getUTCDay() + 6) % 7;
+  let cells = '';
+  for (let i = 0; i < 42; i++){
+    const d = new Date(Date.UTC(y, m - 1, 1 - lead + i)), key = iso(d);
+    cells += '<div class="d ' + (d.getUTCMonth() !== m - 1 ? 'out ' : '') +
+      (key === TODAY ? 'today ' : '') + (key === S.date ? 'sel' : '') +
+      '" onclick="A.pickDate(\'' + key + '\')">' + d.getUTCDate() + '</div>';
+  }
+  return '<div class="mini"><div class="mhead"><span>' + MON[m-1] + ' ' + y + '</span>' +
+    '<span class="sp"></span><button class="mnav" onclick="A.shiftMonth(-1)">&#8249;</button>' +
+    '<button class="mnav" onclick="A.shiftMonth(1)">&#8250;</button></div>' +
+    '<div class="mgrid">' + WD.map(d => '<div class="wd">' + d[0] + '</div>').join('') +
+    cells + '</div></div>';
+}
+// the sidebar is the calendar's own: the categories and the month, nothing else. The
+// principles that used to sit behind a second mode here now live in column 3.
+function renderCol1(){
+  const catRow = c => '<div class="catrow' + (catOn(c.id) ? '' : ' off') + '"' +
+    ' onclick="A.toggleCat(\'' + c.id + '\')" title="' + (catOn(c.id) ? 'Hide' : 'Show') + ' ' +
+    esc(c.name) + '"><span class="cb' + (catOn(c.id) ? ' on' : '') + '" style="color:' + c.color +
+    '"></span>' + esc(c.name) + '</div>';
+  document.getElementById('col1').innerHTML = '<div class="sechead">Categories</div>' +
+    '<div class="sblist">' + CATS.map(catRow).join('') + '</div>' + miniMonth();
+}
+
+// ============================ column 2: Day / Week / Month ============================
+function blockHtml(t, left, width){
+  const c = cat(t.cat), top = yOf(t.start), h = Math.max(16, yOf(t.dur) - 2);
+  const rings = [S.sel === t.id ? 'inset 0 0 0 2px var(--btn)' : '',
+                 t.must ? '' : 'inset 0 0 0 1px ' + rgba(c.color, .34)].filter(Boolean);
+  const style = (t.must ? 'background:' + c.color + ';color:#fff;'
+                        : 'background:' + rgba(c.color, .18) + ';color:var(--text);') +
+    (rings.length ? 'box-shadow:' + rings.join(',') + ';' : '');
+  return '<div class="blk ' + (t.done ? 'done ' : '') + (S.sel === t.id ? 'sel' : '') +
+    '" data-id="' + t.id + '" style="top:' + top + 'px;height:' + h + 'px;left:calc(' + left +
+    ' + 4px);width:calc(' + width + ' - 8px);' + style + '">' +
+    '<div class="r1"><span class="cb ' + (t.done ? 'on' : '') + '" data-tid="' + t.id + '"></span>' +
+    '<span class="t">' + esc(t.title) + '</span></div>' +
+    (h >= 34 ? '<div class="tm">' + fmt(t.start) + ' - ' + fmt(t.start + t.dur) + '</div>' : '') +
+    '</div>';
+}
+function adChip(t){
+  const c = cat(t.cat);
+  const style = t.must ? 'background:' + c.color + ';color:#fff;'
+    : 'background:' + rgba(c.color, .18) + ';color:var(--text);box-shadow:inset 0 0 0 1px ' + rgba(c.color, .34) + ';';
+  return '<span class="adit ' + (t.done ? 'done' : '') + '" style="' + style + '">' +
+    '<span class="cb ' + (t.done ? 'on' : '') + '" data-tid="' + t.id + '"></span>' +
+    '<span class="t">' + esc(t.title) + '</span></span>';
+}
+function hourLines(){
+  let out = '';
+  for (let h = 0; h <= 24; h++){
+    out += '<div class="hr" style="top:' + (h * HOUR) + 'px"></div>';
+    if (h < 24) out += '<div class="hlab" style="top:' + (h * HOUR) + 'px">' + pad2(h) + '</div>';
+  }
+  return out;
+}
+function dayView(){
+  const ad = untimed(S.date);
+  const blocks = timed(S.date).map(t => blockHtml(t, '0%', '100%')).join('');
+  return '<div class="allday"><div class="gut">all-day</div><div class="items">' +
+      (ad.length ? ad.map(adChip).join('') : '<div class="adempty">Nothing without a time.</div>') +
+    '</div></div>' +
+    '<div class="gridwrap" id="gridwrap"><div class="grid" style="height:' + (24*HOUR) + 'px">' +
+      hourLines() + '<div id="lane">' + blocks +
+      (S.date === TODAY ? '<div class="nowline" style="left:0;right:0;top:' + yOf(NOW) + 'px"></div>' : '') +
+      '</div></div></div>';
+}
+function weekView(){
+  const days = []; for (let i = 0; i < 7; i++) days.push(addDays(monday(S.date), i));
+  const head = '<div class="wkhead">' + days.map((k, i) =>
+    '<div class="wc' + (k === TODAY ? ' today' : k === S.date ? ' sel' : '') +
+    '" onclick="A.pickDate(\'' + k + '\')" ondblclick="A.openDay(\'' + k + '\')">' +
+    '<div class="wd">' + WD[i] + '</div><div class="dn">' + dt(k).getUTCDate() + '</div></div>').join('') +
+    '</div>';
+  const ad = '<div class="allday"><div class="gut">all-day</div><div class="cols">' +
+    days.map(k => '<div>' + untimed(k).map(adChip).join('') + '</div>').join('') + '</div></div>';
+  let blocks = '', cols = '';
+  days.forEach((k, i) => {
+    const l = (i / 7 * 100).toFixed(4) + '%', w = (100 / 7).toFixed(4) + '%';
+    cols += '<div class="dcol" style="left:' + l + '"></div>';
+    blocks += timed(k).map(t => blockHtml(t, l, w)).join('');
+  });
+  const nowIdx = days.indexOf(TODAY);
+  const now = nowIdx < 0 ? '' : '<div class="nowline" style="top:' + yOf(NOW) + 'px;left:' +
+    (nowIdx / 7 * 100).toFixed(4) + '%;width:' + (100/7).toFixed(4) + '%"></div>';
+  return head + ad + '<div class="gridwrap" id="gridwrap"><div class="grid" style="height:' +
+    (24*HOUR) + 'px">' + hourLines() + '<div id="lane">' + cols + blocks + now + '</div></div></div>';
+}
+function monthView(){
+  const [y, m] = S.date.split('-').map(Number);
+  const lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+  const weeks = Math.ceil((lead + new Date(Date.UTC(y, m, 0)).getUTCDate()) / 7);
+  let cells = '';
+  for (let i = 0; i < weeks * 7; i++){
+    const d = new Date(Date.UTC(y, m - 1, 1 - lead + i)), k = iso(d);
+    const list = onDay(k), show = list.slice(0, 4);
+    cells += '<div class="mocell' + (d.getUTCMonth() !== m - 1 ? ' out' : '') +
+      (k === TODAY ? ' today' : '') + (k === S.date ? ' sel' : '') +
+      '" onclick="A.pickDate(\'' + k + '\')" ondblclick="A.openDay(\'' + k + '\')">' +
+      '<div class="dn">' + d.getUTCDate() + '</div>' +
+      show.map(t => { const c = cat(t.cat);
+        const st = t.must ? 'background:' + c.color + ';color:#fff;'
+          : 'background:' + rgba(c.color, .18) + ';color:var(--text);box-shadow:inset 0 0 0 1px ' + rgba(c.color, .34) + ';';
+        return '<div class="chip' + (t.done ? ' done' : '') + '" style="' + st + '">' +
+          esc(t.title) + '</div>'; }).join('') +
+      (list.length > 4 ? '<div class="momore">+' + (list.length - 4) + ' more</div>' : '') + '</div>';
+  }
+  return '<div class="mo"><div class="mowd">' + WD.map(d => '<div>' + d + '</div>').join('') +
+    '</div><div class="mogrid" style="grid-template-rows:repeat(' + weeks + ',1fr)">' + cells +
+    '</div></div>';
+}
+function renderCol2(){
+  const d = dt(S.date);
+  let title;
+  if (S.axis === 'day')
+    title = narrowHead()
+      ? WD[(d.getUTCDay() + 6) % 7] + ' ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()].slice(0,3)
+      : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getUTCDay()] +
+        ', ' + d.getUTCDate() + ' ' + MON[d.getUTCMonth()];
+  else if (S.axis === 'week'){
+    const a = monday(S.date), b = addDays(a, 6);
+    title = dt(a).getUTCDate() + (dt(a).getUTCMonth() === dt(b).getUTCMonth() ? ''
+      : ' ' + MON[dt(a).getUTCMonth()].slice(0,3)) + ' – ' + dt(b).getUTCDate() + ' ' +
+      MON[dt(b).getUTCMonth()] + ' ' + dt(b).getUTCFullYear();
+  } else title = MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+  const axis = '<div class="axis">' + ['day','week','month'].map(k =>
+    '<button class="' + (S.axis === k ? 'on' : '') + '" onclick="A.axis(\'' + k + '\')">' +
+    k[0].toUpperCase() + k.slice(1) + '</button>').join('') + '</div>';
+  const n = onDay(S.date).length;
+  const warn = (S.axis === 'day' && n > 5 && !narrowHead())
+    ? '<div class="warn">' + n + ' tasks &mdash; more than usual.</div>' : '';
+  document.getElementById('col2').innerHTML =
+    '<div class="dayhead"><div class="left">' +
+      '<button class="panetog t1" title="Show or hide the sidebar" onclick="A.togglePane(1)">' +
+        ICON_PANEL_L + '</button>' +
+      '<div class="ttls"><div class="h1">' + title + '</div>' + warn + '</div></div>' + axis +
+      '<div class="right"><button class="panetog t3" title="Show or hide the side panel"' +
+        ' onclick="A.togglePane(3)">' + ICON_PANEL_R + '</button></div></div>' +
+    (S.axis === 'day' ? dayView() : S.axis === 'week' ? weekView() : monthView()) +
+    '<button class="rayfab" title="Ask Ray (frozen in proto-day-A, not part of this prototype)">' +
+      ICON_CHAT + '</button>';
+}
+
+// ============================ column 3 ============================
+// ---- Today mode: the frozen pane, unchanged ----
+function trackB(c, v){
+  const at = f => 'calc(17px + (100% - 34px) * ' + f.toFixed(4) + ')';
+  let ticks = '';
+  for (let i = 1; i <= 10; i++) ticks += '<span class="vtk" style="bottom:' + at(frac(i)) + '"></span>';
+  const set = v != null, show = (S.setting && S.setting.cat === c.id) || S.pick === c.id;
+  return '<div class="ccol' + (S.setting && S.setting.cat === c.id ? ' setting' : '') +
+      (S.pick === c.id ? ' on' : '') + '" title="' + esc(c.bar || 'No bar set for ' + c.name) + '">' +
+    '<div class="vtrack" data-trk="' + c.id + '"><span class="vrail"></span>' + ticks +
+      '<span class="vdot' + (set ? '' : ' unset') + '" style="bottom:calc(6px + (100% - 34px) * ' +
+        frac(set ? v : 5).toFixed(4) + ')' + (set ? ';background:' + c.color : '') + '">' +
+        esc(c.name[0]) + '</span>' +
+      (set && show ? '<span class="vnum" style="bottom:' + at(frac(v)) + '">' + v + '</span>' : '') +
+    '</div><div class="cname" onclick="A.pickTrack(\'' + c.id + '\')">' + esc(c.name) + '</div></div>';
+}
+function todayPane(){
+  const cols = CATS.filter(c => catOn(c.id));
+  const p = cols.find(c => c.id === S.pick), ev = p ? evidence(p.id) : [];
+  const under = !p
+    ? '<div class="note">Pick a category to see what you ticked for it today.</div>'
+    : (p.bar ? '<div class="pickbar">' + esc(p.bar) + '</div>' : '') +
+      (ev.length ? '<div class="evi">' + ev.map(t => '<span>' + esc(t.title) + '</span>').join('') + '</div>'
+                 : '<div class="note">Nothing ticked for ' + esc(p.name) + ' today.</div>');
+  return cols.length
+    ? '<div class="chart">' + cols.map(c => trackB(c, revOf(S.date).s[c.id])).join('') +
+      '</div><div class="pick">' + under + '</div>'
+    : '<div class="note">Every category is hidden.</div>';
+}
+// ---- Chart mode: Dalio's own drawing, one window at a time ----
+// 7 days or 28 days - the same view at two zoom levels. Unfiltered, each day is a column of
+// lettered circles sorted best at the top; the slot says rank, never value. Filtered to one
+// category, each circle sits at the height of its own score, which is what turns a run of
+// judgements into a trend you can see. Both behave the same at either zoom.
+function chartPane(){
+  const RAIL = 26, GAP = 9, MAXH = 300;
+  const N = S.zoom;
+  const panelW = px('--c3w') - 2 - 24 - RAIL - GAP;
+  const days = [];
+  for (let i = N - 1; i >= 0; i--) days.push(addDays(S.date, -i));
+  const shown = ALL.filter(c => (catOn(c.id) || c.gone) && (!S.filter || c.id === S.filter));
+  const per = days.map(k => { const sc = revOf(k).s;
+    return shown.filter(c => sc[c.id] != null).sort((a, b) => sc[a.id] - sc[b.id]); });
+  const deep = Math.max(1, ...per.map(l => l.length));
+  const pitch = panelW / N;
+  // a circle is as big as the columns allow, or as the deepest day allows - whichever
+  // runs out first. Seven columns leave room for the book's own presence; 28 do not.
+  const byWidth = Math.floor(pitch / (N === 7 ? 1.24 : 1.06));
+  const byHeight = Math.floor(MAXH / (deep * 1.32));
+  const D = Math.max(8, Math.min(60, byWidth, byHeight));
+  const SLOT = D + Math.round(D * .32);
+  // filtered: one fixed-height scatter field, identical at both zoom levels
+  const H = S.filter ? 260 : deep * SLOT + 3;
+  let dots = '', any = false;
+  per.forEach((here, i) => here.forEach((c, j) => {
+    any = true;
+    const sc = revOf(days[i]).s[c.id];
+    // stacked: the slot is rank only. Filtered: the height IS the score.
+    const bottom = S.filter ? frac(sc) * (H - D) : j * SLOT;
+    dots += '<div class="ddot' + (c.gone ? ' gone' : '') + '" style="left:' +
+      ((i + .5) * pitch - D / 2).toFixed(1) + 'px;bottom:' + bottom.toFixed(1) +
+      'px;width:' + D + 'px;height:' + D + 'px;font-size:' + Math.max(7, Math.round(D * .45)) +
+      'px;background:' + c.color + '" title="' + esc(c.name) + ' \u00b7 ' + shortD(days[i]) +
+      ' \u00b7 ' + sc + '">' + esc(c.name[0]) + '</div>';
+  }));
+  const zoom = '<div class="zoomtog">' + [[7,'7 days'],[28,'28 days']].map(([n,l]) =>
+    '<span class="' + (N === n ? 'on' : '') + '" onclick="A.zoom(' + n + ')">' + l +
+    '</span>').join('<i></i>') + '</div>';
+  if (!any) return zoom + '<div class="empty">Nothing recorded in the last ' + N + ' days.</div>';
+  const chart = '<div class="dch">' +
+      '<div class="drail" style="height:' + H + 'px"><span>GOOD</span><span>BAD</span></div>' +
+      '<div class="dpanel" style="height:' + H + 'px">' + dots + '</div></div>';
+  // the chips are the legend and the filter at once - no rows of prose under the chart
+  const chips = ALL.filter(c => catOn(c.id) || c.gone).map(c =>
+    '<span class="cchip' + (c.gone ? ' gone' : '') + (S.filter === c.id ? ' on' : '') +
+    '" onclick="A.filter(\'' + c.id + '\')"' +
+    (S.filter === c.id ? ' style="background:' + c.color + '"' : '') + ' title="' +
+    (S.filter === c.id ? 'Show every category again' : 'Show only ' + esc(c.name)) + '">' +
+    '<span class="sw" style="background:' +
+    (S.filter === c.id ? 'rgba(255,255,255,.85)' : c.color) + '"></span>' + esc(c.name) +
+    '</span>').join('');
+  return zoom + chart + '<div class="cchips">' + chips + '</div>';
+}
+function dayNote(){
+  return '<div class="sec dnote"><div class="h">Day note</div>' +
+    '<textarea id="daynote" placeholder="What happened today, in your own words."' +
+      ' oninput="A.setDayNote(this.value)">' + esc(revOf(S.date).note || '') + '</textarea></div>';
+}
+function reviewPane(){
+  const seg = '<span class="seg tiny">' + [['today','Today'],['chart','Trends']].map(([k,l]) =>
+    '<span class="' + (S.rmode === k ? 'on' : '') + '" onclick="A.rmode(\'' + k + '\')">' + l +
+    '</span>').join('') + '</span>';
+  const chart = S.rmode === 'chart';
+  // no month nav any more: both windows roll with the day the pane is on
+  return '<div class="sec"><div class="h hrow"><span>' +
+      (chart ? 'Goodness of outcome' : 'Review your day') + '</span>' + seg + '</div>' +
+      (chart ? chartPane() : todayPane()) + '</div>' + (chart ? '' : dayNote());
+}
+// the principles used to live behind a second mode of the sidebar; they belong beside the
+// review instead, under the day's own content, in the same section rhythm
+const PLABEL = id => { const [k, n] = id.split(':');
+  return (k === 'work' ? 'WORK' : 'LIFE') + ' PRINCIPLE ' + n; };
+const isFav = id => S.favs.includes(id);
+function podPane(){
+  const card = '<div class="pcard"><div class="top">' +
+      '<span class="lbl">' + esc(PLABEL(S.pod)) + '</span>' +
+      '<button class="fav' + (isFav(S.pod) ? ' on' : '') + '" title="' +
+        (isFav(S.pod) ? 'Remove from favourites' : 'Add to favourites') +
+        '" onclick="A.toggleFav(\'' + S.pod + '\')">' +
+        (isFav(S.pod) ? ICON_MARK_ON : ICON_MARK) + '</button></div>' +
+      '<div class="ttl">[principle title loads from the local corpus at runtime]</div></div>';
+  return '<div class="sec"><div class="h">Principle of the day</div>' + card + '</div>';
+}
+function bookmarkPane(){
+  const group = (kind, label) => {
+    const rows = S.favs.filter(id => id.split(':')[0] === kind);
+    if (!rows.length) return '';
+    return '<div class="grph">' + label + '</div>' + rows.map(id =>
+      '<div class="prow"><span class="pn">' + esc(id.split(':')[1]) + '</span>' +
+      '<span class="t">[title loads from the local corpus]</span></div>').join('');
+  };
+  return '<div class="sec"><div class="h">Bookmarks</div>' +
+      (S.favs.length ? group('life', 'Life principles') + group('work', 'Work principles')
+                     : '<div class="note">No bookmarks yet.</div>') + '</div>';
+}
+function renderCol3(){
+  const prev = {day:'Previous day', week:'Previous week', month:'Previous month'}[S.axis];
+  document.getElementById('col3').innerHTML =
+    '<div class="c3head"><div class="nav">' +
+      '<button class="navbtn" onclick="A.step(-1)" title="' + prev + '">&#8249;</button>' +
+      '<button class="navbtn" onclick="A.today()">Today</button>' +
+      '<button class="navbtn" onclick="A.step(1)" title="' + prev.replace('Previous','Next') +
+        '">&#8250;</button></div>' +
+    '<button class="navbtn add" title="New task">' + ICON_PLUS + '</button></div>' +
+    '<div class="c3body">' + podPane() + reviewPane() + bookmarkPane() + '</div>';
+}
+
+// ============================ pointer ============================
+let drag = null, firstPaint = true;
+// which of the ten steps the pointer is over (1 at the floor ... 10 at the top)
+function trackVal(el, e){
+  const r = el.getBoundingClientRect();
+  const f = (r.bottom - 17 - e.clientY) / Math.max(1, r.height - 34);
+  return Math.max(1, Math.min(10, Math.round(Math.max(0, Math.min(1, f)) * 9) + 1));
+}
+const px = v => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(v));
+document.addEventListener('mousedown', e => {
+  // the two dividers: drag the panel edge, exactly as Finder and Calendar do
+  const dv = e.target.closest('.dvd');
+  if (dv){
+    e.preventDefault();
+    const n = dv.dataset.div;
+    drag = {mode:'div', n:n, el:dv, x0:e.clientX, w0:px(n === '1' ? '--c1w' : '--c3w')};
+    dv.classList.add('on'); document.body.classList.add('resizing');
+    return;
+  }
+  if (S.c3Open && !e.target.closest('#col3') && !e.target.closest('.t3')){
+    e.preventDefault(); S.c3Open = false; render(); return; }
+  if (S.c1Open && !e.target.closest('#col1') && !e.target.closest('.t1')){
+    e.preventDefault(); S.c1Open = false; render(); return; }
+  // the ten-step track: press anywhere on it, then drag the dot up or down
+  const trk = e.target.closest('[data-trk]');
+  if (trk){
+    e.preventDefault();
+    const c = trk.dataset.trk, v = trackVal(trk, e);
+    drag = {mode:'score', cat:c, had:revOf(S.date).s[c], v:v, y0:e.clientY, moved:false};
+    S.pick = c; S.setting = {cat:c, v:v}; A.setScore(c, v, true);
+    return;
+  }
+  const cb = e.target.closest('.cb[data-tid]');
+  if (cb){ e.preventDefault(); A.toggleDone(cb.dataset.tid); return; }
+  const blk = e.target.closest('.blk');
+  if (blk){ e.preventDefault(); A.select(blk.dataset.id); }
+});
+document.addEventListener('mousemove', e => {
+  if (!drag) return;
+  if (drag.mode === 'div'){
+    const dx = e.clientX - drag.x0, root = document.documentElement;
+    if (drag.n === '1'){
+      const max = Math.min(420, window.innerWidth - px('--c3w') - 420);
+      root.style.setProperty('--c1w', Math.max(196, Math.min(max, drag.w0 + dx)) + 'px');
+    } else {
+      const max = Math.min(720, window.innerWidth - px('--c1w') - 420);
+      root.style.setProperty('--c3w', Math.max(300, Math.min(max, drag.w0 - dx)) + 'px');
+    }
+    return;
+  }
+  if (drag.mode === 'score'){
+    if (Math.abs(e.clientY - drag.y0) > 3) drag.moved = true;
+    const el = document.querySelector('[data-trk="' + drag.cat + '"]'); if (!el) return;
+    const v = trackVal(el, e);
+    if (v !== drag.v){ drag.v = v; S.setting = {cat:drag.cat, v:v}; A.setScore(drag.cat, v, true); }
+  }
+});
+document.addEventListener('mouseup', () => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.mode === 'div'){
+    d.el.classList.remove('on'); document.body.classList.remove('resizing');
+    render();                    // the chart's circles are sized from the pane's width
+    return;
+  }
+  if (d.mode === 'score'){
+    S.setting = null;
+    // a click on the step the dot already sat on leaves that category blank again
+    if (!d.moved && d.had === d.v) A.clearScore(d.cat); else render();
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (S.filter){ S.filter = null; render(); return; }
+  if (S.c3Open || S.c1Open){ S.c3Open = S.c1Open = false; render(); }
+});
+
+// ============================ render ============================
+function render(){
+  const app = document.querySelector('.app');
+  app.className = 'app' + (S.c1Open ? ' c1open' : '') + (S.c3Open ? ' c3open' : '');
+  const w = document.getElementById('gridwrap');
+  const keep = w ? w.scrollTop : null;
+  renderCol1(); renderCol2(); renderCol3();
+  const nw = document.getElementById('gridwrap');
+  // first paint lands on the morning, like Apple Calendar does
+  if (nw) nw.scrollTop = firstPaint ? Math.max(0, yOf(6 * 60) - 8) : (keep === null ? 0 : keep);
+  firstPaint = false;
+}
+const MQW = window.matchMedia('(max-width:1199px)');
+const MQ3 = window.matchMedia('(max-width:1099px)');
+const MQ1 = window.matchMedia('(max-width:899px)');
+const syncPanes = () => {
+  let ch = false;
+  if (!MQ3.matches && S.c3Open){ S.c3Open = false; ch = true; }
+  if (!MQ1.matches && S.c1Open){ S.c1Open = false; ch = true; }
+  if (ch) render();
+};
+MQ3.addEventListener('change', syncPanes);
+MQ1.addEventListener('change', syncPanes);
+MQW.addEventListener('change', render);
+// for screenshots and for linking a comment to a state: #week #month #chart #filter
+const H = location.hash.slice(1).split(',');
+if (H.includes('week')) S.axis = 'week';
+if (H.includes('month')) S.axis = 'month';
+if (H.includes('chart')) S.rmode = 'chart';
+if (H.includes('d28')){ S.rmode = 'chart'; S.zoom = 28; }
+if (H.includes('filter')){ S.rmode = 'chart'; S.filter = 'c3'; }
+render();
+</script>
+<!-- shared review-comment layer; every prototype in this folder adds this one line -->
+<script src="./proto-comments.js"></script>
+</body>
+</html>

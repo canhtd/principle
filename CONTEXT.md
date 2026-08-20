@@ -52,26 +52,30 @@ _Avoid_: Journal entry, reflection, comment, summary
 
 ### Over time
 
-**Chart**:
-A reading surface inside the Review your day pane, not a segment of the time axis: a
-small Today | Chart toggle in the pane swaps the day's tracks for one real calendar month
-seen at once — the month being viewed, 28 to 31 days, moved a whole month at a time —
-with per day, per Category, one Dot at its height, drawn in the Category's colour and
-lettered with its initial. Filtering to one Category shows that Category's Dots with a
-line at their average.
-_Avoid_: Graph, dashboard, trend view, month chart, Chart view, the last 28 days
+**Trends**:
+A reading surface inside the Review your day pane, not a segment of the time axis: a small
+Today | Trends toggle in the pane swaps the day's tracks for the Dalio reading of the
+Dots. It stands on a rolling window ending on the day the pane is on — the **Last 7 days**
+or the **Last 28 days**, one window at a time behind a quiet sub-toggle, 7 days by
+default. Each day is a ranked stack of that day's Dots: a circle per Category in the
+Category's colour, lettered with its initial, sorted best outcome on top, with no numbers
+anywhere — the slot is rank, not height. Days without Dots are empty columns and a deleted
+Category's Dots stay, muted. Filtering to one Category shows only its Dots, each placed
+vertically by its own height, so the trend reads as a scatter.
+_Avoid_: Chart, graph, dashboard, trend view, month chart, Trends view
 
 **Level and direction**:
-The one-line reading the Chart gives per Category, in Dalio's 5.3a terms: level is this
-week's average height, direction is how it moved against last week — rising, flat or
-sinking.
+The reading Trends is there to give per Category, in Dalio's 5.3a terms: level is the last
+7 days' average height, direction is how it moved against the 7 before — rising, flat or
+sinking. The app draws the Dots and lets Danny read it; it prints no per-Category
+sentence.
 _Avoid_: Trend, score, progress, delta, momentum
 
 **Day / Week / Month**:
 The app's time axis, one segmented control, and all three segments show Tasks: Day is the
 hour grid, Week the Week view, Month the Month view. Each segment stands on a real
 calendar window that ‹ › move one whole day, week or month at a time — never a rolling
-count of the last so many days. There is no Year, and no segment is the Chart's home.
+count of the last so many days. There is no Year, and no segment is where Trends lives.
 _Avoid_: View mode, zoom level, range, period, rolling window
 
 **Week view**:
