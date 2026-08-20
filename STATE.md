@@ -96,3 +96,34 @@ records is document work, not code — no app build was made.
 unblocked; #18 first), and STOP at the first ticket that runs so Danny can try
 it. Still parked: the old #9 WIP in worktree `agent-a0d650685afc5161d`, and
 `/design-gauntlet` for #7 (evenings only).
+
+## 2026-08-20 evening — #18 mid review-fix loop (checkpoint at usage limit)
+
+**Proto freeze + recut landed earlier today** (`main = 1511282`, entry above).
+
+**#18 (column 3 + dividers) — NOT merged, NOT pushed.**
+
+- Build 1: branch `feat/column3-shell`, commit `5ca1d74`, in worktree
+  `.claude/worktrees/agent-a9d722f974c6cbd23`. Worker evidence: 432 tests /
+  52 suites green, launch smoke PASS, runtime screenshots in the session
+  scratchpad `t18/` (green report; CTO viewed the default-widths shot only —
+  CTO has NOT re-run the suite himself).
+- Review verdict: REQUEST-CHANGES. Blocking: (1) divider drag starts from the
+  STORED width while drawn at the FITTED width — dead zone up to 233 pt on
+  narrow windows, and a plain click persists the fitted width, destroying a
+  stored 620; (2) docked Ask Ray drops the principle card + bookmarks
+  ("every mode" broken). Plus 6 minor findings.
+- Fixer `w-t18b` was spawned into the same worktree with the full findings
+  list and was RUNNING at checkpoint time. To resume: `git log` on
+  `feat/column3-shell` — a `fix(mac):` commit after `5ca1d74` means it
+  finished; then re-review the fix diff, merge, and the CTO re-runs
+  `swift test` + `scripts/make-app.sh` before Danny tries it. If no new
+  commit, re-send the findings (they are in this repo's issue #18 review
+  context and reproducible from the list above).
+
+**Open decision for Danny.** The app still shows a Backlog section in column 3;
+the frozen prototype removed it and no ticket covers the removal. Proposed:
+a small unblocked ticket "Remove the Backlog surface from column 3".
+
+**Next.** Finish #18 loop → Danny tries it (STOP point) → #19 Week view next
+(#9 needs #18 merged first). `/design-gauntlet` for #7: evenings.
