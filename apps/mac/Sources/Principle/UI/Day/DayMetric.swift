@@ -1,4 +1,5 @@
 import DesignSystem
+import PrincipleCore
 import SwiftUI
 
 /// The geometry that is this screen's rather than the design system's.
@@ -15,8 +16,28 @@ enum DayMetric {
     static let gutter: CGFloat = 56
     static let dayHeight = hourHeight * 24
 
-    /// Column 3. Column 1 is Eden's own sidebar width (`EdenMetric.sidebarWidth`).
-    static let detailWidth: CGFloat = 320
+    /// Where the two side panels open before anybody has dragged them (#18).
+    /// Both are remembered from launch to launch, and the bounds they drag
+    /// between belong to ``PanelWidths`` — the library, where they are tested.
+    static let defaultWidths = PanelWidths(
+        // Eden's own sidebar width. `PanelWidths` repeats the number for the
+        // library's sake; this line is what keeps the two from drifting.
+        sidebar: EdenMetric.sidebarWidth,
+        detail: PanelWidths.detailDefault
+    )
+
+    // MARK: The dividers (#18)
+
+    /// What column 2 keeps for itself however wide the panels are dragged. The
+    /// day is the point of the screen; a grid squeezed to a gutter is not.
+    ///
+    /// 360 rather than a rounder number because of the breakpoint below it: at
+    /// 1100 pt, the width where column 3 first docks, the two default widths
+    /// and the canvas margins leave exactly this much. A greedier floor would
+    /// make the app open a squeezed column 3 on a laptop screen.
+    static let dayColumnMinimum: CGFloat = 360
+    /// The grab area, a little wider than the 8 pt gap it fills.
+    static let dividerGrab: CGFloat = 12
 
     /// Where the grid opens: the morning, like Calendar, rather than midnight.
     static let firstVisibleHour: CGFloat = 6
@@ -33,8 +54,13 @@ enum DayMetric {
 
     // MARK: Breakpoints (decision 10)
 
-    /// Below this the header takes the short date and drops the subtitle.
-    static let narrowHeader: CGFloat = 1200
+    /// Below this *column 2* takes the short date and drops the subtitle.
+    ///
+    /// The column's width, not the window's (#18): the panels beside it are
+    /// draggable now, so a wide window with a wide sidebar leaves exactly the
+    /// header a narrow window used to. 640 is where the long date — "Wednesday,
+    /// 30 September" — stops clearing the centred Day / Week / Month control.
+    static let narrowHeaderColumn: CGFloat = 640
     /// Below this column 3 becomes a drawer.
     static let detailDrawer: CGFloat = 1100
     /// Below this column 1 does too.

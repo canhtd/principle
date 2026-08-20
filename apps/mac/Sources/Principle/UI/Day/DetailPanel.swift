@@ -2,36 +2,50 @@ import DesignSystem
 import PrincipleCore
 import SwiftUI
 
-/// Column 3: ‹ Today › on top (decision 6), and under it one of four things —
-/// a task being written, the task that is selected, the day being reviewed, or
-/// what the day could still take from the backlog.
+/// Column 3: ‹ Today › on top (decision 6), and under it three sections —
+/// the principle of the day, the pane, and the bookmarks (#18, spec #14 Rev 6).
 ///
-/// The column shows one at a time on purpose: each of them wants the whole
+/// The pane is one of four things: a task being written, the task that is
+/// selected, the day being reviewed, or what the day could still take from the
+/// backlog. It shows one at a time on purpose: each of them wants the whole
 /// width, and the header's own word for what is up ("Review" / "Backlog") can
 /// only stay true if there is one answer to give.
+///
+/// What is above and below it does not change with it. The principle opens the
+/// column on every day and in every mode, and the bookmarks close it — the two
+/// fixed ends are what make this a place Danny reads rather than a pane that
+/// keeps rearranging itself.
 struct DetailPanel: View {
     @Bindable var journal: JournalModel
     @Bindable var ui: DayShellState
+    let favorites: FavoritesModel
 
     var body: some View {
         VStack(spacing: 0) {
             dateNavigation
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if ui.draft != nil {
-                        NewTaskPane(journal: journal, ui: ui)
-                    } else if let taskID = ui.selectedTaskID, journal.task(id: taskID) != nil {
-                        TaskDetailPane(journal: journal, ui: ui, taskID: taskID)
-                    } else if ui.isReviewing {
-                        ReviewPane(journal: journal, ui: ui)
-                    } else {
-                        BacklogPane(journal: journal, ui: ui)
-                    }
+                VStack(alignment: .leading, spacing: 20) {
+                    PrincipleOfTheDaySection(journal: journal, favorites: favorites, ui: ui)
+                    pane
+                    BookmarksSection(ui: ui, favorites: favorites)
                 }
                 .padding(.horizontal, EdenMetric.sidebarPadding)
                 .padding(.vertical, EdenMetric.libraryPaddingTop - 4)
             }
             .scrollIndicators(.never)
+        }
+    }
+
+    @ViewBuilder
+    private var pane: some View {
+        if ui.draft != nil {
+            NewTaskPane(journal: journal, ui: ui)
+        } else if let taskID = ui.selectedTaskID, journal.task(id: taskID) != nil {
+            TaskDetailPane(journal: journal, ui: ui, taskID: taskID)
+        } else if ui.isReviewing {
+            ReviewPane(journal: journal, ui: ui)
+        } else {
+            BacklogPane(journal: journal, ui: ui)
         }
     }
 

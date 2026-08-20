@@ -15,9 +15,11 @@ extension DayShell {
 
         switch LaunchHooks.state {
         case .principles:
-            ui.sidebarMode = .principles
+            // Nothing to switch to any more: column 3 carries the principle of
+            // the day and the bookmarks on every screen (#18). Kept as a state
+            // so an older screenshot script still opens rather than failing.
+            break
         case .principlesPopover:
-            ui.sidebarMode = .principles
             // A popover is its own window, and AppKit has nothing to hang one
             // off until the row it points at is in a window itself. Asked for
             // during this pass it is silently dropped; one turn later it opens.

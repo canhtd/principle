@@ -16,11 +16,6 @@ enum TimeAxis: String, CaseIterable, Identifiable {
     var title: String { rawValue.capitalized }
 }
 
-/// Which of column 1's two faces is up (decision 2).
-enum SidebarMode {
-    case calendar, principles
-}
-
 /// Where the Ask Ray chat is, if anywhere. Two modes like Notion AI: a panel
 /// floating over the grid, or the chat docked in place of column 3 (decision 8).
 enum ChatMode {
@@ -35,7 +30,6 @@ enum ChatMode {
 @Observable
 final class DayShellState {
     var axis: TimeAxis = .day
-    var sidebarMode: SidebarMode = .calendar
     var categoriesExpanded = true
     /// The task open in column 3, or `nil` for the day pane.
     var selectedTaskID: UUID?
