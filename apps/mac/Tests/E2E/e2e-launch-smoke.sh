@@ -11,7 +11,7 @@
 # is ever spawned. What it proves, in the order it proves it:
 #
 #   1. `scripts/make-app.sh` still assembles a bundle that launches at all.
-#   2. It owns an on-screen window at the size `PRINCIPLE_WINDOW` asked for.
+#   2. It owns a window at the size `PRINCIPLE_WINDOW` asked for.
 #   3. The process is still alive with that window 5 s later — a SwiftUI crash
 #      on first layout dies well inside that.
 #   4. That window's accessibility tree carries `day-header-title` (set in
@@ -77,9 +77,15 @@ trap cleanup EXIT
 
 # --- the two things AppKit will not tell a shell -------------------------------
 # `windows lock` answers whether the login screen is up; `windows <pid>` lists
-# that process's on-screen windows as `id<TAB>width,height`. Owner pid and
-# bounds are readable without any permission — `kCGWindowName` would need Screen
-# Recording, which is why the window is identified by its owner and its size.
+# that process's windows as `id<TAB>width,height`. Owner pid and bounds are
+# readable without any permission — `kCGWindowName` would need Screen Recording,
+# which is why the window is identified by its owner and its size.
+#
+# The list is `.optionAll`, not `.optionOnScreenOnly`, because what is asserted
+# is that the window EXISTS. An on-screen-only list leaves out every window that
+# is not on the Space in front right now, so somebody working on another Space
+# while this runs would read as "no window opened", or as "the window is gone",
+# on an app that is perfectly healthy.
 cat >"$TMP_ROOT/windows.swift" <<'SWIFT'
 import CoreGraphics
 import Foundation
@@ -92,7 +98,7 @@ if argument == "lock" {
 }
 
 let pid = Int(argument) ?? -1
-let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID)
     as? [[String: Any]] ?? []
 for info in list {
     guard info[kCGWindowOwnerPID as String] as? Int == pid,
@@ -143,7 +149,20 @@ func find(_ element: AXUIElement, depth: Int) -> String? {
 }
 
 let app = AXUIElementCreateApplication(pid)
-for window in attribute(app, kAXWindowsAttribute as String) as? [AXUIElement] ?? [] {
+
+/// `AXWindows` comes back empty for an app whose windows all sit on some other
+/// Space: the tree is still there, it is that one list that is filtered. So the
+/// main and focused window are searched too, and the header is readable
+/// whichever Space is in front while this runs.
+var roots = attribute(app, kAXWindowsAttribute as String) as? [AXUIElement] ?? []
+for name in [kAXMainWindowAttribute, kAXFocusedWindowAttribute] {
+    guard let window = attribute(app, name as String),
+        CFGetTypeID(window) == AXUIElementGetTypeID()
+    else { continue }
+    roots.append(window as! AXUIElement)
+}
+
+for window in roots {
     if let hit = find(window, depth: 0) {
         print(hit)
         exit(0)
