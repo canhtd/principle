@@ -17,6 +17,11 @@ import os
 public final class JournalModel {
     /// The day on screen, in the store's calendar.
     public internal(set) var day: Date
+    /// True while the day on screen is on screen *because it was today* when it
+    /// was shown — which is the only case midnight is allowed to move (#17). A
+    /// day Danny opened from the mini month is his choice, and reviewing it
+    /// takes longer than the minute the clock ticks in.
+    public internal(set) var isFollowingToday: Bool
     /// The month the mini calendar is showing, which is not always the month the
     /// day is in: paging ahead to look at September must not move the day.
     public internal(set) var visibleMonth: Date
@@ -53,9 +58,10 @@ public final class JournalModel {
     /// (spec #11).
     public static let softCap = 5
 
-    public init(store: JournalStore, day: Date = Date()) {
+    public init(store: JournalStore, day: Date = Date(), now: Date = Date()) {
         self.store = store
         self.day = day
+        isFollowingToday = store.calendar.isDate(day, inSameDayAs: now)
         visibleMonth = day
         sections = DaySections(day: JournalDay(day, calendar: store.calendar), must: [], nice: [])
         refresh()
@@ -152,13 +158,5 @@ public final class JournalModel {
     func report(_ error: any Error) {
         Self.logger.error("Journal write failed: \(String(describing: error), privacy: .public)")
         errorMessage = "That change could not be saved. Check the repo path in Settings."
-    }
-}
-
-extension JournalModel {
-    /// True when the day on screen is behind `date` — what an app left open
-    /// overnight looks like in the morning.
-    public func selectionIsStale(before date: Date) -> Bool {
-        JournalDay(day, calendar: calendar) < JournalDay(date, calendar: calendar)
     }
 }
