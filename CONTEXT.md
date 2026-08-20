@@ -53,10 +53,13 @@ _Avoid_: Journal entry, reflection, comment, summary
 ### Over time
 
 **Chart**:
-The last 28 days seen at once: per day, per Category, one Dot at its height, drawn in the
-Category's colour and lettered with its initial. Filtering to one Category shows that
-Category's Dots with a line at their average.
-_Avoid_: Graph, dashboard, trend view, month chart
+A reading surface inside the Review your day pane, not a segment of the time axis: a
+small Today | Chart toggle in the pane swaps the day's tracks for one real calendar month
+seen at once — the month being viewed, 28 to 31 days, moved a whole month at a time —
+with per day, per Category, one Dot at its height, drawn in the Category's colour and
+lettered with its initial. Filtering to one Category shows that Category's Dots with a
+line at their average.
+_Avoid_: Graph, dashboard, trend view, month chart, Chart view, the last 28 days
 
 **Level and direction**:
 The one-line reading the Chart gives per Category, in Dalio's 5.3a terms: level is this
@@ -65,6 +68,20 @@ sinking.
 _Avoid_: Trend, score, progress, delta, momentum
 
 **Day / Week / Month**:
-The app's time axis, one segmented control. Day is the hour grid, Week the seven days,
-Month the Chart's home. There is no Year.
-_Avoid_: View mode, zoom level, range, period
+The app's time axis, one segmented control, and all three segments show Tasks: Day is the
+hour grid, Week the Week view, Month the Month view. Each segment stands on a real
+calendar window that ‹ › move one whole day, week or month at a time — never a rolling
+count of the last so many days. There is no Year, and no segment is the Chart's home.
+_Avoid_: View mode, zoom level, range, period, rolling window
+
+**Week view**:
+The Week segment: a seven-day hour grid of Tasks over one calendar week, Monday to
+Sunday, in the manner of Apple Calendar. ‹ › move it a whole week at a time. It is a
+calendar of Tasks and shows no Dots.
+_Avoid_: 7-day chart, the last seven days, week summary, weekly review
+
+**Month view**:
+The Month segment: a month grid of Tasks over one real calendar month of 28 to 31 days,
+in the manner of Apple Calendar. ‹ › move it a whole month at a time. It is a calendar of
+Tasks and shows no Dots.
+_Avoid_: 28-day view, the last 28 days, month chart, monthly review
