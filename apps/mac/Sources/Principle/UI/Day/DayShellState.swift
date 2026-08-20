@@ -39,6 +39,13 @@ final class DayShellState {
     var categoriesExpanded = true
     /// The task open in column 3, or `nil` for the day pane.
     var selectedTaskID: UUID?
+    /// True while column 3 is showing "Review your day" in place of the backlog.
+    /// Deliberately not persisted: which of the two the column is on is a state
+    /// of this sitting, not a setting.
+    var isReviewing = false
+    /// The track the review pane is talking about — the one last touched, which
+    /// is the one wearing its number. `nil` until a track is picked.
+    var reviewCategoryID: UUID?
     /// The category being renamed in place, the way Finder renames a file.
     var renamingCategoryID: UUID?
     /// True while the "New category" field the section header's "+" opens is up.
@@ -82,6 +89,7 @@ final class DayShellState {
     /// rather than by dragging.
     func startDraft(categoryID: UUID?) {
         selectedTaskID = nil
+        isReviewing = false
         if isChatDocked { setChatMode(.floating) }
         draft = TaskDraft(
             categoryID: categoryID,
@@ -122,7 +130,22 @@ final class DayShellState {
         if taskID != nil, isChatDocked { setChatMode(.floating) }
         selectedTaskID = taskID
         // A draft and a selection are two answers to the same question.
-        if taskID != nil { draft = nil }
+        // So are a task and the review: both want the whole column, and the
+        // header's own word for what is up has to keep being true.
+        if taskID != nil {
+            draft = nil
+            isReviewing = false
+        }
+    }
+
+    /// The way into the review and back out again — one control, in the header's
+    /// free left cell, on every day rather than after five o'clock.
+    func toggleReview() {
+        isReviewing.toggle()
+        if isReviewing {
+            selectedTaskID = nil
+            draft = nil
+        }
     }
 
     /// Escape, in the order a macOS window closes things: the innermost first.
