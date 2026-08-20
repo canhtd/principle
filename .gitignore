@@ -21,3 +21,8 @@ dist/
 __pycache__/
 .DS_Store
 node_modules/
+
+# Cây làm việc phụ của agent, và ảnh chụp do Playwright MCP đổ ra — cả hai
+# đều là rác của phiên làm việc, không phải của repo.
+/.claude/worktrees/
+.playwright-mcp/

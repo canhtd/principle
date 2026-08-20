@@ -2,11 +2,13 @@ import DesignSystem
 import PrincipleCore
 import SwiftUI
 
-/// Column 3: ‹ Today › on top (decision 6), and under it either the task that
-/// is selected or what the day could still take from the backlog.
+/// Column 3: ‹ Today › on top (decision 6), and under it one of four things —
+/// a task being written, the task that is selected, the day being reviewed, or
+/// what the day could still take from the backlog.
 ///
-/// The dots, "Order the day" and "Close day" belong here too — they are #8, and
-/// deliberately not built yet.
+/// The column shows one at a time on purpose: each of them wants the whole
+/// width, and the header's own word for what is up ("Review" / "Backlog") can
+/// only stay true if there is one answer to give.
 struct DetailPanel: View {
     @Bindable var journal: JournalModel
     @Bindable var ui: DayShellState
@@ -20,6 +22,8 @@ struct DetailPanel: View {
                         NewTaskPane(journal: journal, ui: ui)
                     } else if let taskID = ui.selectedTaskID, journal.task(id: taskID) != nil {
                         TaskDetailPane(journal: journal, ui: ui, taskID: taskID)
+                    } else if ui.isReviewing {
+                        ReviewPane(journal: journal, ui: ui)
                     } else {
                         BacklogPane(journal: journal, ui: ui)
                     }
@@ -46,6 +50,7 @@ struct DetailPanel: View {
                 }
             }
             HStack(spacing: 0) {
+                reviewToggle
                 Spacer(minLength: 0)
                 EdenIconButton(systemImage: "plus", help: "New task on this day", size: 26, action: newTask)
             }
@@ -55,6 +60,16 @@ struct DetailPanel: View {
         .padding(.bottom, 9)
         .frame(maxWidth: .infinity)
         .overlay(alignment: .bottom) { EdenColor.black(6).frame(height: 1) }
+    }
+
+    /// The way into the review, in the header's free left cell — always there
+    /// rather than after five o'clock, because an older day is reviewed from
+    /// the same spot and a control that only appears in the evening is one
+    /// Danny has to find again. The same word is the way back.
+    private var reviewToggle: some View {
+        Button(ui.isReviewing ? "Backlog" : "Review") { ui.toggleReview() }
+            .buttonStyle(EdenGhostButtonStyle())
+            .help(ui.isReviewing ? "Back to the backlog" : "Review your day")
     }
 
     /// Apple Calendar's new event, not a row appearing in a list: a draft block
