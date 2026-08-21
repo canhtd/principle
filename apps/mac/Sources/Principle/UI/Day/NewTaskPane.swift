@@ -16,9 +16,7 @@ struct NewTaskPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("New task")
-                .font(EdenFont.ui(12))
-                .foregroundStyle(EdenColor.hex(0x77746F))
+            PaneSectionLabel("New task")
                 .padding(.bottom, 4)
 
             TaskField(label: "Title") {

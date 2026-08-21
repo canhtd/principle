@@ -11,12 +11,15 @@ import SwiftUI
 /// Calendar all cheat by the same couple of points.
 struct PanelDivider: View {
     let help: String
-    /// The drag is about to start: the caller remembers the width it is moving
-    /// from, because every later report is measured against that.
+    /// The hand has actually moved: the caller remembers the width it is moving
+    /// from, because every later report is measured against that. Pressing the
+    /// mouse down and letting it go again never gets here — a click on a seam
+    /// is not a resize of nothing.
     let onBegin: () -> Void
     /// How far the pointer has travelled sideways since ``onBegin``, in points.
     let onDrag: (CGFloat) -> Void
-    /// The mouse is up: the width has settled and can be written down.
+    /// The mouse is up after a real drag: the width has settled and can be
+    /// written down. Not called at all when nothing moved.
     let onEnd: () -> Void
 
     @State private var isHovering = false
@@ -34,6 +37,12 @@ struct PanelDivider: View {
             .overlay { hairline }
             .overlay { grabArea }
             .help(help)
+            // Above both columns, so the grab area's overhang is the same two
+            // points on each side. The column after the divider in the row is
+            // otherwise drawn — and hit-tested — over the right-hand overhang,
+            // leaving a strip of 10 pt rather than 12: 6 pt to the left of the
+            // divider's middle and 4 to the right.
+            .zIndex(1)
             .onDisappear { setCursor(false) }
     }
 
@@ -49,7 +58,8 @@ struct PanelDivider: View {
 
     /// Wider than the gap and invisible. An overlay is not clipped to its
     /// parent, so the extra points hang over the two panels beside it — a
-    /// couple of points of their 12 pt padding, never a row.
+    /// couple of points of their 12 pt padding, never a row. The `zIndex` above
+    /// is what keeps both halves of that overhang real.
     private var grabArea: some View {
         Color.black.opacity(0.001)
             .frame(width: DayMetric.dividerGrab)
@@ -63,18 +73,28 @@ struct PanelDivider: View {
                 // resizing does, and a translation measured against a frame
                 // that is itself sliding comes out at half the distance the
                 // hand travelled.
+                //
+                // `minimumDistance: 0` so the first point of travel counts —
+                // but AppKit reports the mouse going *down* as a change of zero
+                // too, and taking that for a drag made a plain click write the
+                // width the panel happened to be drawn at. So the drag starts
+                // on the first report that actually moved, and a click reaches
+                // none of the three callbacks.
                 DragGesture(minimumDistance: 0, coordinateSpace: .global)
                     .onChanged { value in
+                        let dx = value.translation.width
                         if !isDragging {
-                            isDragging = true
                             setCursor(true)
+                            guard dx != 0 else { return }
+                            isDragging = true
                             onBegin()
                         }
-                        onDrag(value.translation.width)
+                        onDrag(dx)
                     }
                     .onEnded { _ in
+                        let moved = isDragging
                         isDragging = false
-                        onEnd()
+                        if moved { onEnd() }
                         setCursor(isHovering)
                     }
             )

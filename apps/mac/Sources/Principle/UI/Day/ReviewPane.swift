@@ -20,15 +20,10 @@ struct ReviewPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 7) {
-                Text("Review your day")
-                    .font(EdenFont.ui(12))
-                    .foregroundStyle(EdenColor.hex(0x77746F))
+                PaneSectionLabel("Review your day")
 
                 if tracks.isEmpty {
-                    Text("Every category is hidden.")
-                        .font(EdenFont.ui(12))
-                        .foregroundStyle(EdenColor.n400)
-                        .padding(.leading, EdenMetric.sidebarInset)
+                    PaneNote("Every category is hidden.")
                 } else {
                     chart
                     ReviewEvidence(journal: journal, ui: ui)

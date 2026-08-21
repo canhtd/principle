@@ -23,6 +23,10 @@ struct PaneSectionLabel: View {
 
 /// What a section says when it has nothing to show. Never a stand-in for the
 /// content — it says plainly that there is none.
+///
+/// Indented by the same 8 pt `SidebarRow` indents by, so the sentence starts
+/// where the rows it stands in for would have started — and so that the four of
+/// them across column 3 share one left edge rather than one each.
 struct PaneNote: View {
     let text: String
 
@@ -35,6 +39,7 @@ struct PaneNote: View {
             .font(EdenFont.ui(12))
             .foregroundStyle(EdenColor.n400)
             .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, EdenMetric.sidebarInset)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

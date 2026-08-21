@@ -1,3 +1,4 @@
+import DesignSystem
 import Foundation
 import Testing
 
@@ -24,11 +25,20 @@ struct PanelWidthsTests {
 
         #expect(widths.sidebar == PanelWidths.sidebarDefault)
         #expect(widths.detail == PanelWidths.detailDefault)
-        // The numbers the ticket names, kept here so a silent edit to either
-        // one fails rather than ships.
+        // The numbers the ticket names, kept here so a silent edit to any of
+        // them fails rather than ships.
+        #expect(PanelWidths.sidebarDefault == 260)
         #expect(PanelWidths.detailDefault == 420)
         #expect(PanelWidths.sidebarLimits == 196...420)
         #expect(PanelWidths.detailLimits == 300...620)
+    }
+
+    @Test("The sidebar default is Eden's own sidebar width")
+    func sidebarDefaultMatchesEden() {
+        // The library cannot depend on the design system, so `sidebarDefault` is
+        // a copy of `EdenMetric.sidebarWidth` written out by hand. This is the
+        // check that keeps the copy honest — the doc comment on it says so.
+        #expect(PanelWidths.sidebarDefault == EdenMetric.sidebarWidth)
     }
 
     @Test("A width outside its bounds is clamped, not refused")

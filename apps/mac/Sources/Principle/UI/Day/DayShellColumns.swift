@@ -8,29 +8,27 @@ import SwiftUI
 /// The dividers are not drawn on top of the columns — they *are* the 8 pt of
 /// canvas that already sat between them, made grabbable. So a window nobody has
 /// dragged anything in is laid out to the point exactly as it was before.
+///
+/// Every number in the row comes from ``PanelLayout``, which is tested: the
+/// widths the panels are drawn at, the width column 2 is left with, and where a
+/// drag on either divider lands.
 extension DayShell {
     @ViewBuilder
     func columns(width: CGFloat, docksSidebar: Bool, docksDetail: Bool) -> some View {
-        let shown = shownWidths(width: width, docksSidebar: docksSidebar, docksDetail: docksDetail)
-        let room = panelRoom(width: width, docksSidebar: docksSidebar, docksDetail: docksDetail)
-        let dayWidth = room + DayMetric.dayColumnMinimum
-            - (docksSidebar ? shown.sidebar : 0) - (docksDetail ? shown.detail : 0)
+        let layout = PanelLayout(
+            windowWidth: width,
+            widths: widths,
+            gap: EdenMetric.sidebarInset,
+            dayMinimum: DayMetric.dayColumnMinimum,
+            docksSidebar: docksSidebar,
+            docksDetail: docksDetail
+        )
+        let shown = layout.shown
 
         HStack(spacing: 0) {
             if docksSidebar {
                 sidebar.frame(width: shown.sidebar)
-                PanelDivider(
-                    help: "Drag to resize the sidebar",
-                    onBegin: { dragStart = widths.sidebar },
-                    onDrag: { dx in
-                        widths.sidebar = PanelWidths.clamp(
-                            dragStart + dx,
-                            to: PanelWidths.sidebarLimits,
-                            room: docksDetail ? room - shown.detail : room
-                        )
-                    },
-                    onEnd: { widths.save(to: AppSettings.sharedDefaults()) }
-                )
+                divider(.sidebar, help: "Drag to resize the sidebar", in: layout)
             }
             DayColumn(
                 journal: journal,
@@ -39,58 +37,50 @@ extension DayShell {
                 // What the header has to fit in is its own column, not the
                 // window: a sidebar dragged wide leaves it just as little room
                 // as a narrow window used to (#18).
-                isHeaderNarrow: dayWidth < DayMetric.narrowHeaderColumn,
+                isHeaderNarrow: layout.dayWidth < DayMetric.narrowHeaderColumn,
                 showsSidebarToggle: !docksSidebar,
                 showsDetailToggle: !docksDetail,
                 isFullScreen: isFullScreen
             )
             if docksDetail {
-                PanelDivider(
-                    help: "Drag to resize the panel",
-                    onBegin: { dragStart = widths.detail },
-                    onDrag: { dx in
-                        // The divider is on column 3's *left*, so the pointer
-                        // moving left is the column getting wider.
-                        widths.detail = PanelWidths.clamp(
-                            dragStart - dx,
-                            to: PanelWidths.detailLimits,
-                            room: docksSidebar ? room - shown.sidebar : room
-                        )
-                    },
-                    onEnd: { widths.save(to: AppSettings.sharedDefaults()) }
-                )
+                divider(.detail, help: "Drag to resize the panel", in: layout)
                 detailColumn.frame(width: shown.detail)
             }
         }
     }
 
-    // MARK: - What the panels are actually drawn at
+    // MARK: - The dividers
 
-    /// The room the docked panels may share, once the canvas has had its
-    /// margins, each divider its gap, and column 2 its floor.
-    func panelRoom(width: CGFloat, docksSidebar: Bool, docksDetail: Bool) -> CGFloat {
-        let gaps = (docksSidebar ? 1 : 0) + (docksDetail ? 1 : 0)
-        return width - EdenMetric.sidebarInset * CGFloat(2 + gaps) - DayMetric.dayColumnMinimum
+    /// One divider, wired to the panel it resizes.
+    ///
+    /// The drag begins at the width the divider is *drawn* at, and the widths
+    /// are written down only if the hand actually moved one: a plain click on a
+    /// divider must leave the stored pair exactly as it found it, or a window
+    /// that shrank would quietly destroy the width Danny chose for a wide one.
+    private func divider(_ edge: PanelLayout.Edge, help: String, in layout: PanelLayout) -> some View {
+        PanelDivider(
+            help: help,
+            onBegin: { dragStart = layout.dragStart(edge) },
+            onDrag: { dx in setWidth(edge, to: layout.dragged(edge, from: dragStart, by: dx)) },
+            onEnd: {
+                guard width(edge) != dragStart else { return }
+                widths.save(to: AppSettings.sharedDefaults())
+            }
+        )
     }
 
-    /// A window that shrank under the two stored widths draws them narrower —
-    /// it does not overwrite them. Widen the window again and the widths Danny
-    /// chose come back, which is what every Mac app does with a split.
-    func shownWidths(width: CGFloat, docksSidebar: Bool, docksDetail: Bool) -> PanelWidths {
-        let room = panelRoom(width: width, docksSidebar: docksSidebar, docksDetail: docksDetail)
-        guard docksSidebar, docksDetail else {
-            // One of the two is a drawer: it overlays the day rather than
-            // taking width from it, so only the docked one is held to the room.
-            return PanelWidths(
-                sidebar: docksSidebar
-                    ? PanelWidths.clamp(widths.sidebar, to: PanelWidths.sidebarLimits, room: room)
-                    : widths.sidebar,
-                detail: docksDetail
-                    ? PanelWidths.clamp(widths.detail, to: PanelWidths.detailLimits, room: room)
-                    : widths.detail
-            )
+    private func setWidth(_ edge: PanelLayout.Edge, to value: CGFloat) {
+        switch edge {
+        case .sidebar: widths.sidebar = value
+        case .detail: widths.detail = value
         }
-        return widths.fitted(into: room)
+    }
+
+    private func width(_ edge: PanelLayout.Edge) -> CGFloat {
+        switch edge {
+        case .sidebar: return widths.sidebar
+        case .detail: return widths.detail
+        }
     }
 
     // MARK: - The two panels
@@ -102,12 +92,16 @@ extension DayShell {
         }
     }
 
+    /// Column 3, in whichever of its two modes it is in. Both are the same
+    /// column: the principle of the day opens it and the bookmarks close it
+    /// whatever is between them (#18) — docking Ask Ray swaps the pane, not the
+    /// column.
     @ViewBuilder
     var detailColumn: some View {
-        if ui.isChatDocked {
-            AskRayPanel(session: session, favorites: favorites, ui: ui, isDocked: true)
-        } else {
-            EdenPanel {
+        EdenPanel {
+            if ui.isChatDocked {
+                AskRayColumn(journal: journal, session: session, favorites: favorites, ui: ui)
+            } else {
                 DetailPanel(journal: journal, ui: ui, favorites: favorites)
             }
         }

@@ -28,9 +28,16 @@ let package = Package(
             ]
         ),
         .target(name: "PrincipleCore"),
+        // DesignSystem is here for one assertion: the library repeats Eden's
+        // sidebar width by hand (`PanelWidths.sidebarDefault`) because it cannot
+        // depend on the package, and a copy nothing compares is a copy that
+        // drifts. No view is tested from here.
         .testTarget(
             name: "PrincipleTests",
-            dependencies: ["PrincipleCore"],
+            dependencies: [
+                "PrincipleCore",
+                .product(name: "DesignSystem", package: "design-system"),
+            ],
             resources: [.copy("Fixtures")]
         ),
     ]

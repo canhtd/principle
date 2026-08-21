@@ -32,12 +32,19 @@ enum DayMetric {
     /// day is the point of the screen; a grid squeezed to a gutter is not.
     ///
     /// 360 rather than a rounder number because of the breakpoint below it: at
-    /// 1100 pt, the width where column 3 first docks, the two default widths
-    /// and the canvas margins leave exactly this much. A greedier floor would
-    /// make the app open a squeezed column 3 on a laptop screen.
+    /// 1100 pt, the width where column 3 first docks, the canvas margins, the
+    /// two divider gaps and the two default widths (4 × 8 + 260 + 420) leave the
+    /// day 388 pt. A floor greedier than that would make the app open a squeezed
+    /// column 3 on a laptop screen; 360 sits just under it, and the 28 pt of
+    /// slack goes to the day.
     static let dayColumnMinimum: CGFloat = 360
-    /// The grab area, a little wider than the 8 pt gap it fills.
+    /// The grab area, a little wider than the 8 pt gap it fills — two points of
+    /// overhang on each side (``PanelDivider``).
     static let dividerGrab: CGFloat = 12
+    /// How tall the bookmarks may grow at the foot of column 3 while Ask Ray is
+    /// docked in it: about five rows and their heading. Past that they scroll,
+    /// rather than pushing the thread off the screen (``AskRayColumn``).
+    static let chatColumnBookmarks: CGFloat = 190
 
     /// Where the grid opens: the morning, like Calendar, rather than midnight.
     static let firstVisibleHour: CGFloat = 6

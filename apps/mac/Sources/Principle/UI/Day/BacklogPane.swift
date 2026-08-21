@@ -13,15 +13,10 @@ struct BacklogPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text("Backlog")
-                .font(EdenFont.ui(12))
-                .foregroundStyle(EdenColor.hex(0x77746F))
+            PaneSectionLabel("Backlog")
 
             if let line = emptyLine {
-                Text(line)
-                    .font(EdenFont.ui(12))
-                    .foregroundStyle(EdenColor.n400)
-                    .padding(.leading, EdenMetric.sidebarInset)
+                PaneNote(line)
             } else {
                 let must = journal.backlogTasks(priority: .must)
                 group("Must do", tasks: must, isFirst: true)

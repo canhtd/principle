@@ -20,8 +20,10 @@ public struct PanelWidths: Equatable, Sendable {
     public static let detailLimits: ClosedRange<CGFloat> = 300...620
 
     /// Eden's own sidebar width (`EdenMetric.sidebarWidth`), repeated here
-    /// because the library does not depend on the design system. The two are
-    /// checked against each other in ``DayMetric``.
+    /// because the library does not depend on the design system. The app opens
+    /// the sidebar from Eden's number rather than from this copy
+    /// (`DayMetric.defaultWidths`); what keeps the copy from drifting is a test
+    /// — `PanelWidthsTests` holds the two equal.
     public static let sidebarDefault: CGFloat = 260
     /// Column 3 opens wider than it used to: it now carries the principle of
     /// the day, the pane and the bookmarks rather than the pane alone.
