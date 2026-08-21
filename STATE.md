@@ -142,3 +142,22 @@ a small unblocked ticket "Remove the Backlog surface from column 3".
   fix(mac)". Do not reset the tree before reading it.
 - Everything else in the evening entry stands (re-review → merge → CTO re-runs
   tests + make-app.sh → Danny tries #18; Backlog-removal ticket still open).
+
+## 2026-08-21 — #18 merged; STOP point for Danny
+
+- #18 (column 3 restructure + draggable dividers) — MERGED to main `f5eca28`
+  (branch commits 5ca1d74 → 2c704b5 → d4aa468 → 35def5b). Review loop: build 1
+  REQUEST-CHANGES (8 findings) → fix pass → re-review found a new blocking
+  divider-ratchet bug (clamp ceiling fed back per frame) → fixed as a frozen
+  `PanelLayout.Drag` value type + replay tests → APPROVE → 3 nits applied.
+- done, ran for real: `swift test` on merged main = 446 tests / 54 suites
+  passed, and `apps/mac/scripts/make-app.sh` rebuilt
+  `~/Applications/Principle.app` — both re-run by the CTO. Runtime behaviour
+  (drag out-and-back keeps stored widths, docked Ask Ray keeps card+bookmarks,
+  520pt short column) verified by the worker with screenshots, NOT re-run by
+  the CTO.
+- **STOP point: Danny tries #18 before any next ticket.**
+- Follow-ups parked: docked Ask Ray has no date navigation (known out of
+  scope); onEnd guard lacks the edge check its onDrag twin got (pathological
+  only); Backlog-removal ticket still awaiting Danny's yes; #19 Week view is
+  the next unblocked ticket, #9 now unblocked by this merge.
