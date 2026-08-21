@@ -25,10 +25,13 @@ struct DayShell: View {
         defaults: AppSettings.sharedDefaults(),
         fallback: DayMetric.defaultWidths
     )
-    /// The width the divider being dragged started from. Every report of a drag
-    /// is measured against that one number rather than against the last frame,
-    /// which is what keeps a fast drag from drifting.
-    @State var dragStart: CGFloat = 0
+    /// The divider being dragged right now, and the row as it stood when the
+    /// hand took hold of it. Nil between drags.
+    ///
+    /// Frozen for the length of the gesture: every report is measured against
+    /// this rather than against the last frame, which is what keeps a fast drag
+    /// from drifting and a slow one from ratcheting (``PanelLayout/Drag``).
+    @State var drag: PanelLayout.Drag?
 
     init(repoURL: URL, session: SessionViewModel, favorites: FavoritesModel) {
         _journal = State(initialValue: JournalModel(repoURL: repoURL))
@@ -122,7 +125,7 @@ struct DayShell: View {
                 .transition(.move(edge: .leading))
         }
         if detailOpen {
-            detailColumn
+            detailColumn(isDrawer: true)
                 .frame(width: min(widths.detail, ceiling), height: height)
                 .edenFloatShadow(opacity: 14)
                 .padding(EdenMetric.sidebarInset)

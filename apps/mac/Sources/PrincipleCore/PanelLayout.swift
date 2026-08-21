@@ -92,11 +92,54 @@ public struct PanelLayout: Equatable, Sendable {
         }
     }
 
+    /// One drag, from the mouse going down to the mouse coming up.
+    ///
+    /// It exists to hold the layout *still*. Every width this reports is
+    /// measured against the row as it stood when the hand pressed down, never
+    /// against the row the drag has been redrawing underneath itself — and it
+    /// is a type rather than a convention because a convention is exactly what
+    /// the last version got wrong.
+    ///
+    /// What went wrong: the sidebar's ceiling is the room column 3 leaves, and
+    /// column 3 is re-fitted wider every time the sidebar narrows. Recomputed
+    /// per frame, each frame's output became the next frame's ceiling, so the
+    /// sidebar ratcheted down and could not come back — and what it had
+    /// ratcheted to is what got written to disk. Held to the frame it started
+    /// from, a drag out and back lands exactly where it began.
+    public struct Drag: Equatable, Sendable {
+        /// The row as it stood when the hand went down. Frozen on purpose.
+        public let layout: PanelLayout
+        public let edge: Edge
+        /// The width the divider was *drawn* at, which is where the hand took
+        /// hold of it.
+        public let start: CGFloat
+
+        public init(_ layout: PanelLayout, edge: Edge) {
+            self.layout = layout
+            self.edge = edge
+            self.start = layout.dragStart(edge)
+        }
+
+        /// Where the divider is now, `dx` points from where it was grabbed.
+        public func width(movedBy dx: CGFloat) -> CGFloat {
+            layout.dragged(edge, from: start, by: dx)
+        }
+
+        /// The stored pair the drag began from — what to put back when the hand
+        /// comes up having gone nowhere, so memory and disk still agree.
+        public var widthsAtStart: PanelWidths { layout.widths }
+    }
+
+    /// Takes hold of one divider: everything the gesture needs, frozen now.
+    public func drag(_ edge: Edge) -> Drag { Drag(self, edge: edge) }
+
     /// Where a divider that began at `start` has been dragged to, `dx` points
     /// sideways from where the hand pressed down.
     ///
     /// Held to the panel's own bounds and to the room the other panel leaves —
-    /// neither may take the day below its floor.
+    /// neither may take the day below its floor. Call it through ``Drag``
+    /// rather than directly: a caller that re-reads this off a layout rebuilt
+    /// mid-gesture is the ratchet described there.
     public func dragged(_ edge: Edge, from start: CGFloat, by dx: CGFloat) -> CGFloat {
         let shown = shown
         switch edge {

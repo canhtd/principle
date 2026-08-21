@@ -74,19 +74,26 @@ struct PanelDivider: View {
                 // that is itself sliding comes out at half the distance the
                 // hand travelled.
                 //
-                // `minimumDistance: 0` so the first point of travel counts —
-                // but AppKit reports the mouse going *down* as a change of zero
-                // too, and taking that for a drag made a plain click write the
-                // width the panel happened to be drawn at. So the drag starts
-                // on the first report that actually moved, and a click reaches
-                // none of the three callbacks.
-                DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                // A resize has to be asked for, so the hand travels a little
+                // first. At `minimumDistance: 0` AppKit's report of the mouse
+                // going *down* was itself a change, and a plain click wrote
+                // whatever width the panel happened to be drawn at over the
+                // stored one. Refusing only an exactly-zero change fixed the
+                // motionless click and left the point or two of tremor that
+                // comes with pressing a trackpad doing the same damage.
+                //
+                // The distance is the gesture's own rather than a count kept
+                // here: below it there is no callback at all, which is a
+                // stronger guarantee than ignoring the ones that arrive.
+                // Measured on the built app — a 2 pt drag produces no
+                // `onChanged` and writes nothing; from 3 pt on, the panel
+                // tracks the hand point for point.
+                DragGesture(minimumDistance: DayMetric.dividerDragMinimum, coordinateSpace: .global)
                     .onChanged { value in
                         let dx = value.translation.width
                         if !isDragging {
-                            setCursor(true)
-                            guard dx != 0 else { return }
                             isDragging = true
+                            setCursor(true)
                             onBegin()
                         }
                         onDrag(dx)

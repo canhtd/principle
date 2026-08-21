@@ -20,8 +20,11 @@ enum DayMetric {
     /// Both are remembered from launch to launch, and the bounds they drag
     /// between belong to ``PanelWidths`` — the library, where they are tested.
     static let defaultWidths = PanelWidths(
-        // Eden's own sidebar width. `PanelWidths` repeats the number for the
-        // library's sake; this line is what keeps the two from drifting.
+        // Eden's own sidebar width, read from Eden rather than from the copy
+        // `PanelWidths` keeps for the library's sake — so the app opens at the
+        // real number even if the copy drifts. Catching the drift is a
+        // different job and belongs to the one thing that can fail: the test in
+        // `PanelWidthsTests` that holds the two equal.
         sidebar: EdenMetric.sidebarWidth,
         detail: PanelWidths.detailDefault
     )
@@ -41,6 +44,10 @@ enum DayMetric {
     /// The grab area, a little wider than the 8 pt gap it fills — two points of
     /// overhang on each side (``PanelDivider``).
     static let dividerGrab: CGFloat = 12
+    /// How far the hand travels before a press on a divider counts as a resize
+    /// rather than a click. Pressing a trackpad moves the pointer a point or
+    /// two on its own, and a click must never write a width (``PanelDivider``).
+    static let dividerDragMinimum: CGFloat = 3
     /// How tall the bookmarks may grow at the foot of column 3 while Ask Ray is
     /// docked in it: about five rows and their heading. Past that they scroll,
     /// rather than pushing the thread off the screen (``AskRayColumn``).

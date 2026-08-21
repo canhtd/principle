@@ -18,8 +18,16 @@ struct AskRayColumn: View {
     let favorites: FavoritesModel
     @Bindable var ui: DayShellState
 
+    /// How tall the bookmarks would be if nothing capped them. Starts at the
+    /// cap so the first frame is drawn at a sane height rather than at nothing,
+    /// and is corrected the moment the list has been measured.
+    @State private var listHeight: CGFloat = DayMetric.chatColumnBookmarks
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        // 20, the gap ``DetailPanel`` puts between the same column's sections.
+        // It is one column in two modes, and docking the chat must not be a
+        // change of rhythm.
+        VStack(alignment: .leading, spacing: 20) {
             PrincipleOfTheDaySection(journal: journal, favorites: favorites, ui: ui)
 
             AskRayPanel(session: session, favorites: favorites, ui: ui, isDocked: true)
@@ -32,35 +40,53 @@ struct AskRayColumn: View {
     }
 
     /// Capped rather than free: the bookmarks are the column's foot, and a long
-    /// list of them must not push the thread off the screen.
+    /// list of them must not push the thread off the screen. But a cap is a
+    /// ceiling and must not become a floor — one bookmark is one row, and 190
+    /// points of empty scroll view under it is 190 points taken off the thread
+    /// for nothing.
     ///
-    /// The cap is the whole mechanism, so nothing may be allowed to talk the
-    /// scroll view out of it. `fixedSize(vertical:)` does exactly that — it
-    /// proposes no height at all, so the scroll view answers with its
-    /// *content's* height and the cap above it never binds, which puts a long
-    /// list through the foot of the panel. Left greedy inside `0...cap`
-    /// instead, the scroll view takes the cap when there is room for it and
-    /// less when there is not, and `VStack` hands it its share before the
-    /// thread's because it is the less flexible of the two.
+    /// So the height is `min(list, cap)`, measured rather than negotiated. Both
+    /// of the shorter spellings are wrong here, in opposite directions, and
+    /// both were tried:
     ///
-    /// An empty list is the one case with no scrolling to do, and it says its
-    /// single line without reserving the cap for it.
-    @ViewBuilder
+    /// - `frame(maxHeight:)` is not a ceiling on a *request*, it is a ceiling
+    ///   on a greedy view: a `max` frame takes the height it is offered and
+    ///   clamps that, which is exactly why `frame(maxWidth: .infinity)` is how
+    ///   one fills a row. One bookmark still reserved all 190 and sat centred
+    ///   in the empty half of it.
+    /// - `fixedSize(vertical:)` proposes no height at all, the scroll view
+    ///   answers with its content's, and the cap never binds — a long list ran
+    ///   out through the foot of the panel.
+    ///
+    /// `frame(height:)` is neither: it is the exact number, so a short list
+    /// takes its own height and gives the rest to the thread, and a long one
+    /// stops at the cap and scrolls. The measurement happens inside the scroll
+    /// view, which proposes no height down its own axis — so what is read there
+    /// is the list's full height, not the window it is being shown through.
     private var bookmarks: some View {
-        if favorites.isEmpty {
+        ScrollView {
             BookmarksSection(ui: ui, favorites: favorites)
-        } else {
-            ScrollView {
-                BookmarksSection(ui: ui, favorites: favorites)
-            }
-            .scrollIndicators(.never)
-            // The list is read from the top or it is not read at all. Without
-            // this it opened part-way down a long one — the heading and the
-            // first rows already scrolled past — because the rows arrive from
-            // disk after the scroll view has laid out, and it keeps the offset
-            // it had rather than following the content back up.
-            .defaultScrollAnchor(.top)
-            .frame(maxHeight: DayMetric.chatColumnBookmarks)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.size.height, initial: true) { _, height in
+                                listHeight = height
+                            }
+                    }
+                }
         }
+        .scrollIndicators(.never)
+        // The list is read from the top or it is not read at all. Without this
+        // it opened part-way down a long one — the heading and the first rows
+        // already scrolled past — because the rows arrive from disk after the
+        // scroll view has laid out, and it keeps the offset it had rather than
+        // following the content back up.
+        //
+        // The trade taken knowingly: this also snaps back to the top when the
+        // list changes under a reader who had scrolled down. Bookmarks change
+        // when Danny bookmarks something, which is rare and is not something he
+        // does from inside this list.
+        .defaultScrollAnchor(.top)
+        .frame(height: min(listHeight, DayMetric.chatColumnBookmarks))
     }
 }

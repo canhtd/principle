@@ -44,7 +44,7 @@ extension DayShell {
             )
             if docksDetail {
                 divider(.detail, help: "Drag to resize the panel", in: layout)
-                detailColumn.frame(width: shown.detail)
+                detailColumn().frame(width: shown.detail)
             }
         }
     }
@@ -53,17 +53,32 @@ extension DayShell {
 
     /// One divider, wired to the panel it resizes.
     ///
-    /// The drag begins at the width the divider is *drawn* at, and the widths
-    /// are written down only if the hand actually moved one: a plain click on a
-    /// divider must leave the stored pair exactly as it found it, or a window
-    /// that shrank would quietly destroy the width Danny chose for a wide one.
+    /// The gesture takes hold of the row once, at ``PanelLayout/drag(_:)``, and
+    /// every later report is measured against that one frozen copy — never
+    /// against `layout`, which is rebuilt from `widths` the drag is itself
+    /// changing. Reading the live one is the ratchet ``PanelLayout/Drag``
+    /// documents.
+    ///
+    /// The widths are written down only if the hand actually moved one, and a
+    /// drag that came back to where it started puts the stored pair back in
+    /// memory as well: the drag works in *drawn* widths, which in a window too
+    /// narrow for both are not the stored ones, and leaving the drawn pair
+    /// behind would leave memory disagreeing with disk until the next launch.
     private func divider(_ edge: PanelLayout.Edge, help: String, in layout: PanelLayout) -> some View {
         PanelDivider(
             help: help,
-            onBegin: { dragStart = layout.dragStart(edge) },
-            onDrag: { dx in setWidth(edge, to: layout.dragged(edge, from: dragStart, by: dx)) },
+            onBegin: { drag = layout.drag(edge) },
+            onDrag: { dx in
+                guard let drag else { return }
+                setWidth(edge, to: drag.width(movedBy: dx))
+            },
             onEnd: {
-                guard width(edge) != dragStart else { return }
+                defer { drag = nil }
+                guard let drag else { return }
+                guard width(edge) != drag.start else {
+                    widths = drag.widthsAtStart
+                    return
+                }
                 widths.save(to: AppSettings.sharedDefaults())
             }
         )
@@ -96,10 +111,17 @@ extension DayShell {
     /// column: the principle of the day opens it and the bookmarks close it
     /// whatever is between them (#18) — docking Ask Ray swaps the pane, not the
     /// column.
+    ///
+    /// `isDrawer` is the one place the two part company. Below 1100 pt there is
+    /// no column 3 to dock into, so the chat falls back to floating over the
+    /// day — and the drawer, which is this same view, would then put a *second*
+    /// live `AskRayPanel` on screen driven by the one `SessionViewModel`: two
+    /// threads, two composers, one conversation. The drawer therefore always
+    /// shows the pane, and the chat stays the floating panel it fell back to.
     @ViewBuilder
-    var detailColumn: some View {
+    func detailColumn(isDrawer: Bool = false) -> some View {
         EdenPanel {
-            if ui.isChatDocked {
+            if ui.isChatDocked, !isDrawer {
                 AskRayColumn(journal: journal, session: session, favorites: favorites, ui: ui)
             } else {
                 DetailPanel(journal: journal, ui: ui, favorites: favorites)
