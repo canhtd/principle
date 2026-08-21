@@ -69,7 +69,7 @@ extension DayShell {
             help: help,
             onBegin: { drag = layout.drag(edge) },
             onDrag: { dx in
-                guard let drag else { return }
+                guard let drag, drag.edge == edge else { return }
                 setWidth(edge, to: drag.width(movedBy: dx))
             },
             onEnd: {

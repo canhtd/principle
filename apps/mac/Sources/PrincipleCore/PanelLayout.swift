@@ -84,7 +84,7 @@ public struct PanelLayout: Equatable, Sendable {
     /// the stored one. They differ whenever the window is too narrow for both
     /// stored widths, and starting from the stored one is exactly the dead zone
     /// this type exists to keep out.
-    public func dragStart(_ edge: Edge) -> CGFloat {
+    func dragStart(_ edge: Edge) -> CGFloat {
         let shown = shown
         switch edge {
         case .sidebar: return shown.sidebar
@@ -140,7 +140,7 @@ public struct PanelLayout: Equatable, Sendable {
     /// neither may take the day below its floor. Call it through ``Drag``
     /// rather than directly: a caller that re-reads this off a layout rebuilt
     /// mid-gesture is the ratchet described there.
-    public func dragged(_ edge: Edge, from start: CGFloat, by dx: CGFloat) -> CGFloat {
+    func dragged(_ edge: Edge, from start: CGFloat, by dx: CGFloat) -> CGFloat {
         let shown = shown
         switch edge {
         case .sidebar:

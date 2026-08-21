@@ -45,24 +45,30 @@ struct AskRayColumn: View {
     /// points of empty scroll view under it is 190 points taken off the thread
     /// for nothing.
     ///
-    /// So the height is `min(list, cap)`, measured rather than negotiated. Both
-    /// of the shorter spellings are wrong here, in opposite directions, and
-    /// both were tried:
+    /// So the number is `min(list, cap)`, measured rather than negotiated, and
+    /// it is handed to a `maxHeight`. Both halves of that are load-bearing, and
+    /// each was got wrong first:
     ///
-    /// - `frame(maxHeight:)` is not a ceiling on a *request*, it is a ceiling
-    ///   on a greedy view: a `max` frame takes the height it is offered and
-    ///   clamps that, which is exactly why `frame(maxWidth: .infinity)` is how
-    ///   one fills a row. One bookmark still reserved all 190 and sat centred
-    ///   in the empty half of it.
+    /// - The *number* has to be the measured one. `frame(maxHeight:)` is not a
+    ///   ceiling on a *request*, it is a ceiling on a greedy view: a `max`
+    ///   frame takes the height it is offered and clamps that, which is
+    ///   exactly why `frame(maxWidth: .infinity)` is how one fills a row.
+    ///   Handed the bare 190 it took all 190, and one bookmark sat centred in
+    ///   the empty half of it.
+    /// - The *frame* has to be a `max` one. `frame(height:)` is the exact
+    ///   number and so will not yield: in a column too short for all three
+    ///   sections — the window at its 520 pt minimum — the bookmarks held
+    ///   their whole height, the thread collapsed to nothing between the card
+    ///   and them, and the list ran out through the foot of the panel. A `max`
+    ///   frame asks for the same height wherever there is room for it and
+    ///   gives the difference back where there is not.
     /// - `fixedSize(vertical:)` proposes no height at all, the scroll view
     ///   answers with its content's, and the cap never binds — a long list ran
     ///   out through the foot of the panel.
     ///
-    /// `frame(height:)` is neither: it is the exact number, so a short list
-    /// takes its own height and gives the rest to the thread, and a long one
-    /// stops at the cap and scrolls. The measurement happens inside the scroll
-    /// view, which proposes no height down its own axis — so what is read there
-    /// is the list's full height, not the window it is being shown through.
+    /// The measurement happens inside the scroll view, which proposes no height
+    /// down its own axis — so what is read there is the list's full height, not
+    /// the window it is being shown through.
     private var bookmarks: some View {
         ScrollView {
             BookmarksSection(ui: ui, favorites: favorites)
@@ -87,6 +93,6 @@ struct AskRayColumn: View {
         // when Danny bookmarks something, which is rare and is not something he
         // does from inside this list.
         .defaultScrollAnchor(.top)
-        .frame(height: min(listHeight, DayMetric.chatColumnBookmarks))
+        .frame(maxHeight: min(listHeight, DayMetric.chatColumnBookmarks))
     }
 }
