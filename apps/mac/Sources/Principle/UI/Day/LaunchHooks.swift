@@ -24,7 +24,19 @@ enum LaunchHooks {
 
     /// `PRINCIPLE_STATE=principles` — which face of the shell to open on.
     static var state: State? {
-        ProcessInfo.processInfo.environment["PRINCIPLE_STATE"].flatMap(State.init(rawValue:))
+        rawState.flatMap(State.init(rawValue:))
+    }
+
+    /// What was asked for, recognised or not — so a typo in a script can be
+    /// told apart from a launch that asked for nothing.
+    static var rawState: String? {
+        ProcessInfo.processInfo.environment["PRINCIPLE_STATE"]
+    }
+
+    /// Says on stderr what a launch hook did or did not do. These hooks exist
+    /// for scripts, and a script's only eyes are its log.
+    static func report(_ message: String) {
+        FileHandle.standardError.write(Data("PRINCIPLE_STATE: \(message)\n".utf8))
     }
 
     enum State: String {

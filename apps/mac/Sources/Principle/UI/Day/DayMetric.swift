@@ -1,4 +1,5 @@
 import DesignSystem
+import PrincipleCore
 import SwiftUI
 
 /// The geometry that is this screen's rather than the design system's.
@@ -15,8 +16,42 @@ enum DayMetric {
     static let gutter: CGFloat = 56
     static let dayHeight = hourHeight * 24
 
-    /// Column 3. Column 1 is Eden's own sidebar width (`EdenMetric.sidebarWidth`).
-    static let detailWidth: CGFloat = 320
+    /// Where the two side panels open before anybody has dragged them (#18).
+    /// Both are remembered from launch to launch, and the bounds they drag
+    /// between belong to ``PanelWidths`` — the library, where they are tested.
+    static let defaultWidths = PanelWidths(
+        // Eden's own sidebar width, read from Eden rather than from the copy
+        // `PanelWidths` keeps for the library's sake — so the app opens at the
+        // real number even if the copy drifts. Catching the drift is a
+        // different job and belongs to the one thing that can fail: the test in
+        // `PanelWidthsTests` that holds the two equal.
+        sidebar: EdenMetric.sidebarWidth,
+        detail: PanelWidths.detailDefault
+    )
+
+    // MARK: The dividers (#18)
+
+    /// What column 2 keeps for itself however wide the panels are dragged. The
+    /// day is the point of the screen; a grid squeezed to a gutter is not.
+    ///
+    /// 360 rather than a rounder number because of the breakpoint below it: at
+    /// 1100 pt, the width where column 3 first docks, the canvas margins, the
+    /// two divider gaps and the two default widths (4 × 8 + 260 + 420) leave the
+    /// day 388 pt. A floor greedier than that would make the app open a squeezed
+    /// column 3 on a laptop screen; 360 sits just under it, and the 28 pt of
+    /// slack goes to the day.
+    static let dayColumnMinimum: CGFloat = 360
+    /// The grab area, a little wider than the 8 pt gap it fills — two points of
+    /// overhang on each side (``PanelDivider``).
+    static let dividerGrab: CGFloat = 12
+    /// How far the hand travels before a press on a divider counts as a resize
+    /// rather than a click. Pressing a trackpad moves the pointer a point or
+    /// two on its own, and a click must never write a width (``PanelDivider``).
+    static let dividerDragMinimum: CGFloat = 3
+    /// How tall the bookmarks may grow at the foot of column 3 while Ask Ray is
+    /// docked in it: about five rows and their heading. Past that they scroll,
+    /// rather than pushing the thread off the screen (``AskRayColumn``).
+    static let chatColumnBookmarks: CGFloat = 190
 
     /// Where the grid opens: the morning, like Calendar, rather than midnight.
     static let firstVisibleHour: CGFloat = 6
@@ -33,8 +68,13 @@ enum DayMetric {
 
     // MARK: Breakpoints (decision 10)
 
-    /// Below this the header takes the short date and drops the subtitle.
-    static let narrowHeader: CGFloat = 1200
+    /// Below this *column 2* takes the short date and drops the subtitle.
+    ///
+    /// The column's width, not the window's (#18): the panels beside it are
+    /// draggable now, so a wide window with a wide sidebar leaves exactly the
+    /// header a narrow window used to. 640 is where the long date — "Wednesday,
+    /// 30 September" — stops clearing the centred Day / Week / Month control.
+    static let narrowHeaderColumn: CGFloat = 640
     /// Below this column 3 becomes a drawer.
     static let detailDrawer: CGFloat = 1100
     /// Below this column 1 does too.

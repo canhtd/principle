@@ -15,9 +15,17 @@ extension DayShell {
 
         switch LaunchHooks.state {
         case .principles:
-            ui.sidebarMode = .principles
+            // Nothing to switch to any more: column 3 carries the principle of
+            // the day and the bookmarks on every screen (#18). Kept as a state
+            // so an older screenshot script still opens rather than failing —
+            // but it says so, because a script that asks for a screen and is
+            // silently handed another one is how a stale shot gets filed as a
+            // new one.
+            LaunchHooks.report(
+                "PRINCIPLE_STATE=principles no longer switches anything: since #18 the principle "
+                    + "of the day and the bookmarks are in column 3 on every screen. Opened on the day."
+            )
         case .principlesPopover:
-            ui.sidebarMode = .principles
             // A popover is its own window, and AppKit has nothing to hang one
             // off until the row it points at is in a window itself. Asked for
             // during this pass it is silently dropped; one turn later it opens.
@@ -33,7 +41,11 @@ extension DayShell {
         case .chatDocked:
             ui.setChatMode(.docked)
         case nil:
-            break
+            // A value nobody recognises is a typo in a script, not a request
+            // for the plain day — and it used to look exactly like one.
+            if let asked = LaunchHooks.rawState {
+                LaunchHooks.report("PRINCIPLE_STATE=\(asked) is not a state this app knows. Opened on the day.")
+            }
         }
     }
 }

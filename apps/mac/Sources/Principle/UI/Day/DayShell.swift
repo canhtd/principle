@@ -18,7 +18,20 @@ struct DayShell: View {
     @State var now = Date()
     /// Native full screen has no traffic lights, so the panels that were
     /// holding room for them give it back. `WindowChrome` is what knows.
-    @State private var isFullScreen = false
+    @State var isFullScreen = false
+    /// How wide the two side panels are, as the last drag left them — read back
+    /// out of the defaults on every launch (#18).
+    @State var widths = PanelWidths(
+        defaults: AppSettings.sharedDefaults(),
+        fallback: DayMetric.defaultWidths
+    )
+    /// The divider being dragged right now, and the row as it stood when the
+    /// hand took hold of it. Nil between drags.
+    ///
+    /// Frozen for the length of the gesture: every report is measured against
+    /// this rather than against the last frame, which is what keeps a fast drag
+    /// from drifting and a slow one from ratcheting (``PanelLayout/Drag``).
+    @State var drag: PanelLayout.Drag?
 
     init(repoURL: URL, session: SessionViewModel, favorites: FavoritesModel) {
         _journal = State(initialValue: JournalModel(repoURL: repoURL))
@@ -36,26 +49,12 @@ struct DayShell: View {
                 EdenColor.canvas
                 EdenPageGradient()
 
-                HStack(spacing: EdenMetric.sidebarInset) {
-                    if docksSidebar {
-                        sidebar.frame(width: EdenMetric.sidebarWidth)
-                    }
-                    DayColumn(
-                        journal: journal,
-                        ui: ui,
-                        now: now,
-                        isHeaderNarrow: width < DayMetric.narrowHeader,
-                        showsSidebarToggle: !docksSidebar,
-                        showsDetailToggle: !docksDetail,
-                        isFullScreen: isFullScreen
-                    )
-                    if docksDetail {
-                        detailColumn.frame(width: DayMetric.detailWidth)
-                    }
-                }
-                .padding(EdenMetric.sidebarInset)
+                // The dividers are the 8 pt of canvas between the columns, so
+                // the row itself has no spacing of its own to add (#18).
+                columns(width: width, docksSidebar: docksSidebar, docksDetail: docksDetail)
+                    .padding(EdenMetric.sidebarInset)
 
-                drawers(docksSidebar: docksSidebar, docksDetail: docksDetail, height: proxy.size.height)
+                drawers(docksSidebar: docksSidebar, docksDetail: docksDetail, size: proxy.size)
                 chatLayer(size: proxy.size, docksDetail: docksDetail)
             }
             .onChange(of: width) { _, new in ui.syncDrawers(width: new) }
@@ -98,33 +97,16 @@ struct DayShell: View {
     /// second timer would redraw the whole grid for nothing.
     private static let clock = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
-    // MARK: - The columns
-
-    @ViewBuilder
-    private var sidebar: some View {
-        EdenPanel {
-            SidebarPanel(journal: journal, ui: ui, favorites: favorites,
-                         isFullScreen: isFullScreen)
-        }
-    }
-
-    @ViewBuilder
-    private var detailColumn: some View {
-        if ui.isChatDocked {
-            AskRayPanel(session: session, favorites: favorites, ui: ui, isDocked: true)
-        } else {
-            EdenPanel {
-                DetailPanel(journal: journal, ui: ui)
-            }
-        }
-    }
-
     // MARK: - Drawers (decision 10)
 
     @ViewBuilder
-    private func drawers(docksSidebar: Bool, docksDetail: Bool, height: CGFloat) -> some View {
+    private func drawers(docksSidebar: Bool, docksDetail: Bool, size: CGSize) -> some View {
         let sidebarOpen = !docksSidebar && ui.isSidebarDrawerOpen
         let detailOpen = !docksDetail && ui.isDetailDrawerOpen
+        let height = size.height - EdenMetric.sidebarInset * 2
+        // A drawer is the same panel, at the width it was last dragged to — but
+        // never wider than the window it is sliding over.
+        let ceiling = size.width - EdenMetric.sidebarInset * 2
 
         if sidebarOpen || detailOpen {
             // A click off an open drawer closes it, the way a drawer closes.
@@ -137,14 +119,14 @@ struct DayShell: View {
         }
         if sidebarOpen {
             sidebar
-                .frame(width: EdenMetric.sidebarWidth, height: height - EdenMetric.sidebarInset * 2)
+                .frame(width: min(widths.sidebar, ceiling), height: height)
                 .edenFloatShadow(opacity: 14)
                 .padding(EdenMetric.sidebarInset)
                 .transition(.move(edge: .leading))
         }
         if detailOpen {
-            detailColumn
-                .frame(width: DayMetric.detailWidth, height: height - EdenMetric.sidebarInset * 2)
+            detailColumn(isDrawer: true)
+                .frame(width: min(widths.detail, ceiling), height: height)
                 .edenFloatShadow(opacity: 14)
                 .padding(EdenMetric.sidebarInset)
                 .frame(maxWidth: .infinity, alignment: .trailing)

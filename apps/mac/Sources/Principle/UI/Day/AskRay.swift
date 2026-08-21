@@ -26,7 +26,9 @@ struct AskRayBubble: View {
 }
 
 /// The chat itself, in whichever of its two homes it is in: a panel floating
-/// over the grid, or docked in place of column 3. Identical in both.
+/// over the grid, or docked as column 3's pane — between the principle of the
+/// day and the bookmarks, which #18 keeps at the column's two ends whatever is
+/// in the middle. Identical in both, down to the chrome bar its size.
 ///
 /// The engine is the one the app already had — this is Eden's chat pane built
 /// around ``SessionViewModel``, not a second chat. The pane is three pieces that
@@ -111,7 +113,10 @@ struct AskRayPanel: View {
     }
 }
 
-/// The floating panel casts a shadow; the docked one is a column and does not.
+/// The floating panel casts a shadow over the day. The docked one sits *on*
+/// column 3's panel between the principle card and the bookmarks (#18), so it
+/// wears the same 1.5 pt lift the principle card does — a panel shadow inside a
+/// panel reads as a second window.
 private struct FloatingShadow: ViewModifier {
     let isFloating: Bool
 
@@ -119,7 +124,7 @@ private struct FloatingShadow: ViewModifier {
         if isFloating {
             content.shadow(color: EdenColor.black(18), radius: 30, y: 22)
         } else {
-            content.edenPanelShadow()
+            content.shadow(color: EdenColor.black(4), radius: 1.5, y: 1)
         }
     }
 }

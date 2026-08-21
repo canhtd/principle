@@ -17,8 +17,14 @@ private struct PrincipleExcerptModifier: ViewModifier {
     let favorites: FavoritesModel
     @Bindable var ui: DayShellState
 
+    /// `.leading`, which is the edge these actually open on: every principle in
+    /// the app is shown in column 3 or in the chat, both of which sit against
+    /// the window's right edge, so a popover asked for on the trailing side is
+    /// flipped by AppKit every single time. Declaring the flipped edge is not a
+    /// cosmetic change — a popover that is sized while it still believes it is
+    /// opening rightwards measures itself against the wrong margin.
     func body(content: Content) -> some View {
-        content.popover(isPresented: isOpen, arrowEdge: .trailing) {
+        content.popover(isPresented: isOpen, arrowEdge: .leading) {
             PrincipleExcerptView(record: record, favorites: favorites, maxHeight: ui.excerptMaxHeight)
         }
     }

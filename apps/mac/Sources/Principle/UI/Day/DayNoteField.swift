@@ -27,9 +27,7 @@ struct DayNoteField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text("Day note")
-                .font(EdenFont.ui(12))
-                .foregroundStyle(EdenColor.hex(0x77746F))
+            PaneSectionLabel("Day note")
             editor
         }
         .frame(maxWidth: .infinity, alignment: .leading)

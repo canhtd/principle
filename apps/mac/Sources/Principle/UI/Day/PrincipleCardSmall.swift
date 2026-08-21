@@ -2,9 +2,10 @@ import DesignSystem
 import PrincipleCore
 import SwiftUI
 
-/// The principle card, in column 1 and in the chat: a 3 pt accent stroke inside
-/// the radius, an uppercase `LIFE PRINCIPLE 5.3` label, the title, and the
-/// bookmark toggle (decision 4).
+/// The principle card at the top of column 3, in both of that column's modes
+/// (``PrincipleOfTheDaySection`` is its only caller since #18 moved it out of
+/// the sidebar): a 3 pt accent stroke inside the radius, an uppercase
+/// `LIFE PRINCIPLE 5.3` label, the title, and the bookmark toggle (decision 4).
 ///
 /// The card carries no excerpt — clicking it opens one beside it (decision 5).
 struct PrincipleCardSmall: View {
